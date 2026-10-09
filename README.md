@@ -1,75 +1,285 @@
-# React + TypeScript + Vite
+# Pango - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Pango web application (SPA), a multi-organization SaaS platform for intelligent inventory management with demand forecasting for small and medium-sized businesses.
 
-Currently, two official plugins are available:
+> This repository contains **only the frontend**. The back end (NestJS) and the forecasting service (FastAPI) are hosted in separate repositories.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Table of contents
 
-## React Compiler
+1. [Project status](#1-project-status)
+2. [Scope](#2-scope)
+3. [Stack](#3-stack)
+4. [Architecture](#4-architecture)
+5. [Structure](#5-structure)
+6. [Routes and permissions](#6-routes-and-permissions)
+7. [Naming conventions](#7-naming-conventions)
+8. [Coding convention](#8-coding-conventions)
+9. [Dark/light theme and visual identity](#9-dark-light-theme-and-visual-identity)
+10. [Configuration and scripts](#10-configuration-and-scripts)
+11. [Git flow](#11-git-flow)
+12. [Documentation](#12-documentation)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 1. Project status
 
-## Expanding the ESLint configuration
+| Area                                                                     | Status                           |
+| ------------------------------------------------------------------------ | -------------------------------- |
+| Skeleton (Vite + React + TS), feature-based structure, CI                | ✅ Done                          |
+| Light / dark / system theme with Tailwind v4                             | ✅ Done                          |
+| Session (store + JWT on requests), permission-based route guards, layout | ⏳ Pending                       |
+| Module screens                                                           | ⏳ Placeholders                  |
+| Base components (table, modal, status badges, form fields)               | ⏳ Pending                       |
+| Login with the pangolin illustration and "under construction" screen     | ⏳ Pending                       |
+| ESLint + Prettier, tests (Vitest + Testing Library)                      | ⏳ Pending                       |
+| API contract and final permission catalog                                | ⏳ To be agreed with the backend |
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 2. Scope
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### In scope
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+The frontend is the presentation layer for the use cases in the SRS. It consumes the backend API (BFF); it contains no business rules and does not compute forecasts.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+| UC            | Use case                                                                          | Module (feature)          |
+| ------------- | --------------------------------------------------------------------------------- | ------------------------- |
+| CU-01         | Authenticate user                                                                 | `auth`                    |
+| CU-02         | Manage users, profiles and permissions                                            | `users`                   |
+| CU-03         | Manage materials (in the ER diagram: **Producto**)                                | `products`                |
+| CU-04         | Manage warehouses and locations                                                   | `warehouses`              |
+| CU-05         | Record inventory movement                                                         | `inventory`               |
+| CU-06         | Identify material via RFID (display the identification result)                    | `inventory`               |
+| CU-07         | View occupancy of warehouses and locations                                        | `warehouses`, `dashboard` |
+| CU-08 / CU-09 | Create and handle internal requests                                               | `requests`                |
+| CU-10 / CU-11 | View demand forecast and reorder point                                            | `forecast`                |
+| CU-12         | View inventory alerts                                                             | `alerts`                  |
+| —             | Areas (requesting / fulfilling) and the minimal Supplier and Purchase Order block | `areas`, `suppliers`      |
+| —             | Dashboard for inventory, demand, forecasts and alerts                             | `dashboard`               |
+
+> The use case IDs (CU-xx) come from the SRS and are kept in Spanish on purpose, so they match the source document.
+
+### Out of scope
+
+- Business logic, forecast computation, reorder point and alert generation (backend / FastAPI service).
+- Multi-tenant isolation: enforced by the backend; the frontend only sends the JWT.
+- Physical RFID reading: the reader is an external device integrated by the backend (RFID Adapter). The frontend only presents the result.
+- Pricing, billing and last-mile logistics.
+- Native mobile app. The web app must be responsive.
+- Internationalization: the interface is in Spanish. No i18n library is included in the MVP.
+
+## 3. Technologies
+
+| Technology            | Version                                 | Purpose                                        |
+| --------------------- | --------------------------------------- | ---------------------------------------------- |
+| React                 | 19                                      | UI                                             |
+| TypeScript            | 6.0.2 (`strict` mode)                   | Typing                                         |
+| Vite                  | 8.3.0                                   | Dev server and build                           |
+| Tailwind CSS          | 4.3.3 (CSS-first, no `tailwind.config`) | Styling and theming                            |
+| React Router          | 7                                       | Routing (`createBrowserRouter`, `lazy` routes) |
+| TanStack Query        | 5                                       | Server state: caching, retries, invalidation   |
+| Zustand               | 5.0.15                                  | Client state (session, theme)                  |
+| React Hook Form + Zod | 7 / 3                                   | Forms and validation                           |
+| Axios                 | 1                                       | HTTP client with interceptors                  |
+
+Requirements: Node.js 20+ and pnpm. Modern browsers (Chrome 111+, Safari 16.4+, Firefox 128+), due to Tailwind v4.
+
+## 4. Frontend architecture
 
 ```
+Browser ──► Frontend (SPA) ──► BFF / API Gateway (NestJS) ──► PostgreSQL · Redis
+                                        └──► Forecasting service (FastAPI)
+```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+**State.** Each kind of state has exactly one home:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+| Kind                | Tool                  | Example                                           |
+| ------------------- | --------------------- | ------------------------------------------------- |
+| Server data         | TanStack Query        | product list, alerts                              |
+| Global client state | Zustand               | session (`useAuthStore`), theme (`useThemeStore`) |
+| Form state          | React Hook Form + Zod | create-product form                               |
+| Local UI state      | `useState`            | open modal, active tab                            |
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+**Requests.** All requests go through `core/api/client.ts`, which adds `Authorization: Bearer <token>` and logs the user out on a 401. The organization (tenant) is resolved by the backend from the JWT; the frontend does not send it.
+
+**Permissions.** The SRS states that profiles and permissions are configurable by each organization's administrator, so the frontend **does not hardcode roles**: the session carries a list of permissions (`resource:action`) and the UI decides based on it (`hasAnyPermission`, `RequirePermission`). Hiding an element is a UX concern only; real authorization is enforced by the backend.
+
+**Anti-corruption layer.** Components never use the raw backend JSON: each `features/<x>/api/` converts responses into the frontend's domain types (camelCase, in English). If the contract changes, only that layer is touched.
+
+**Loading.** Every page is loaded with `React.lazy`; the layout and session form the initial bundle.
+
+## 5. Directory structure
 
 ```
+pango-frontend/
+├─ .github/workflows/ci.yml      # typecheck + build
+├─ public/                       # static assets (favicon, pangolin illustrations)
+├─ src/
+│  ├─ main.tsx                   # entry point; initializes the theme
+│  ├─ app/                       # app composition
+│  │  ├─ App.tsx                 # providers (QueryClient, Router)
+│  │  └─ router.tsx              # route table and guards
+│  ├─ core/                      # cross-cutting infrastructure, no business UI
+│  │  ├─ api/client.ts           # Axios instance + interceptors
+│  │  ├─ auth/                   # auth.store.ts · permissions.ts · guards.tsx
+│  │  └─ theme/theme.store.ts    # light/dark/system mode
+│  ├─ shared/                    # reusable, no business logic
+│  │  ├─ ui/                     # base components (PageHeader, ThemeToggle, …)
+│  │  ├─ layout/                 # AppLayout, nav.ts
+│  │  ├─ hooks/                  # generic hooks (useDebounce, …)
+│  │  └─ lib/                    # pure utilities (formatDate, formatQuantity, …)
+│  ├─ features/                  # one directory per domain module
+│  │  └─ <feature>/
+│  │     ├─ api/                 # <feature>.api.ts · <feature>.keys.ts · <feature>.mappers.ts · query hooks
+│  │     ├─ components/          # feature-specific components
+│  │     ├─ pages/               # <Name>Page.tsx (one per route)
+│  │     └─ types/               # <feature>.types.ts · <feature>.schema.ts (Zod)
+│  └─ styles/
+│     ├─ index.css               # Tailwind entry + custom utilities (@utility)
+│     └─ theme.css               # color tokens and fonts (light/dark)
+├─ index.html                    # includes the anti-flash theme script
+├─ vite.config.ts                # @ → src alias, Tailwind plugin, /api proxy
+└─ .env.example
+```
+
+Current features: `auth`, `dashboard`, `products`, `warehouses`, `inventory`, `requests`, `suppliers`, `forecast`, `alerts`, `areas`, `users`.
+
+### Dependency rules
+
+```
+app ──► features ──► shared ──► core
+```
+
+- A module may only import from those to its right. `core` never imports from `shared`, `features` or `app`.
+- **A feature never imports from another feature.** If two features need the same thing, move it to `shared/` (if generic) or compose it in `app/` or in the page.
+- Inside a feature use relative paths; across layers use the `@/` alias.
+- No barrel files (`index.ts`): import from the file that defines the symbol.
+- Import order: external libraries → `@/core` → `@/shared` → the feature's relative imports.
+
+## 6. Routes and permissions
+
+URLs are in Spanish and kebab-case. Permissions are provisional until the catalog is closed with the backend.
+
+| Route          | Feature      | UC           | Required permission (any of)         |
+| -------------- | ------------ | ------------ | ------------------------------------ |
+| `/login`       | `auth`       | CU-01        | public                               |
+| `/`            | `dashboard`  | CU-07        | signed in                            |
+| `/productos`   | `products`   | CU-03        | `products:manage`                    |
+| `/almacenes`   | `warehouses` | CU-04, CU-07 | `warehouses:manage`                  |
+| `/inventario`  | `inventory`  | CU-05, CU-06 | `inventory:record`                   |
+| `/solicitudes` | `requests`   | CU-08, CU-09 | `requests:create`, `requests:attend` |
+| `/proveedores` | `suppliers`  | —            | `suppliers:manage`                   |
+| `/prediccion`  | `forecast`   | CU-10, CU-11 | `forecast:view`                      |
+| `/alertas`     | `alerts`     | CU-12        | `alerts:view`                        |
+| `/areas`       | `areas`      | —            | `areas:manage`                       |
+| `/usuarios`    | `users`      | CU-02        | `users:manage`                       |
+
+## 7. Naming conventions
+
+### 7.1 Language
+
+- **Code identifiers** (directories, files, components, functions, variables, types, permissions): **English**.
+- **User-facing text and URLs**: **Spanish**.
+- **Documentation, code comments and commit messages**: **English**.
+- ER diagram entities are translated with the glossary below; do not invent synonyms:
+  | ER diagram (Spanish) | Code (English) | | ER diagram (Spanish) | Code (English) |
+  |---|---|---|---|---|
+  | Producto (formerly "Material") | `Product` | | Predicción | `Forecast` |
+  | Almacén | `Warehouse` | | Alerta de inventario | `InventoryAlert` |
+  | Ubicación | `Location` | | Parámetros de reposición | `ReorderParams` |
+  | Inventario | `Inventory` | | Proveedor | `Supplier` |
+  | Movimiento | `Movement` | | Orden de compra | `PurchaseOrder` |
+  | Solicitud interna | `InternalRequest` | | Área | `Area` |
+  | Usuario | `User` | | Organización (tenant) | `Organization` |
+
+### 7.2 Summary
+
+| Element                           | Convention                               | Example                                                |
+| --------------------------------- | ---------------------------------------- | ------------------------------------------------------ |
+| Directories                       | `kebab-case`, lowercase                  | `features/purchase-orders/`                            |
+| Component file                    | `PascalCase.tsx`, same as the component  | `ProductForm.tsx`                                      |
+| Page file                         | `<Name>Page.tsx`, `export default`       | `ProductsPage.tsx`                                     |
+| Hook file                         | `camelCase.ts`, `use` prefix             | `useProducts.ts`                                       |
+| Other files                       | `kebab-case` + role suffix               | `product.api.ts`, `product.schema.ts`, `auth.store.ts` |
+| Tests                             | next to the file, `.test.ts(x)` suffix   | `ProductForm.test.tsx`                                 |
+| Components                        | `PascalCase`, noun                       | `StockBadge`                                           |
+| Component props                   | `<Component>Props`                       | `ProductFormProps`                                     |
+| Functions                         | `camelCase`, verb + object               | `getProducts`, `formatQuantity`                        |
+| Handlers inside a component       | `handle<Event>`                          | `handleSubmit`                                         |
+| Event props                       | `on<Event>`                              | `onSelect`, `onClose`                                  |
+| Predicates                        | `is…`, `has…`, `can…`                    | `isLowStock`, `hasAnyPermission`                       |
+| Variables                         | `camelCase`                              | `selectedWarehouse`                                    |
+| Booleans                          | `is/has/can/should` prefix               | `isLoading`, `canEdit`                                 |
+| Collections                       | plural                                   | `products`, `locations`                                |
+| Module-level constants            | `UPPER_SNAKE_CASE`                       | `NAV_ITEMS`, `THEME_STORAGE_KEY`                       |
+| Types and interfaces              | `PascalCase`, no `I` prefix              | `Product`, `SessionUser`                               |
+| Backend DTOs                      | `Dto` suffix                             | `ProductDto`                                           |
+| Form / mutation inputs            | `Input` / `FormValues` suffix            | `CreateProductInput`                                   |
+| Literal unions                    | `PascalCase`; preferred over `enum`      | `type MovementType = 'in' \| 'out'`                    |
+| Zod schemas                       | `camelCase` + `Schema`; type is inferred | `productFormSchema` → `ProductFormValues`              |
+| Zustand stores                    | `use<Name>Store`                         | `useAuthStore`                                         |
+| Query keys                        | `<feature>Keys` object                   | `productKeys.list(filters)`                            |
+| Providers / contexts              | `<Name>Provider`                         | `ThemeProvider`                                        |
+| Permissions                       | `resource:action` (English)              | `products:manage`                                      |
+| URL routes                        | `kebab-case`, Spanish                    | `/ordenes-de-compra`                                   |
+| Environment variables             | `VITE_` + `UPPER_SNAKE_CASE`             | `VITE_API_URL`                                         |
+| Custom CSS utilities (`@utility`) | `kebab-case`                             | `btn-primary`                                          |
+| Branches                          | `<type>/<module>-<description>`          | `feature/products-crud`                                |
+| Commits                           | Conventional Commits, in English         | `feat(products): add create form`                      |
+
+### 7.3 Additional rules
+
+- A component file exports **one** public component; private helpers may live in the same file if they are not reused.
+- Components use **named exports**; only pages use `export default` (required by `React.lazy`).
+- No ambiguous abbreviations (`prod`, `wh`, `qty`). `id`, `url`, `dto` are fine; `i`/`j` only for trivial indexes.
+- Names describe the domain, not the implementation: `lowStockProducts`, not `filteredArray`.
+- Files with a role suffix (`.api`, `.store`, `.schema`, `.types`, `.keys`, `.mappers`) contain only that role.
+
+## 8. Code conventions
+
+- **Strict TypeScript**: no `any`; use `unknown` and narrow it. No `// @ts-ignore`.
+- **Styles**: only semantic theme tokens (`bg-surface`, `text-fg`, `border-line`, `bg-primary`…). **Literal colors are forbidden** (`#fff`, `bg-white`, `text-gray-500`) in components: they break dark mode.
+- **Data**: read with `useQuery`, write with `useMutation` plus invalidation through the `*Keys` objects. No `fetch`/Axios calls inside components.
+- **Forms**: React Hook Form with `zodResolver`; the Zod schema lives in `types/<feature>.schema.ts`.
+- **Errors**: screens handle three explicit states — loading, error and empty — in addition to the data state.
+- **Accessibility**: real interactive elements (`button`, `a`), `aria-label` on icon-only controls, visible focus, legible contrast in both themes.
+- **Security**: store no sensitive data besides the session token; never rely on the UI for authorization.
+- **Performance**: pages are lazy-loaded; long lists are paginated server-side.
+
+## 9. Light / dark theme and visual identity
+
+- Three modes: **Light**, **Dark** and **System** (follows the OS). The choice is stored in `localStorage` (`pango-theme`), and a script in `index.html` applies it before the first render to avoid a flash.
+- The whole theme lives in `src/styles/theme.css`: `:root` (light) and `.dark` (dark) define the values, and `@theme inline` exposes them as Tailwind utilities. There is no `tailwind.config`.
+- Tokens: `canvas`, `surface`, `sidebar`, `sidebar-fg`, `fg`, `muted`, `line`, `primary`, `primary-fg`, `accent`, `accent-fg`, `success`, `warning`, `danger`.
+- Brand: Tinta `#1E2A22` · Arena `#F6F1E7` · Cobre `#B5502E` · Musgo `#3B6E58`. In dark mode, Musgo and Cobre are lightened to keep contrast.
+- Typography: **Space Grotesk** (headings) and **Work Sans** (interface).
+- Mascot: the pangolin appears on the login screen (peeking in from the bottom center, with the form in the middle) and on the "under construction" screen.
+
+## 10. Setup and scripts
+
+```bash
+cp .env.example .env
+npm install
+npm run dev        # http://localhost:5173 — proxies /api → http://localhost:3000
+```
+
+| Script               | Description                               |
+| -------------------- | ----------------------------------------- |
+| `pnpm run dev`       | Development server                        |
+| `pnpm run build`     | Typecheck + production build into `dist/` |
+| `pnpm run preview`   | Serves the build locally                  |
+| `pnpm run typecheck` | Type checking only                        |
+
+| Variable       | Description                       | Default |
+| -------------- | --------------------------------- | ------- |
+| `VITE_API_URL` | Base URL of the BFF / API Gateway | `/api`  |
+
+## 11. Workflow (Git and CI)
+
+- Branches: `main` (stable) ← `develop` ← `feature/<module>-<description>`. Changes land through Pull Requests.
+- Commits: [Conventional Commits](https://www.conventionalcommits.org/) in English (`feat`, `fix`, `refactor`, `docs`, `chore`, `style`, `test`), with the module as scope.
+- CI (`.github/workflows/ci.yml`, GitHub Actions) runs on every push to `main`/`develop` and on every PR targeting them, and can be started manually (`workflow_dispatch`). Steps: `npm ci` → `format:check` → `lint` → `typecheck` → `test` → `build`. `test` runs with `--if-present`, so it starts enforcing as soon as Vitest is added. A new push to a PR cancels its previous run.
+- Branch protection (recommended): require the **CI / Checks** status check on `main` and `develop`, and at least one approving review.
+- PR checklist: `npm run format:check`, `npm run lint` and `npm run build` pass · looks right in light and dark · handles loading, error and empty states · a new feature is added to `FEATURES` in `eslint.config.js`.
+
+## 12. Reference documents
+
+- Platform SRS (use cases, requirements and actors).
+- Entity–Relationship diagram (ERD) and initial proposed architecture (Lucidchart).
+- Project IEEE paper: _Pango: Gestión Inteligente de Inventarios con Predicción de Demanda para Pequeñas y Medianas Empresas_.
