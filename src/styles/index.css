@@ -1,8 +1,16 @@
-@import "tailwindcss";
-@import "./theme.css";
+@import 'tailwindcss';
+@import './theme.css';
 
 @layer base {
-  body { @apply bg-canvas font-body text-fg antialiased transition-colors duration-300; }
-  h1, h2, h3 { @apply font-display; }
-  ::selection { @apply bg-primary/30; }
+  body {
+    @apply bg-canvas font-body text-fg antialiased transition-colors duration-300;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+  ::selection {
+    @apply bg-primary/30;
+  }
 }

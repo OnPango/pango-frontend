@@ -1,73 +1,72 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-    color-scheme: light;
+  color-scheme: light;
 
-    --canvas: #F6F1E7;      /*Page background*/
-    --surface: #FFFFFF;     /*Cards, forms*/
-    --sidebar: transparent;   /*Sidebar*/
-    --sidebar-fg: #1E2A22;  /*Sidebar text color*/
+  --canvas: #f6f1e7; /*Page background*/
+  --surface: #ffffff; /*Cards, forms*/
+  --sidebar: transparent; /*Sidebar*/
+  --sidebar-fg: #1e2a22; /*Sidebar text color*/
 
-    --fg: #1E2A22;          /*Main text*/
-    --muted: #727272;       /*Secondary text*/
-    --line: #C5C1B9;        /*Borders and separators*/
+  --fg: #1e2a22; /*Main text*/
+  --muted: #727272; /*Secondary text*/
+  --line: #c5c1b9; /*Borders and separators*/
 
-    --primary: #B5502E;     /*Cobre*/
-    --primary-fg: #F6F1E7;
-    --secondary: #3B6E58;   /*Musgo*/
-    --secondary-fg: #F6F1E7;
-    --accent: #1E2A22;
-    --accent-fg: #F6F1E7;
+  --primary: #b5502e; /*Cobre*/
+  --primary-fg: #f6f1e7;
+  --secondary: #3b6e58; /*Musgo*/
+  --secondary-fg: #f6f1e7;
+  --accent: #1e2a22;
+  --accent-fg: #f6f1e7;
 
-    --success: #2F7D4F;
-    --warning: #B07612;
-    --danger: #B2342C;
-    
+  --success: #2f7d4f;
+  --warning: #b07612;
+  --danger: #b2342c;
 }
 
 .dark {
-    color-scheme: dark;
+  color-scheme: dark;
 
-    --canvas: #1A1A1A;
-    --surface: #121212;
-    --sidebar: transparent;
-    --sidebar-fg: #F6F1E7;
+  --canvas: #1a1a1a;
+  --surface: #121212;
+  --sidebar: transparent;
+  --sidebar-fg: #f6f1e7;
 
-    --fg: #F6F1E7;
-    --muted: #727272;
-    --line: #090909;
+  --fg: #f6f1e7;
+  --muted: #727272;
+  --line: #090909;
 
-    --primary: #5CA083;      /*Musgo claro*/
-    --primary-fg: #F6F1E7;
-    --secondary: #D6704E;    /*Cobre claro*/
-    --secondary-fg: #F6F1E7;
-    --accent: #1E2A22;
-    --accent-fg: #F6F1E7;
+  --primary: #5ca083; /*Musgo claro*/
+  --primary-fg: #f6f1e7;
+  --secondary: #d6704e; /*Cobre claro*/
+  --secondary-fg: #f6f1e7;
+  --accent: #1e2a22;
+  --accent-fg: #f6f1e7;
 
-    --success: #5EEF82;
-    --warning: #E0A840;
-    --danger: #EC786C;
+  --success: #5eef82;
+  --warning: #e0a840;
+  --danger: #ec786c;
 }
 
 @theme inline {
-    --color-canvas: var(--canvas);
-    --color-surface: var(--surface);
-    --color-sidebar: var(--sidebar);
-    --color-sidebar-fg: var(--sidebar-fg);
-    --color-fg: var(--fg);
-    --color-muted: var(--muted);
-    --color-line: var(--line);
-    --color-primary: var(--primary);
-    --color-primary-fg: var(--primary-fg);
-    --color-secondary: var(--secondary);
-    --color-secondary-fg: var(--secondary-fg);
-    --color-accent: var(--accent);
-    --color-accent-fg: var(--accent-fg);
-    --color-success: var(--success);
-    --color-warning: var(--warning);
-    --color-danger: var(--danger);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-fg: var(--sidebar-fg);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-secondary: var(--secondary);
+  --color-secondary-fg: var(--secondary-fg);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
 
-    --font-display: 'Space Grotesk', 'system-ui', 'sans-serif';
-    --font-body: 'Work Sans', 'system-ui', 'sans-serif';
-    --font-nunito: 'Nunito', 'system-ui', 'sans-serif';
+  --font-display: 'Space Grotesk', 'system-ui', 'sans-serif';
+  --font-body: 'Work Sans', 'system-ui', 'sans-serif';
+  --font-nunito: 'Nunito', 'system-ui', 'sans-serif';
 }

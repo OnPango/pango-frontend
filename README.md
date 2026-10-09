@@ -178,15 +178,15 @@ URLs are in Spanish and kebab-case. Permissions are provisional until the catalo
 - **User-facing text and URLs**: **Spanish**.
 - **Documentation, code comments and commit messages**: **English**.
 - ER diagram entities are translated with the glossary below; do not invent synonyms:
-  | ER diagram (Spanish) | Code (English) | | ER diagram (Spanish) | Code (English) |
-  |---|---|---|---|---|
-  | Producto (formerly "Material") | `Product` | | Predicción | `Forecast` |
-  | Almacén | `Warehouse` | | Alerta de inventario | `InventoryAlert` |
-  | Ubicación | `Location` | | Parámetros de reposición | `ReorderParams` |
-  | Inventario | `Inventory` | | Proveedor | `Supplier` |
-  | Movimiento | `Movement` | | Orden de compra | `PurchaseOrder` |
-  | Solicitud interna | `InternalRequest` | | Área | `Area` |
-  | Usuario | `User` | | Organización (tenant) | `Organization` |
+  | ER diagram (Spanish)           | Code (English)    |     | ER diagram (Spanish)     | Code (English)   |
+  | ------------------------------ | ----------------- | --- | ------------------------ | ---------------- |
+  | Producto (formerly "Material") | `Product`         |     | Predicción               | `Forecast`       |
+  | Almacén                        | `Warehouse`       |     | Alerta de inventario     | `InventoryAlert` |
+  | Ubicación                      | `Location`        |     | Parámetros de reposición | `ReorderParams`  |
+  | Inventario                     | `Inventory`       |     | Proveedor                | `Supplier`       |
+  | Movimiento                     | `Movement`        |     | Orden de compra          | `PurchaseOrder`  |
+  | Solicitud interna              | `InternalRequest` |     | Área                     | `Area`           |
+  | Usuario                        | `User`            |     | Organización (tenant)    | `Organization`   |
 
 ### 7.2 Summary
 
@@ -225,22 +225,36 @@ URLs are in Spanish and kebab-case. Permissions are provisional until the catalo
 
 ### 7.3 Additional rules
 
+🔒 Enforced by lint: `camelCase` for variables, functions and parameters (`PascalCase` also allowed for components, `UPPER_CASE` for constants), `PascalCase` for types, no `I` prefix on interfaces, and `import type` for type-only imports. File naming and the boolean `is/has/can` prefix are review items.
+
 - A component file exports **one** public component; private helpers may live in the same file if they are not reused.
-- Components use **named exports**; only pages use `export default` (required by `React.lazy`).
+- 🔒 Components use **named exports**; only pages (`src/features/*/pages/`) use `export default` (required by `React.lazy`).
 - No ambiguous abbreviations (`prod`, `wh`, `qty`). `id`, `url`, `dto` are fine; `i`/`j` only for trivial indexes.
 - Names describe the domain, not the implementation: `lowStockProducts`, not `filteredArray`.
 - Files with a role suffix (`.api`, `.store`, `.schema`, `.types`, `.keys`, `.mappers`) contain only that role.
 
 ## 8. Code conventions
 
-- **Strict TypeScript**: no `any`; use `unknown` and narrow it. No `// @ts-ignore`.
-- **Styles**: only semantic theme tokens (`bg-surface`, `text-fg`, `border-line`, `bg-primary`…). **Literal colors are forbidden** (`#fff`, `bg-white`, `text-gray-500`) in components: they break dark mode.
+Rules marked 🔒 are enforced by ESLint (`eslint.config.js`) and fail CI; the rest are review items.
+
+- 🔒 **Strict TypeScript**: no `any`; use `unknown` and narrow it. No `// @ts-ignore` (use `@ts-expect-error` with a reason).
+- 🔒 **Styles**: only semantic theme tokens (`bg-surface`, `text-fg`, `border-line`, `bg-primary`…). **Literal colors are forbidden** in `className` (`bg-white`, `text-gray-500`, `bg-[#fff]`): they break dark mode.
 - **Data**: read with `useQuery`, write with `useMutation` plus invalidation through the `*Keys` objects. No `fetch`/Axios calls inside components.
 - **Forms**: React Hook Form with `zodResolver`; the Zod schema lives in `types/<feature>.schema.ts`.
 - **Errors**: screens handle three explicit states — loading, error and empty — in addition to the data state.
-- **Accessibility**: real interactive elements (`button`, `a`), `aria-label` on icon-only controls, visible focus, legible contrast in both themes.
+- 🔒 **Accessibility**: real interactive elements (`button`, `a`) and `aria-label` on icon-only controls (`jsx-a11y` rules); visible focus and legible contrast in both themes are review items.
 - **Security**: store no sensitive data besides the session token; never rely on the UI for authorization.
 - **Performance**: pages are lazy-loaded; long lists are paginated server-side.
+
+### Testing
+
+- Vitest + Testing Library in a jsdom environment. Tests live next to the code they cover (`ProductForm.test.tsx`).
+- Test behavior as the user sees it: query by role, label or text (`getByRole`) and interact with `userEvent`. No snapshot tests and no assertions on implementation details.
+- Mock only the network boundary: `stubApi()` (`src/test/http.ts`) stubs the Axios adapter, so the real interceptors and API functions still run. Do not mock stores or your own modules.
+- Helpers in `src/test/`: `renderWithProviders`, `renderRoutes` (route tables, guards, redirects), `signInAs(permissions)`, `buildSessionUser` and `stubApi`. `setup.ts` resets the session, theme, `localStorage` and the HTTP stub after every test, so tests need no manual cleanup.
+- Naming: `describe('<unit>')` with `it('does X when Y')`, in English.
+- A new feature ships with tests for its API functions (request shape and mapping), its page states (loading, error, empty, data) and any permission-dependent UI.
+- `npm run test:coverage` shows coverage. There is no threshold yet; the placeholder pages are expected to show 0%.
 
 ## 9. Light / dark theme and visual identity
 
@@ -259,12 +273,16 @@ npm install
 npm run dev        # http://localhost:5173 — proxies /api → http://localhost:3000
 ```
 
-| Script               | Description                               |
-| -------------------- | ----------------------------------------- |
-| `pnpm run dev`       | Development server                        |
-| `pnpm run build`     | Typecheck + production build into `dist/` |
-| `pnpm run preview`   | Serves the build locally                  |
-| `pnpm run typecheck` | Type checking only                        |
+| Script                                     | Description                                     |
+| ------------------------------------------ | ----------------------------------------------- |
+| `pnpm run dev`                             | Development server                              |
+| `pnpm run build`                           | Typecheck + production build into `dist/`       |
+| `pnpm run preview`                         | Serves the build locally                        |
+| `pnpm run typecheck`                       | Type checking only                              |
+| `pnpm run lint` / `npm run lint:fix`       | ESLint (check / auto-fix)                       |
+| `pnpm run format` / `npm run format:check` | Prettier (write / check)                        |
+| `pnpm test` / `npm run test:watch`         | Vitest (single run / watch mode)                |
+| `pnpm run test:coverage`                   | Vitest with a V8 coverage report in `coverage/` |
 
 | Variable       | Description                       | Default |
 | -------------- | --------------------------------- | ------- |
@@ -274,9 +292,9 @@ npm run dev        # http://localhost:5173 — proxies /api → http://localhost
 
 - Branches: `main` (stable) ← `develop` ← `feature/<module>-<description>`. Changes land through Pull Requests.
 - Commits: [Conventional Commits](https://www.conventionalcommits.org/) in English (`feat`, `fix`, `refactor`, `docs`, `chore`, `style`, `test`), with the module as scope.
-- CI (`.github/workflows/ci.yml`, GitHub Actions) runs on every push to `main`/`develop` and on every PR targeting them, and can be started manually (`workflow_dispatch`). Steps: `npm ci` → `format:check` → `lint` → `typecheck` → `test` → `build`. `test` runs with `--if-present`, so it starts enforcing as soon as Vitest is added. A new push to a PR cancels its previous run.
+- CI (`.github/workflows/ci.yml`, GitHub Actions) runs on every push to `main`/`develop` and on every PR targeting them, and can be started manually (`workflow_dispatch`). Steps: `npm ci` → `format:check` → `lint` → `typecheck` → `test` → `build`. A new push to a PR cancels its previous run.
 - Branch protection (recommended): require the **CI / Checks** status check on `main` and `develop`, and at least one approving review.
-- PR checklist: `npm run format:check`, `npm run lint` and `npm run build` pass · looks right in light and dark · handles loading, error and empty states · a new feature is added to `FEATURES` in `eslint.config.js`.
+- PR checklist: `npm run format:check`, `npm run lint`, `npm test` and `npm run build` pass · looks right in light and dark · handles loading, error and empty states · new behavior has tests · a new feature is added to `FEATURES` in `eslint.config.js`.
 
 ## 12. Reference documents
 

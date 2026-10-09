@@ -28,7 +28,9 @@ export function applyTheme(resolved: ResolvedTheme) {
   const root = document.documentElement;
   root.classList.toggle('dark', resolved === 'dark');
   root.style.colorScheme = resolved;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLORS[resolved]);
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute('content', THEME_COLORS[resolved]);
 }
 
 interface ThemeState {
@@ -43,7 +45,11 @@ export const useThemeStore = create<ThemeState>((set) => {
     mode,
     resolved: resolveTheme(mode),
     setMode: (next) => {
-      try { localStorage.setItem(THEME_STORAGE_KEY, next); } catch { /* almacenamiento no disponible */ }
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, next);
+      } catch {
+        /* almacenamiento no disponible */
+      }
       const resolved = resolveTheme(next);
       applyTheme(resolved);
       set({ mode: next, resolved });
