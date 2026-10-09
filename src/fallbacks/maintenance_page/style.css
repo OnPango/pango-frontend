@@ -1,0 +1,52 @@
+html, body { height:100%; margin:0; }
+body { display:grid; place-items:center; }
+
+.pango { position:relative; width:min(92vw, 960px); aspect-ratio:1496 / 650; }
+.pango img { position:absolute; display:block; height:auto; max-width:none; user-select:none; -webkit-user-drag:none; }
+.pango .full { left:0; top:0; width:100%; }
+
+/* Respiración: copia recortada del pangolín (sin cono ni barricada) */
+.body { position:absolute; inset:0; clip-path:polygon(40.11% 7.69%,50.80% 5.38%,57.49% 12.31%,60.83% 38.46%,64.84% 52.31%,68.18% 78.46%,69.18% 90.77%,24.40% 90.77%,26.74% 78.46%,30.75% 60.00%,32.75% 49.23%,34.76% 29.23%); transform-origin:48% 82%; animation:breathe 4.6s ease-in-out infinite alternate; }
+@keyframes breathe { from { transform:scale(1); } to { transform:scale(1.009) translateY(-.25%); } }
+
+/* Parpadeo */
+.eye { transform-origin:50% 52%; animation:blink 5.8s infinite; }
+@keyframes blink { 0%,86%,92%,100% { transform:scaleY(1); } 89% { transform:scaleY(.07); } }
+
+/* Nariz: olfateo suave */
+.nose { transform-origin:50% 40%; animation:sniff 6.4s ease-in-out infinite; }
+@keyframes sniff {
+0%,24%,40%,100% { transform:none; }
+27% { transform:translateY(-2.2%) scale(1.045) rotate(-1.4deg); }
+30% { transform:translateY(.6%) scale(.99); }
+33% { transform:translateY(-1.8%) scale(1.04) rotate(1.2deg); }
+36% { transform:none; }
+}
+
+/* Hojas */
+.leaf { transform-origin:50% 96%; animation:sway 3.8s ease-in-out infinite alternate; }
+.leaf.r { animation-duration:4.4s; animation-delay:-1.7s; }
+@keyframes sway { from { transform:rotate(-1.8deg); } to { transform:rotate(2deg); } }
+
+/* Rayitas junto al casco */
+.marks { transform-origin:0% 100%; animation:marks 3.2s ease-in-out infinite; }
+@keyframes marks { 0%,55%,100% { opacity:1; transform:none; } 68% { opacity:.25; transform:translate(.4%,-.6%) scale(1.03); } 80% { opacity:1; } }
+
+/* Luz de la barricada */
+.lamp { position:absolute; left:85.43%; top:34.15%; width:12%; aspect-ratio:1; translate:-50% -50%; border-radius:50%;
+        background:radial-gradient(circle, rgba(255,196,64,.95) 0%, rgba(255,150,20,.45) 38%, rgba(255,150,20,0) 70%);
+        pointer-events:none; animation:glow 2.6s ease-in-out infinite; }
+@keyframes glow { 0%,100% { opacity:.05; transform:scale(.8); } 50% { opacity:.7; transform:scale(1.15); } }
+
+/* Polvo y partículas (las crea el script de abajo) */
+.dust { position:absolute; inset:0; pointer-events:none; overflow:visible; }
+.puff { position:absolute; aspect-ratio:1; border-radius:50%; opacity:0;
+        background:radial-gradient(circle, rgba(222,204,168,.55) 0%, rgba(222,204,168,.22) 45%, rgba(222,204,168,0) 70%);
+        animation:puff var(--d) ease-out var(--t) infinite; }
+@keyframes puff { 0% { opacity:0; transform:translate(0,0) scale(.5); } 25% { opacity:.55; }
+                100% { opacity:0; transform:translate(var(--x), -90%) scale(1.7); } }
+.mote { position:absolute; aspect-ratio:1; border-radius:50%; background:rgba(232,214,178,.85); opacity:0;
+        animation:mote var(--d) ease-in-out var(--t) infinite; }
+@keyframes mote { 0%,100% { opacity:0; transform:translate(0,0); } 30%,70% { opacity:.8; } 50% { transform:translate(var(--x), var(--y)); } }
+
+@media (prefers-reduced-motion: reduce) { .pango *, .pango *::before { animation:none !important; } .lamp, .dust { display:none; } }
