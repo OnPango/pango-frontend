@@ -1,13 +1,13 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/index.css';
-import { MaintenancePage } from './fallbacks/maintenance_page/MaintenancePage.tsx';
 import { initTheme } from './core/theme/theme.sore.ts';
+import { App } from './app/App.tsx';
 
 initTheme();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <MaintenancePage />
+    <App />
   </StrictMode>,
 );
