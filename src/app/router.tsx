@@ -13,7 +13,7 @@ const guarded = (path: string, anyOf: Permission[], Page: LazyPage): RouteObject
   children: [{ path, element: page({ Page }) }],
 });
 
-const LoginPage = lazy(() => Promise.resolve({ default: () => <div>Login</div> }));
+const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
 const DashboardPage = lazy(() => Promise.resolve({ default: () => <div>Dashboard</div> }));
 
 //Example Page:
