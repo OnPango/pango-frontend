@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router-dom';
 import { router } from './router';
+import { useAuthStore } from '@/core/auth/auth.store';
+import { useEffect } from 'react';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,6 +19,32 @@ const queryClient = new QueryClient({
 });
 
 export function App() {
+  useEffect(() => {
+    useAuthStore.setState({
+      user: {
+        id: '1',
+        name: 'Carlos',
+        email: 'carlosarango1107@outlook.com',
+        roleName: 'Admin',
+        areaId: '1',
+        organizationId: '1',
+        permissions: [
+          'dashboard:view',
+          'users:manage',
+          'warehouses:manage',
+          'products:manage',
+          'inventory:record',
+          'requests:create',
+          'requests:attend',
+          'suppliers:manage',
+          'forecast:view',
+          'alerts:view',
+          'areas:manage',
+        ],
+      },
+      isAuthenticated: true,
+    });
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />

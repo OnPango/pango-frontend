@@ -11,6 +11,7 @@
   --fg: #1e2a22; /*Main text*/
   --muted: #727272; /*Secondary text*/
   --line: #c5c1b9; /*Borders and separators*/
+  --line2: #c5c1b9;
 
   --primary: #b5502e; /*Cobre*/
   --primary-fg: #f6f1e7;
@@ -34,7 +35,8 @@
 
   --fg: #f6f1e7;
   --muted: #727272;
-  --line: #2a2a2a;
+  --line: #0e0e0e;
+  --line2: #2a2a2a;
 
   --primary: #5ca083; /*Musgo claro*/
   --primary-fg: #f6f1e7;
@@ -56,6 +58,7 @@
   --color-fg: var(--fg);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-line2: var(--line2);
   --color-primary: var(--primary);
   --color-primary-fg: var(--primary-fg);
   --color-secondary: var(--secondary);

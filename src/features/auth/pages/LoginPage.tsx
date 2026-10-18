@@ -5,6 +5,7 @@ import { Leaves2 } from '@/shared/ui/Leaves2';
 import { Leaves3 } from '@/shared/ui/Leaves3';
 import { DoubleArc, SimpleArc } from '@/shared/ui/DecorativeArcs';
 import { Logo } from '@/shared/ui/Logo';
+import { Button } from '@/shared/ui/components/Button';
 
 export default function LoginPage() {
   return (
@@ -89,7 +90,7 @@ export default function LoginPage() {
         </section>
         <form
           onSubmit={() => {}}
-          className="w-full space-y-5 rounded-4xl border border-line bg-surface px-12 py-8 shadow-lg"
+          className="w-full space-y-5 rounded-4xl border border-line2 bg-surface px-12 py-8 shadow-lg"
         >
           <h4 className="text-md m-0 font-light tracking-wide">BIENVENIDO A PANGO</h4>
           {/*pequeña linea*/}
@@ -101,11 +102,11 @@ export default function LoginPage() {
           </section>
 
           <section className="flex flex-col gap-3">
-            <div className="flex items-center gap-4 rounded-2xl border border-line p-3 focus-within:border-accent">
+            <div className="flex items-center gap-4 rounded-2xl border border-line2 p-3 focus-within:border-accent">
               <FaUserLarge className="text-lg text-accent" />
               <input className="w-full outline-none" placeholder="Email" />
             </div>
-            <div className="flex items-center gap-4 rounded-2xl border border-line p-3 focus-within:border-accent">
+            <div className="flex items-center gap-4 rounded-2xl border border-line2 p-3 focus-within:border-accent">
               <RiLockPasswordFill className="text-xl text-accent" />
               <input className="w-full outline-none" type="password" placeholder="Contraseña" />
             </div>
@@ -120,16 +121,16 @@ export default function LoginPage() {
             </div>
           </section>
           <section className="space-y-2">
-            <button className="w-full cursor-pointer rounded-xl bg-primary p-2 text-primary-fg hover:bg-accent">
+            <Button variant="primary" className="w-full p-2.5">
               Iniciar sesión
-            </button>
+            </Button>
             <div className="flex items-center justify-center gap-2 text-muted">
               <div className="h-px w-full bg-canvas"></div>o
               <div className="h-px w-full bg-canvas"></div>
             </div>
-            <button className="btn-primary w-full cursor-pointer rounded-xl bg-canvas p-2">
+            <Button variant="outline" className="w-full p-2.5">
               Acceso con SSO
-            </button>
+            </Button>
             <p className="text-center text-sm text-muted">
               ¿Aún no tienes cuenta?{' '}
               <a href="/" className="text-primary">

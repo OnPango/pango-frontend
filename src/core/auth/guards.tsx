@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from './auth.store';
-import { hasAnyPermission, type Permission } from './permissions';
+import { hasAnyPermission } from './permissions';
+import { type Permission } from '@/shared/types/user';
 
 export function RequireAuth() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
