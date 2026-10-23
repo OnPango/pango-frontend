@@ -22,53 +22,53 @@ export function AppLayout() {
 //   const logout = useAuthStore((state) => state.clearSession);
   const ToggleIcon = isCollapsed ? <TbLayoutSidebarRightCollapseFilled className='size-6'/> : <TbLayoutSidebarLeftCollapseFilled className='size-6' />
   return (
-    <div className="flex h-dvh flex-col">
-      <header className="flex shrink-0 items-center justify-between gap-3 border border-line2 bg-surface px-4 py-2 m-2 rounded-2xl md:px-6">
+    <div className="flex shrink-0 w-dvw min-w-96 h-dvh flex-col p-2 transition-all duration-500 ease-in-out">
+      <header className="flex w-full shrink-0 items-center justify-between gap-3 border border-line bg-surface px-4 py-2 rounded-2xl md:px-6">
         <section className='flex items-center gap-3'>
-            <Logo width='30' height='30'/>
-            {/* Nombre del item */}
-            <span className="text-xl font-medium">Dashboard</span>
-            {toggle && (
-          <Button
-            type="button"
-            variant='ghost'
-            onClick={toggle}
-            aria-expanded={!isCollapsed}
-            aria-controls={'sidebar'}
-            title={isCollapsed ? 'Expandir menú' : undefined}
-            className='p-2'
-            
-          >
-           {ToggleIcon}
-          </Button>
-        )}
-        <span className='text-muted font-light'>/Dashboard</span>
-        <div className="flex items-center w-md gap-4 rounded-full border border-line2 px-3 py-1 focus-within:border-accent">
+          <Logo width='30' height='30'/>
+          {/* Nombre del item */}
+          <span className="hidden lg:block text-xl font-medium">Dashboard</span>
+          {toggle && (
+            <Button
+              type="button"
+              variant='ghost'
+              onClick={toggle}
+              aria-expanded={!isCollapsed}
+              aria-controls={'sidebar'}
+              title={isCollapsed ? 'Expandir menú' : undefined}
+              className='hidden lg:flex p-2'
+              
+            >
+            {ToggleIcon}
+            </Button>
+          )}
+          <span className='text-muted font-light hidden lg:block'>/Dashboard</span>
+          <div className="hidden lg:flex items-center w-md gap-4 rounded-full border border-line2 px-3 py-1 focus-within:border-accent">
             <FiSearch className="text-lg text-muted size-7" />
             <input type="search" name="search" id='header-search' placeholder="Búscar producto, código o alerta..." className="hidden md:block w-full outline-none" />
-        </div>
+          </div>
+          <Button
+              variant="ghost"
+              size="sm"
+              className="lg:hidden"
+              aria-label="Abrir menú"
+              aria-expanded={isMobileNavOpen}
+              aria-controls="mobile-nav"
+              onClick={() => setIsMobileNavOpen(true)}
+            >
+              <RxHamburgerMenu aria-hidden className="size-5" />
+            </Button>
         </section>
 
         <section className='flex gap-5'>
-            <Button
-          variant="ghost"
-          size="sm"
-          className="md:hidden"
-          aria-label="Abrir menú"
-          aria-expanded={isMobileNavOpen}
-          aria-controls="mobile-nav"
-          onClick={() => setIsMobileNavOpen(true)}
-        >
-          <RxHamburgerMenu aria-hidden className="size-5" />
-        </Button>
-        <ThemeToggle />
-        <div className={cn('flex items-center text-right gap-2')}>
-            <div className='flex flex-col min-w-0'>
+            <ThemeToggle />
+            <div className={cn('flex items-center text-right gap-2')}>
+              <div className='flex flex-col min-w-0'>
                     <p className="truncate text-sm font-medium">{user?.name}</p>
                     <p className="truncate text-xs text-sidebar-fg/60">{user?.roleName}</p>
-                  </div>
-                  {user ? <AvatarButton user={user} /> : null}
-                </div>
+              </div>
+              {user ? <AvatarButton user={user} /> : null}
+            </div>
         </section>
       </header>
 
@@ -79,7 +79,10 @@ export function AppLayout() {
         </main>
       </div>
 
-      <MobileNav isOpen={isMobileNavOpen} onClose={() => setIsMobileNavOpen(false)} />
+
+  <MobileNav isOpen={isMobileNavOpen} onClose={() => setIsMobileNavOpen(false)} />
+
+      
     </div>
   );
 }

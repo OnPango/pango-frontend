@@ -13,8 +13,8 @@ export function Sidebar() {
     <aside
       id={SIDEBAR_ID}
       className={cn(
-        'hidden shrink-0 bg-sidebar text-sidebar-fg transition-[width] duration-200 md:block',
-        isCollapsed ? 'w-18' : 'w-60',
+        'hidden shrink-0 bg-sidebar text-sidebar-fg transition-[width] duration-500 lg:block',
+        isCollapsed ? 'w-18' : 'w-60 border-r border-line2',
       )}
     >
       <SidebarContent isCollapsed={isCollapsed} onToggleCollapse={toggle} controlsId={SIDEBAR_ID} />

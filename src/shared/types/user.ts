@@ -1,5 +1,6 @@
 export type Permission =
   | 'dashboard:view'
+  | 'movements:view'
   | 'users:manage'
   | 'areas:manage'
   | 'products:manage'
@@ -9,7 +10,8 @@ export type Permission =
   | 'requests:attend'
   | 'suppliers:manage'
   | 'forecast:view'
-  | 'alerts:view';
+  | 'alerts:view'
+  | 'movements:import-history';
 
 export type User = {
     id: string;

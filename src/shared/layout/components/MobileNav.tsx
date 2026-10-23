@@ -1,6 +1,6 @@
 import { VscChromeClose } from 'react-icons/vsc';
 import { useEffect, useRef } from 'react';
-import { SidebarContent } from './SidebarContent';
+import { SidebarContentMobile } from './SidebarContentMobile';
 
 interface MobileNavProps {
   isOpen: boolean;
@@ -39,11 +39,10 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
       id="mobile-nav"
       aria-label="Menú de navegación"
       onClose={onClose}
-      className="m-0 mr-auto h-dvh max-h-dvh w-72 max-w-[85vw] bg-sidebar p-0 text-sidebar-fg backdrop:bg-sidebar/60 md:hidden"
+      className="fixed inset-0 size-full max-h-none max-w-none bg-fg/5 text-sidebar-fg backdrop-blur-md transition-[opacity,translate] duration-300 ease-out starting:translate-y-4 starting:opacity-0 motion-reduce:transition-none lg:hidden"
     >
       {isOpen && (
-        <SidebarContent
-          isCollapsed={false}
+        <SidebarContentMobile
           onNavigate={onClose}
           headerAction={
             <button

@@ -4,6 +4,10 @@ import { FaWarehouse } from "react-icons/fa";
 import { FaBoxes } from "react-icons/fa";
 import { RiGitPullRequestFill } from "react-icons/ri";
 import { FaTruck } from "react-icons/fa";
+import { HiOutlineSwitchHorizontal } from "react-icons/hi";
+import { FiUpload } from "react-icons/fi";
+import { BsShieldFillCheck } from "react-icons/bs";
+import { RxActivityLog } from "react-icons/rx";
 
 import type { IconType } from "react-icons";
 
@@ -75,7 +79,9 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: 'general',
     label: 'General',
-    items: [{ to: '/', label: 'Dashboard', icon: GoHomeFill, anyOf: ['dashboard:view'] }],
+    items: [
+        { to: '/', label: 'Dashboard', icon: GoHomeFill, anyOf: [] }
+    ],
   },
   {
     id: 'operations',
@@ -84,34 +90,34 @@ export const NAV_SECTIONS: NavSection[] = [
       { to: '/products', label: 'Productos', icon: FaBoxArchive, anyOf: ['products:manage'] },
       { to: '/warehouses', label: 'Almacenes', icon: FaWarehouse, anyOf: ['warehouses:manage'] },
       { to: '/inventory', label: 'Inventario', icon: FaBoxes, anyOf: ['inventory:record'] },
-      {
-        to: '/requests',
-        label: 'Solicitudes',
-        icon: RiGitPullRequestFill,
-        anyOf: ['requests:create', 'requests:attend'],
-      },
+      { to: '/requests', label: 'Solicitudes', icon: RiGitPullRequestFill, anyOf: ['requests:create', 'requests:attend'] },
+      { to: '/movements', label: 'Movimientos', icon: HiOutlineSwitchHorizontal, anyOf: [] },
+    ],
+  },
+  {
+    id: 'data',
+    label: 'Datos',
+    items: [
+        { to: '/import-history', label: 'Importar historial', icon: FiUpload, anyOf: [] }
+    ]
+  },
+  {
+    id: 'admin',
+    label: 'Administración',
+    items: [
+      { to: '/areas', label: 'Áreas', icon: null, anyOf: [] },
+      { to: '/users', label: 'Usuarios', icon: null, anyOf: [] },
+      { to: '/roles-permissions', label: 'Roles y Permisos', icon: BsShieldFillCheck, anyOf: [] },
+      { to: 'Loggbook', label: 'Bitácora', icon: RxActivityLog, anyOf: [] }
     ],
   },
   {
     id: 'supply',
     label: 'Abastecimiento',
     items: [
-      {
-        to: '/suppliers',
-        label: 'Proveedores y compras',
-        icon: FaTruck,
-        anyOf: ['suppliers:manage'],
-      },
-      { to: '/forecast', label: 'Predicción', icon: null, anyOf: ['forecast:view'] },
-      { to: '/alertas', label: 'Alertas', icon: null, anyOf: ['alerts:view'] },
-    ],
-  },
-  {
-    id: 'admin',
-    label: 'Administración',
-    items: [
-      { to: '/areas', label: 'Áreas', icon: null, anyOf: ['areas:manage'] },
-      { to: '/users', label: 'Usuarios', icon: null, anyOf: ['users:manage'] },
+      { to: '/suppliers', label: 'Proveedores y compras', icon: FaTruck, anyOf: ['suppliers:manage'] },
+      { to: '/forecast', label: 'Predicción', icon: null, anyOf: [] },
+      { to: '/alertas', label: 'Alertas', icon: null, anyOf: [] },
     ],
   },
 ];
