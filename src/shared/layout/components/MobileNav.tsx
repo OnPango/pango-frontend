@@ -39,7 +39,7 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
       id="mobile-nav"
       aria-label="Menú de navegación"
       onClose={onClose}
-      className="fixed inset-0 size-full max-h-none max-w-none bg-fg/5 text-sidebar-fg backdrop-blur-md transition-[opacity,translate] duration-300 ease-out starting:translate-y-4 starting:opacity-0 motion-reduce:transition-none lg:hidden"
+      className="fixed inset-0 size-full max-h-none max-w-none bg-fg/5 text-sidebar-fg backdrop-blur-md transition-[opacity,translate] duration-300 ease-out motion-reduce:transition-none lg:hidden starting:translate-y-4 starting:opacity-0"
     >
       {isOpen && (
         <SidebarContentMobile

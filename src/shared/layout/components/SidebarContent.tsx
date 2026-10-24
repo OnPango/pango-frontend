@@ -22,10 +22,7 @@ interface SidebarContentProps {
 const footerButton =
   'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-fg/80 transition hover:bg-sidebar-fg/10 hover:text-sidebar-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/60';
 
-export function SidebarContent({
-  isCollapsed,
-  onNavigate,
-}: SidebarContentProps) {
+export function SidebarContent({ isCollapsed, onNavigate }: SidebarContentProps) {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.clearSession);
 
@@ -71,15 +68,12 @@ export function SidebarContent({
                             'flex items-center gap-3 rounded-full text-sm transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-hidden',
                             centerWhenCollapsed,
                             isActive
-                              ? 'bg-primary text-primary-fg py-3 px-4'
-                              : 'text-sidebar-fg hover:bg-sidebar-fg/10 hover:text-sidebar-fg px-3 py-2',
+                              ? 'bg-primary px-4 py-3 text-primary-fg'
+                              : 'px-3 py-2 text-sidebar-fg hover:bg-sidebar-fg/10 hover:text-sidebar-fg',
                           )
                         }
                       >
-                        {Icon && (
-                          <Icon aria-hidden className="size-5 shrink-0" />
-                        )
-                        }
+                        {Icon && <Icon aria-hidden className="size-5 shrink-0" />}
                         <span className={cn(hiddenWhenCollapsed)}>{item.label}</span>
                       </NavLink>
                     </li>

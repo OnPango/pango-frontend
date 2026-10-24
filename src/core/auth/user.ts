@@ -14,11 +14,11 @@ export type Permission =
   | 'movements:import-history';
 
 export type User = {
-    id: string;
-    name: string;
-    email: string;
-    roleName: string;
-    areaId: string;
-    organizationId: string;
-    permissions: Permission[];
-}
+  id: string;
+  name: string;
+  email: string;
+  roleName: string;
+  areaId: string;
+  organizationId: string;
+  permissions: Permission[];
+};

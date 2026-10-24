@@ -4,6 +4,7 @@ import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
 import { cn } from '@/shared/lib/cn';
 import { NAV_SECTIONS } from '../nav';
+import { Logo } from '@/shared/ui/Logo';
 
 interface SidebarContentMobileProps {
   /** Called when a link is clicked; the drawer uses it to close itself. */
@@ -37,14 +38,14 @@ export function SidebarContentMobile({ onNavigate, headerAction }: SidebarConten
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex shrink-0 items-center justify-between px-6 pt-5">
-        <span className="font-display text-xl font-bold tracking-wide">PANGO</span>
+        <Logo src="logos/pango-logo-horizontal-marron.svg" width="130" />
         {headerAction}
       </div>
 
       <nav
         ref={scrollerRef}
         aria-label="Navegación principal"
-        className="edge-fade-y min-h-0 flex-1 snap-y snap-proximity overflow-y-auto overscroll-contain px-6 py-[30dvh] [scrollbar-none] [&::-webkit-scrollbar]:hidden"
+        className="[scrollbar-none] min-h-0 flex-1 snap-y snap-proximity overflow-y-auto overscroll-contain edge-fade-y px-6 py-[30dvh] [&::-webkit-scrollbar]:hidden"
       >
         <div className="mx-auto flex max-w-md flex-col gap-10">
           {sections.map((section) => {

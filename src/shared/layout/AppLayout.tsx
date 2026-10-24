@@ -1,7 +1,8 @@
 import { RxHamburgerMenu } from 'react-icons/rx';
-import { TbLayoutSidebarLeftCollapseFilled } from "react-icons/tb";
-import { TbLayoutSidebarRightCollapseFilled } from "react-icons/tb";
-import { FiSearch } from "react-icons/fi";
+import { TbLayoutSidebarLeftCollapseFilled } from 'react-icons/tb';
+import { TbLayoutSidebarRightCollapseFilled } from 'react-icons/tb';
+import { FiSearch } from 'react-icons/fi';
+import { IoNotifications } from 'react-icons/io5';
 
 import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
@@ -15,69 +16,76 @@ import { useAuthStore } from '@/core/auth/auth.store';
 import { AvatarButton } from '../ui/components/AvatarButton';
 import { Logo } from '../ui/Logo';
 
-
 export function AppLayout() {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const isCollapsed = useSidebarStore((state) => state.isCollapsed);
   const toggle = useSidebarStore((state) => state.toggle);
   const user = useAuthStore((state) => state.user);
   const location = useLocation();
-  const ToggleIcon = isCollapsed ? <TbLayoutSidebarRightCollapseFilled className='size-6'/> : <TbLayoutSidebarLeftCollapseFilled className='size-6' />
+  const ToggleIcon = isCollapsed ? (
+    <TbLayoutSidebarRightCollapseFilled className="size-6" />
+  ) : (
+    <TbLayoutSidebarLeftCollapseFilled className="size-6" />
+  );
 
   function getTitle() {
     const path = location.pathname.split('/')[1];
-    if(path === '') return 'DASHBOARD';
+    if (path === '') return 'DASHBOARD';
     return path.toLocaleUpperCase();
   }
 
   return (
-    <div className="flex shrink-0 w-dvw min-w-96 h-dvh flex-col p-2 transition-all duration-500 ease-in-out">
-      <header className="flex w-full shrink-0 items-center justify-between gap-3 border border-line bg-surface px-4 py-2 rounded-2xl md:px-6">
-        <section className='flex items-center gap-3'>
-          <Logo width='30' height='30'/>
+    <div className="flex h-dvh w-dvw min-w-96 shrink-0 flex-col p-2 transition-all duration-500 ease-in-out">
+      <header className="flex w-full shrink-0 items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-2 md:px-6">
+        <section className="flex items-center gap-3">
+          <Logo width="30" height="30" />
           {/* Nombre del item */}
-          <span className="hidden lg:block text-md font-semibold">{getTitle()}</span>
+          <span className="text-md hidden font-semibold lg:block">{getTitle()}</span>
           {toggle && (
             <Button
               type="button"
-              variant='ghost'
+              variant="ghost"
               onClick={toggle}
               aria-expanded={!isCollapsed}
               aria-controls={'sidebar'}
               title={isCollapsed ? 'Expandir menú' : undefined}
-              className='hidden lg:flex p-2'
-              
+              className="hidden p-2 lg:flex"
             >
-            {ToggleIcon}
+              {ToggleIcon}
             </Button>
           )}
-          <span className='text-muted font-light hidden lg:block'>/{getTitle().toLowerCase()}</span>
-          <div className="hidden lg:flex items-center w-md gap-4 rounded-full border border-line2 px-3 py-1 focus-within:border-accent">
-            <FiSearch className="text-lg text-muted size-7" />
-            <input type="search" name="search" id='header-search' placeholder="Búscar producto, código o alerta..." className="hidden md:block w-full outline-none" />
+          <span className="hidden font-light text-muted lg:block">/{getTitle().toLowerCase()}</span>
+          <div className="hidden w-md items-center gap-4 rounded-full border border-line2 px-3 py-1 focus-within:border-accent lg:flex">
+            <FiSearch className="size-7 text-lg text-muted" />
+            <input
+              type="search"
+              name="search"
+              id="header-search"
+              placeholder="Búscar producto, código o alerta..."
+              className="hidden w-full outline-none md:block"
+            />
           </div>
           <Button
-              variant="ghost"
-              size="sm"
-              className="lg:hidden"
-              aria-label="Abrir menú"
-              aria-expanded={isMobileNavOpen}
-              aria-controls="mobile-nav"
-              onClick={() => setIsMobileNavOpen(true)}
-            >
-              <RxHamburgerMenu aria-hidden className="size-5" />
-            </Button>
+            variant="ghost"
+            size="sm"
+            className="lg:hidden"
+            aria-label="Abrir menú"
+            aria-expanded={isMobileNavOpen}
+            aria-controls="mobile-nav"
+            onClick={() => setIsMobileNavOpen(true)}
+          >
+            <RxHamburgerMenu aria-hidden className="size-5" />
+          </Button>
         </section>
 
-        <section className='flex gap-5'>
-            <ThemeToggle />
-            <div className={cn('flex items-center text-right gap-2')}>
-              <div className='flex flex-col min-w-0'>
-                    <p className="truncate text-sm font-medium">{user?.name}</p>
-                    <p className="truncate text-xs text-sidebar-fg/60">{user?.roleName}</p>
-              </div>
-              {user ? <AvatarButton user={user} /> : null}
-            </div>
+        <section className="flex gap-5">
+          <ThemeToggle />
+          <Button variant="ghost" size="sm" className="p-2 text-fg" aria-label="Notificaciones">
+            <IoNotifications aria-hidden className="size-5" />
+          </Button>
+          <div className={cn('flex items-center gap-2 text-right')}>
+            {user ? <AvatarButton user={user} /> : null}
+          </div>
         </section>
       </header>
 

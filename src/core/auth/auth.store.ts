@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User as SessionUser } from '@/shared/types/user';
+import type { User as SessionUser } from '@/core/auth/user';
 
 interface AuthState {
   user: SessionUser | null;

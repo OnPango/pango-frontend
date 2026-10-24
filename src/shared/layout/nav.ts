@@ -1,19 +1,19 @@
-import { GoHomeFill } from "react-icons/go";
-import { FaBoxArchive } from "react-icons/fa6";
-import { FaWarehouse } from "react-icons/fa";
-import { FaBoxes } from "react-icons/fa";
-import { RiGitPullRequestFill } from "react-icons/ri";
-import { FaTruck } from "react-icons/fa";
-import { HiOutlineSwitchHorizontal } from "react-icons/hi";
-import { FiUpload } from "react-icons/fi";
-import { BsShieldFillCheck } from "react-icons/bs";
-import { RxActivityLog } from "react-icons/rx";
-import { HiUsers } from "react-icons/hi2";
-import { HiBellAlert } from "react-icons/hi2";
-import { GoGraph } from "react-icons/go";
+import { GoHomeFill } from 'react-icons/go';
+import { FaBoxArchive } from 'react-icons/fa6';
+import { FaWarehouse } from 'react-icons/fa';
+import { FaBoxes } from 'react-icons/fa';
+import { RiGitPullRequestFill } from 'react-icons/ri';
+import { FaTruck } from 'react-icons/fa';
+import { HiOutlineSwitchHorizontal } from 'react-icons/hi';
+import { FiUpload } from 'react-icons/fi';
+import { BsShieldFillCheck } from 'react-icons/bs';
+import { RxActivityLog } from 'react-icons/rx';
+import { HiUsers } from 'react-icons/hi2';
+import { HiBellAlert } from 'react-icons/hi2';
+import { GoGraph } from 'react-icons/go';
 
-import type { IconType } from "react-icons";
-import type { Permission } from '@/shared/types/user';
+import type { IconType } from 'react-icons';
+import type { Permission } from '@/core/auth/user';
 
 export interface NavItem {
   to: string;
@@ -33,9 +33,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: 'general',
     label: 'General',
-    items: [
-        { to: '/', label: 'Inicio', icon: GoHomeFill, anyOf: [] }
-    ],
+    items: [{ to: '/', label: 'Inicio', icon: GoHomeFill, anyOf: [] }],
   },
   {
     id: 'operations',
@@ -44,16 +42,19 @@ export const NAV_SECTIONS: NavSection[] = [
       { to: '/products', label: 'Productos', icon: FaBoxArchive, anyOf: ['products:manage'] },
       { to: '/warehouses', label: 'Almacenes', icon: FaWarehouse, anyOf: ['warehouses:manage'] },
       { to: '/inventory', label: 'Inventario', icon: FaBoxes, anyOf: ['inventory:record'] },
-      { to: '/requests', label: 'Solicitudes', icon: RiGitPullRequestFill, anyOf: ['requests:create', 'requests:attend'] },
+      {
+        to: '/requests',
+        label: 'Solicitudes',
+        icon: RiGitPullRequestFill,
+        anyOf: ['requests:create', 'requests:attend'],
+      },
       { to: '/movements', label: 'Movimientos', icon: HiOutlineSwitchHorizontal, anyOf: [] },
     ],
   },
   {
     id: 'data',
     label: 'Datos',
-    items: [
-        { to: '/import-history', label: 'Importar historial', icon: FiUpload, anyOf: [] }
-    ]
+    items: [{ to: '/import-history', label: 'Importar historial', icon: FiUpload, anyOf: [] }],
   },
   {
     id: 'admin',
@@ -61,16 +62,16 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: '/users', label: 'Usuarios', icon: HiUsers, anyOf: [] },
       { to: '/roles-permissions', label: 'Roles y Permisos', icon: BsShieldFillCheck, anyOf: [] },
-      { to: 'Loggbook', label: 'Bitácora', icon: RxActivityLog, anyOf: [] }
+      { to: 'Loggbook', label: 'Bitácora', icon: RxActivityLog, anyOf: [] },
     ],
   },
   {
     id: 'supply',
     label: 'Abastecimiento',
     items: [
-      { to: '/suppliers', label: 'Proveedores y compras', icon: FaTruck, anyOf: ['suppliers:manage'] },
+      { to: '/suppliers', label: 'Proveedores', icon: FaTruck, anyOf: ['suppliers:manage'] },
       { to: '/forecast', label: 'Predicción', icon: GoGraph, anyOf: [] },
-      { to: '/alertas', label: 'Alertas', icon: HiBellAlert, anyOf: [] },
+      { to: '/alerts', label: 'Alertas', icon: HiBellAlert, anyOf: [] },
     ],
   },
 ];
