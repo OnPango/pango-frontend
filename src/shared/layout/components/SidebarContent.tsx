@@ -68,10 +68,10 @@ export function SidebarContent({
                         onClick={onNavigate}
                         className={({ isActive }) =>
                           cn(
-                            'flex items-center gap-3 rounded-full text-sm transition focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-hidden',
+                            'flex items-center gap-3 rounded-full text-sm transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-hidden',
                             centerWhenCollapsed,
                             isActive
-                              ? 'bg-primary text-primary-fg p-3'
+                              ? 'bg-primary text-primary-fg py-3 px-4'
                               : 'text-sidebar-fg hover:bg-sidebar-fg/10 hover:text-sidebar-fg px-3 py-2',
                           )
                         }

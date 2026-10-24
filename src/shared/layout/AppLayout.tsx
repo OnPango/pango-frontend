@@ -4,7 +4,7 @@ import { TbLayoutSidebarRightCollapseFilled } from "react-icons/tb";
 import { FiSearch } from "react-icons/fi";
 
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Button } from '@/shared/ui/components/Button';
 import { ThemeToggle } from '@/shared/ui/components/ThemeToggle';
 import { Sidebar } from './components/Sidebar';
@@ -14,20 +14,29 @@ import { cn } from '../lib/cn';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { AvatarButton } from '../ui/components/AvatarButton';
 import { Logo } from '../ui/Logo';
+
+
 export function AppLayout() {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const isCollapsed = useSidebarStore((state) => state.isCollapsed);
   const toggle = useSidebarStore((state) => state.toggle);
-    const user = useAuthStore((state) => state.user);
-//   const logout = useAuthStore((state) => state.clearSession);
+  const user = useAuthStore((state) => state.user);
+  const location = useLocation();
   const ToggleIcon = isCollapsed ? <TbLayoutSidebarRightCollapseFilled className='size-6'/> : <TbLayoutSidebarLeftCollapseFilled className='size-6' />
+
+  function getTitle() {
+    const path = location.pathname.split('/')[1];
+    if(path === '') return 'DASHBOARD';
+    return path.toLocaleUpperCase();
+  }
+
   return (
     <div className="flex shrink-0 w-dvw min-w-96 h-dvh flex-col p-2 transition-all duration-500 ease-in-out">
       <header className="flex w-full shrink-0 items-center justify-between gap-3 border border-line bg-surface px-4 py-2 rounded-2xl md:px-6">
         <section className='flex items-center gap-3'>
           <Logo width='30' height='30'/>
           {/* Nombre del item */}
-          <span className="hidden lg:block text-xl font-medium">Dashboard</span>
+          <span className="hidden lg:block text-md font-semibold">{getTitle()}</span>
           {toggle && (
             <Button
               type="button"
@@ -42,7 +51,7 @@ export function AppLayout() {
             {ToggleIcon}
             </Button>
           )}
-          <span className='text-muted font-light hidden lg:block'>/Dashboard</span>
+          <span className='text-muted font-light hidden lg:block'>/{getTitle().toLowerCase()}</span>
           <div className="hidden lg:flex items-center w-md gap-4 rounded-full border border-line2 px-3 py-1 focus-within:border-accent">
             <FiSearch className="text-lg text-muted size-7" />
             <input type="search" name="search" id='header-search' placeholder="Búscar producto, código o alerta..." className="hidden md:block w-full outline-none" />
@@ -78,11 +87,7 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
-
-
-  <MobileNav isOpen={isMobileNavOpen} onClose={() => setIsMobileNavOpen(false)} />
-
-      
+      <MobileNav isOpen={isMobileNavOpen} onClose={() => setIsMobileNavOpen(false)} />
     </div>
   );
 }
