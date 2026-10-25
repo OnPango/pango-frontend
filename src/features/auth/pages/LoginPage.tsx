@@ -1,38 +1,35 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { FaUserLarge } from 'react-icons/fa6';
 import { RiLockPasswordFill } from 'react-icons/ri';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
+import { getApiErrorMessage } from '@/core/api';
+import type { LoginRedirectState } from '@/core/auth/guards';
 import { Leaves2 } from '@/shared/ui/Leaves2';
 import { Leaves3 } from '@/shared/ui/Leaves3';
 import { DoubleArc, SimpleArc } from '@/shared/ui/DecorativeArcs';
 import { Logo } from '@/shared/ui/Logo';
 import { Button } from '@/shared/ui/components/Button';
-import { login } from '@/features/auth/api/auth.service';
-import { useAuthStore } from '@/core/auth/auth.store';
+import { useLogin } from '../api/useLogin';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const setSession = useAuthStore((state) => state.setSession);
+  const location = useLocation();
+  const loginMutation = useLogin();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const redirectTo = (location.state as LoginRedirectState | null)?.from ?? '/';
+  const error = loginMutation.isError
+    ? getApiErrorMessage(loginMutation.error, 'No se pudo iniciar sesión.')
+    : null;
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-    try {
-      const result = await login({ email, password });
-      setSession(result.user, result.token);
-      navigate('/', { replace: true });
-    } catch (err) {
-      setError('Credenciales inválidas o error al iniciar sesión');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
+    loginMutation.mutate(
+      { email, password },
+      { onSuccess: () => navigate(redirectTo, { replace: true }) },
+    );
   };
 
   return (
@@ -79,8 +76,22 @@ export default function LoginPage() {
           />
         </div>
         <div className="absolute right-0 bottom-0">
-          <svg width="400" height="400" viewBox="0 0 162 148" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="125" cy="122" r="122" fill="none" stroke="#B5502E" strokeWidth="1" strokeLinecap="round" />
+          <svg
+            width="400"
+            height="400"
+            viewBox="0 0 162 148"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="125"
+              cy="122"
+              r="122"
+              fill="none"
+              stroke="#B5502E"
+              strokeWidth="1"
+              strokeLinecap="round"
+            />
           </svg>
         </div>
       </section>
@@ -100,7 +111,10 @@ export default function LoginPage() {
             <p className="text-muted">Más control, mejores decisiones</p>
           </div>
         </section>
-        <form onSubmit={handleSubmit} className="w-full space-y-5 rounded-4xl border border-line2 bg-surface px-12 py-8 shadow-lg">
+        <form
+          onSubmit={handleSubmit}
+          className="w-full space-y-5 rounded-4xl border border-line2 bg-surface px-12 py-8 shadow-lg"
+        >
           <h4 className="text-md m-0 font-light tracking-wide">BIENVENIDO A PANGO</h4>
           <div className="w-9 border-3 border-b border-primary" />
 
@@ -112,13 +126,37 @@ export default function LoginPage() {
           <section className="flex flex-col gap-3">
             <div className="flex items-center gap-4 rounded-2xl border border-line2 p-3 focus-within:border-accent">
               <FaUserLarge className="text-lg text-accent" />
-              <input className="w-full outline-none" name="email" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <input
+                className="w-full outline-none"
+                name="email"
+                type="email"
+                autoComplete="username"
+                aria-label="Email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
             <div className="flex items-center gap-4 rounded-2xl border border-line2 p-3 focus-within:border-accent">
               <RiLockPasswordFill className="text-xl text-accent" />
-              <input className="w-full outline-none" name="password" type="password" placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <input
+                className="w-full outline-none"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                aria-label="Contraseña"
+                placeholder="Contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
-            {error && <p className="text-sm text-danger">{error}</p>}
+            {error && (
+              <p role="alert" className="text-sm text-danger">
+                {error}
+              </p>
+            )}
             <div className="flex items-center justify-between text-[12px]">
               <div className="flex items-center gap-1">
                 <input type="checkbox" id="remember" />
@@ -130,7 +168,12 @@ export default function LoginPage() {
             </div>
           </section>
           <section className="space-y-2">
-            <Button type="submit" variant="primary" className="w-full p-2.5" isLoading={isLoading}>
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full p-2.5"
+              isLoading={loginMutation.isPending}
+            >
               Iniciar sesión
             </Button>
             <div className="flex items-center justify-center gap-2 text-muted">

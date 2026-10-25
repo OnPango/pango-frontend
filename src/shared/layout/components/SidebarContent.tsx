@@ -1,8 +1,9 @@
-import { IoLogOut } from "react-icons/io5";
+import { IoLogOut } from 'react-icons/io5';
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
+import { useLogout } from '@/core/auth/useLogout';
 import { cn } from '@/shared/lib/cn';
 import { NAV_SECTIONS } from '../nav';
 
@@ -24,7 +25,7 @@ const footerButton =
 
 export function SidebarContent({ isCollapsed, onNavigate }: SidebarContentProps) {
   const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.clearSession);
+  const { logout, isLoggingOut } = useLogout();
 
   const sections = NAV_SECTIONS.map((section) => ({
     ...section,
@@ -89,13 +90,12 @@ export function SidebarContent({ isCollapsed, onNavigate }: SidebarContentProps)
         <button
           type="button"
           onClick={logout}
+          disabled={isLoggingOut}
           title={isCollapsed ? 'Cerrar sesión' : undefined}
           className={cn(footerButton, centerWhenCollapsed)}
         >
           <IoLogOut aria-hidden className="size-5 shrink-0" />
-          <span className={cn(hiddenWhenCollapsed)}>
-            Cerrar sesión
-          </span>
+          <span className={cn(hiddenWhenCollapsed)}>Cerrar sesión</span>
         </button>
       </div>
     </div>

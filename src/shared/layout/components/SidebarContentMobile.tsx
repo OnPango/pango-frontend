@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
+import { useLogout } from '@/core/auth/useLogout';
 import { cn } from '@/shared/lib/cn';
 import { NAV_SECTIONS } from '../nav';
 import { Logo } from '@/shared/ui/Logo';
@@ -15,7 +16,7 @@ interface SidebarContentMobileProps {
 
 export function SidebarContentMobile({ onNavigate, headerAction }: SidebarContentMobileProps) {
   const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.clearSession);
+  const { logout, isLoggingOut } = useLogout();
   const scrollerRef = useRef<HTMLElement>(null);
 
   const sections = NAV_SECTIONS.map((section) => ({
@@ -90,6 +91,7 @@ export function SidebarContentMobile({ onNavigate, headerAction }: SidebarConten
         <button
           type="button"
           onClick={logout}
+          disabled={isLoggingOut}
           className="w-full rounded-2xl border border-line bg-surface/60 px-4 py-3 text-base font-medium text-fg transition-colors hover:bg-fg/5 focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-hidden"
         >
           Cerrar sesión

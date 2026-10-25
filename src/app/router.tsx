@@ -1,7 +1,7 @@
 import { lazy } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 
-import { RequireAuth, RequirePermission } from '../core/auth/guards';
+import { RequireAuth, RequireGuest, RequirePermission } from '../core/auth/guards';
 import { page } from './load';
 
 import type { Permission } from '@/core/auth/user';
@@ -36,7 +36,10 @@ export const router = createBrowserRouter(
         Page: lazy(() => Promise.resolve({ default: () => <div>Route not found</div> })),
       }),
     },
-    { path: '/login', element: page({ Page: LoginPage }) },
+    {
+      element: <RequireGuest />,
+      children: [{ path: '/login', element: page({ Page: LoginPage }) }],
+    },
     /* Implementation example */
     {
       element: <RequireAuth />,

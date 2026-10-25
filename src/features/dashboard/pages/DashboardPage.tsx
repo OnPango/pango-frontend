@@ -1,5 +1,6 @@
+import { useAuthStore } from '@/core/auth/auth.store';
 import { DataTable } from '@/shared/ui/components/DataTable';
-import { DashboardContent } from '../content/content';
+import { buildGreeting, DashboardContent } from '../content/content';
 
 type ProductRow = {
   id: string;
@@ -9,13 +10,14 @@ type ProductRow = {
 };
 
 export default function DashboardPage() {
+  const userName = useAuthStore((state) => state.user?.name);
   const rows: ProductRow[] = [];
 
   return (
     <>
       <div className="flex flex-col gap-10">
         <section className="flex flex-col gap-3">
-          <h2 className="text-3xl font-bold lg:text-4xl">{DashboardContent.greeting}</h2>
+          <h2 className="text-3xl font-bold lg:text-4xl">{buildGreeting(userName)}</h2>
           <p className="font-light">{DashboardContent.message}</p>
         </section>
 

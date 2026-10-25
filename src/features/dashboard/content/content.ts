@@ -1,19 +1,7 @@
 type DashboardContentType = {
   id: string;
-  greeting: string;
   message: string;
 };
-
-function getUserName(): string | undefined {
-  try {
-    const raw = localStorage.getItem('pango-auth');
-    if (!raw) return undefined;
-    const parsed = JSON.parse(raw);
-    return parsed?.state?.user?.name ?? parsed?.user?.name;
-  } catch {
-    return undefined;
-  }
-}
 
 function getGreeting(hour: number): string {
   if (hour < 12) {
@@ -24,14 +12,13 @@ function getGreeting(hour: number): string {
   return 'Buenas noches';
 }
 
-function buildGreeting(): string {
-  const userName = getUserName();
-  const base = getGreeting(new Date().getHours());
+/** Greeting for the current time of day, personalized when the user's name is known. */
+export function buildGreeting(userName?: string, now = new Date()): string {
+  const base = getGreeting(now.getHours());
   return userName ? `¡${base}, ${userName}!` : `¡${base}!`;
 }
 
 export const DashboardContent: DashboardContentType = {
   id: '1',
-  greeting: buildGreeting(),
   message: 'Bienvenido al sistema de gestión de inventario Pango',
 };
