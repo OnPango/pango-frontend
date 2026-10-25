@@ -1,13 +1,40 @@
+import { useState } from 'react';
 import { FaUserLarge } from 'react-icons/fa6';
 import { RiLockPasswordFill } from 'react-icons/ri';
+import { useNavigate } from 'react-router-dom';
 
 import { Leaves2 } from '@/shared/ui/Leaves2';
 import { Leaves3 } from '@/shared/ui/Leaves3';
 import { DoubleArc, SimpleArc } from '@/shared/ui/DecorativeArcs';
 import { Logo } from '@/shared/ui/Logo';
 import { Button } from '@/shared/ui/components/Button';
+import { login } from '@/features/auth/api/auth.service';
+import { useAuthStore } from '@/core/auth/auth.store';
 
 export default function LoginPage() {
+  const navigate = useNavigate();
+  const setSession = useAuthStore((state) => state.setSession);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+    try {
+      const result = await login({ email, password });
+      setSession(result.user, result.token);
+      navigate('/', { replace: true });
+    } catch (err) {
+      setError('Credenciales inválidas o error al iniciar sesión');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="grid h-screen w-full items-center justify-center">
       <div className="absolute top-20 left-20 hidden lg:block">
@@ -28,7 +55,6 @@ export default function LoginPage() {
         <Leaves3 />
       </div>
 
-      {/* Circulos de fondo */}
       <section className="absolute hidden h-screen w-screen lg:block">
         <div className="absolute top-0 right-0">
           <SimpleArc
@@ -53,22 +79,8 @@ export default function LoginPage() {
           />
         </div>
         <div className="absolute right-0 bottom-0">
-          <svg
-            width="400"
-            height="400"
-            viewBox="0 0 162 148"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle
-              cx="125"
-              cy="122"
-              r="122"
-              fill="none"
-              stroke="#B5502E"
-              stroke-width="1"
-              stroke-linecap="round"
-            />
+          <svg width="400" height="400" viewBox="0 0 162 148" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="125" cy="122" r="122" fill="none" stroke="#B5502E" strokeWidth="1" strokeLinecap="round" />
           </svg>
         </div>
       </section>
@@ -88,12 +100,8 @@ export default function LoginPage() {
             <p className="text-muted">Más control, mejores decisiones</p>
           </div>
         </section>
-        <form
-          onSubmit={() => {}}
-          className="w-full space-y-5 rounded-4xl border border-line2 bg-surface px-12 py-8 shadow-lg"
-        >
+        <form onSubmit={handleSubmit} className="w-full space-y-5 rounded-4xl border border-line2 bg-surface px-12 py-8 shadow-lg">
           <h4 className="text-md m-0 font-light tracking-wide">BIENVENIDO A PANGO</h4>
-          {/*pequeña linea*/}
           <div className="w-9 border-3 border-b border-primary" />
 
           <section className="-space-y-1 text-xl">
@@ -104,15 +112,16 @@ export default function LoginPage() {
           <section className="flex flex-col gap-3">
             <div className="flex items-center gap-4 rounded-2xl border border-line2 p-3 focus-within:border-accent">
               <FaUserLarge className="text-lg text-accent" />
-              <input className="w-full outline-none" placeholder="Email" />
+              <input className="w-full outline-none" name="email" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
             <div className="flex items-center gap-4 rounded-2xl border border-line2 p-3 focus-within:border-accent">
               <RiLockPasswordFill className="text-xl text-accent" />
-              <input className="w-full outline-none" type="password" placeholder="Contraseña" />
+              <input className="w-full outline-none" name="password" type="password" placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
+            {error && <p className="text-sm text-danger">{error}</p>}
             <div className="flex items-center justify-between text-[12px]">
               <div className="flex items-center gap-1">
-                <input type="checkbox" />
+                <input type="checkbox" id="remember" />
                 <label htmlFor="remember">Recordarme</label>
               </div>
               <a href="/" className="text-primary">
@@ -121,14 +130,14 @@ export default function LoginPage() {
             </div>
           </section>
           <section className="space-y-2">
-            <Button variant="primary" className="w-full p-2.5">
+            <Button type="submit" variant="primary" className="w-full p-2.5" isLoading={isLoading}>
               Iniciar sesión
             </Button>
             <div className="flex items-center justify-center gap-2 text-muted">
               <div className="h-px w-full bg-canvas"></div>o
               <div className="h-px w-full bg-canvas"></div>
             </div>
-            <Button variant="outline" className="w-full p-2.5">
+            <Button type="button" variant="outline" className="w-full p-2.5">
               Acceso con SSO
             </Button>
             <p className="text-center text-sm text-muted">

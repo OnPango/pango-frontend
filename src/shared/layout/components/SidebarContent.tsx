@@ -1,4 +1,4 @@
-// import { LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { IoLogOut } from "react-icons/io5";
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/auth.store';
@@ -92,8 +92,10 @@ export function SidebarContent({ isCollapsed, onNavigate }: SidebarContentProps)
           title={isCollapsed ? 'Cerrar sesión' : undefined}
           className={cn(footerButton, centerWhenCollapsed)}
         >
-          {/* <LogOut aria-hidden className="size-5 shrink-0" /> */}
-          <span className={cn(hiddenWhenCollapsed)}>Cerrar sesión</span>
+          <IoLogOut aria-hidden className="size-5 shrink-0" />
+          <span className={cn(hiddenWhenCollapsed)}>
+            Cerrar sesión
+          </span>
         </button>
       </div>
     </div>
