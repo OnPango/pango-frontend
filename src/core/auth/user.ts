@@ -3,6 +3,7 @@ export const PERMISSIONS = [
   'dashboard:view',
   'movements:view',
   'users:manage',
+  'roles:manage',
   'areas:manage',
   'products:manage',
   'warehouses:manage',

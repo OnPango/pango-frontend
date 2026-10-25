@@ -45,7 +45,7 @@ export function DataTable<T>({
   else if (rows.length === 0) body = statusRow(emptyMessage);
   else
     body = rows.map((row) => (
-      <tr key={getRowKey(row)} className="border-t border-line">
+      <tr key={getRowKey(row)} className="border-t border-line2">
         {columns.map((column) => (
           <td key={column.key} className={cn('px-4 py-3', column.className)}>
             {column.cell(row)}
@@ -55,7 +55,7 @@ export function DataTable<T>({
     ));
 
   return (
-    <div className={cn('rounded-xl border border-line bg-surface', className)}>
+    <div className={cn('rounded-2xl border border-line bg-surface px-8 py-6', className)}>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm" aria-busy={isLoading}>
           <caption className="sr-only">{caption}</caption>

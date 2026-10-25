@@ -1,5 +1,6 @@
 import { http } from '@/core/api';
 import { authRoutes } from './handlers/auth.handlers';
+import { usersRoutes } from './handlers/users.handlers';
 import { createMockAdapter } from './server';
 
 /**
@@ -12,6 +13,7 @@ import { createMockAdapter } from './server';
 export function enableMocking(): void {
   http.defaults.adapter = createMockAdapter({
     ...authRoutes,
+    ...usersRoutes,
   });
   console.info('[mock] Backend simulado activo (VITE_USE_MOCK=true).');
 }

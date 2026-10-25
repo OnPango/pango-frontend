@@ -60,9 +60,14 @@ export const NAV_SECTIONS: NavSection[] = [
     id: 'admin',
     label: 'Administración',
     items: [
-      { to: '/users', label: 'Usuarios', icon: HiUsers, anyOf: [] },
-      { to: '/roles-permissions', label: 'Roles y Permisos', icon: BsShieldFillCheck, anyOf: [] },
-      { to: 'Loggbook', label: 'Bitácora', icon: RxActivityLog, anyOf: [] },
+      { to: '/users', label: 'Usuarios', icon: HiUsers, anyOf: ['users:manage'] },
+      {
+        to: '/roles-permissions',
+        label: 'Roles y Permisos',
+        icon: BsShieldFillCheck,
+        anyOf: ['users:manage', 'roles:manage'],
+      },
+      { to: '/loggbook', label: 'Bitácora', icon: RxActivityLog, anyOf: [] },
     ],
   },
   {

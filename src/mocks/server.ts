@@ -8,6 +8,7 @@ import {
 export interface MockRequest {
   method: string;
   path: string;
+  params: Record<string, string>;
   body: unknown;
 }
 
@@ -18,7 +19,7 @@ export interface MockResponse {
 
 export type MockHandler = (request: MockRequest) => MockResponse;
 
-/** Route table keyed by `"<METHOD> <path>"`, e.g. `"POST /auth/login"`. */
+/** Route table keyed by `"<METHOD> <path>"`, e.g. `"POST /auth/login"` or `"PUT /users/:id"`. */
 export type MockRoutes = Record<string, MockHandler>;
 
 const STATUS_TEXT: Record<number, string> = {
@@ -29,11 +30,12 @@ const STATUS_TEXT: Record<number, string> = {
   401: 'Unauthorized',
   403: 'Forbidden',
   404: 'Not Found',
+  409: 'Conflict',
   422: 'Unprocessable Entity',
   500: 'Internal Server Error',
 };
 
-const randomLatency = () => 250 + Math.random() * 350;
+const randomLatency = () => 150 + Math.random() * 200;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Path relative to the API base URL, without query string. */
@@ -55,6 +57,45 @@ function parseBody(data: unknown): unknown {
   }
 }
 
+function matchRoute(
+  routes: MockRoutes,
+  method: string,
+  path: string,
+): { handler: MockHandler; params: Record<string, string> } | null {
+  const directKey = `${method} ${path}`;
+  if (routes[directKey]) {
+    return { handler: routes[directKey], params: {} };
+  }
+
+  const pathParts = path.split('/').filter(Boolean);
+
+  for (const [routeKey, handler] of Object.entries(routes)) {
+    const [routeMethod, routePath] = routeKey.split(' ');
+    if (routeMethod !== method) continue;
+
+    const routeParts = routePath.split('/').filter(Boolean);
+    if (routeParts.length !== pathParts.length) continue;
+
+    const params: Record<string, string> = {};
+    let matches = true;
+
+    for (let i = 0; i < routeParts.length; i++) {
+      if (routeParts[i].startsWith(':')) {
+        params[routeParts[i].slice(1)] = pathParts[i];
+      } else if (routeParts[i] !== pathParts[i]) {
+        matches = false;
+        break;
+      }
+    }
+
+    if (matches) {
+      return { handler, params };
+    }
+  }
+
+  return null;
+}
+
 /**
  * Axios adapter that answers requests from a route table instead of the network.
  * Everything above it (interceptors, API functions, mappers, React Query) runs for real.
@@ -63,12 +104,17 @@ export function createMockAdapter(routes: MockRoutes): AxiosAdapter {
   return async (config) => {
     const method = (config.method ?? 'get').toUpperCase();
     const path = resolvePath(config);
-    const handler = routes[`${method} ${path}`];
+    const matched = matchRoute(routes, method, path);
 
     await sleep(randomLatency());
 
-    const result: MockResponse = handler
-      ? handler({ method, path, body: parseBody(config.data) })
+    const result: MockResponse = matched
+      ? matched.handler({
+          method,
+          path,
+          params: matched.params,
+          body: parseBody(config.data),
+        })
       : { status: 404, data: { message: `Mock: ${method} ${path} no está implementado.` } };
 
     const response: AxiosResponse = {

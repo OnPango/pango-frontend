@@ -40,6 +40,7 @@ export const authRoutes: MockRoutes = {
     if (!user || user.password !== password) return error(401, 'Correo o contraseña incorrectos.');
     if (!user.is_active) return error(403, 'Tu usuario está inactivo. Contacta al administrador.');
 
+    user.last_login_at = new Date().toISOString();
     issueSession(user.id);
     return { status: 200, data: { user: toUserDto(user) } };
   },

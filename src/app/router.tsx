@@ -23,6 +23,7 @@ const RequestsPage = lazy(() => import('@/features/requests/pages/RequestsPage')
 const MovementsPage = lazy(() => Promise.resolve({ default: () => <div>Movements</div> }));
 const ImportHistoryPage = lazy(() => Promise.resolve({ default: () => <div>Import History</div> }));
 const UsersPage = lazy(() => import('@/features/users/pages/UsersPage'));
+const RolesPermissionsPage = lazy(() => import('@/features/users/pages/RolesPermissionsPage'));
 const BitacoraPage = lazy(() => Promise.resolve({ default: () => <div>Bitacora</div> }));
 const ForecastPage = lazy(() => import('@/features/forecast/pages/ForecastPage'));
 const SuppliersPage = lazy(() => import('@/features/suppliers/pages/SuppliersPage'));
@@ -55,6 +56,7 @@ export const router = createBrowserRouter(
             guarded('/movements', [], MovementsPage),
             guarded('/import-history', [], ImportHistoryPage),
             guarded('/users', ['users:manage'], UsersPage),
+            guarded('/roles-permissions', ['users:manage', 'roles:manage'], RolesPermissionsPage),
             guarded('/loggbook', [], BitacoraPage),
             guarded('/forecast', [], ForecastPage),
             guarded('/suppliers', [], SuppliersPage),
