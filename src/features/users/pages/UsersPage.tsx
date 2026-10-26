@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { FiPlus, FiSearch } from 'react-icons/fi';
 import { getApiErrorMessage } from '@/core/api';
-import { Button } from '@/shared/ui/components/Button';
 import { usePagination } from '@/shared/ui/components/pagination/usePagination';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { useAreas, useRoles, useToggleUserStatus, useUsers } from '../api/users.queries';
