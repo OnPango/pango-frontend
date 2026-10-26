@@ -1,5 +1,5 @@
 import type { UserDto } from '@/core/auth/user.mappers';
-import { findRoleById, findUserByEmail, findUserById, type UserRow } from '../db';
+import { findRoleById, findUserByEmail, findUserById, persistUsers, type UserRow } from '../db';
 import type { MockRoutes } from '../server';
 import { destroySession, issueSession, readSession } from '../session';
 
@@ -41,6 +41,7 @@ export const authRoutes: MockRoutes = {
     if (!user.is_active) return error(403, 'Tu usuario está inactivo. Contacta al administrador.');
 
     user.last_login_at = new Date().toISOString();
+    persistUsers();
     issueSession(user.id);
     return { status: 200, data: { user: toUserDto(user) } };
   },

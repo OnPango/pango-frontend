@@ -3,15 +3,24 @@ import { FiPlus, FiSearch } from 'react-icons/fi';
 import { getApiErrorMessage } from '@/core/api';
 import { usePagination } from '@/shared/ui/components/pagination/usePagination';
 import { PageHeader } from '@/shared/ui/PageHeader';
-import { useAreas, useRoles, useToggleUserStatus, useUsers } from '../api/users.queries';
+import {
+  useAreas,
+  useCreateUser,
+  useRoles,
+  useToggleUserStatus,
+  useUpdateUser,
+  useUsers,
+} from '../api/users.queries';
 import { UserModal } from '../components/UserModal';
 import { UsersTable } from '../components/UsersTable';
-import type { ManagedUser } from '../types/users.types';
+import type { CreateUserInput, ManagedUser, UpdateUserInput } from '../types/users.types';
 
 export default function UsersPage() {
   const { data: users = [], isLoading, error: queryError } = useUsers();
   const { data: roles = [] } = useRoles();
   const { data: areas = [] } = useAreas();
+  const createUser = useCreateUser();
+  const updateUser = useUpdateUser();
   const toggleStatus = useToggleUserStatus();
 
   const [search, setSearch] = useState('');
@@ -54,6 +63,30 @@ export default function UsersPage() {
     setUserToEdit(user);
     setActionError(null);
     setIsModalOpen(true);
+  };
+
+  const handleCreateUser = async (data: CreateUserInput) => {
+    setActionError(null);
+    try {
+      await createUser.mutateAsync(data);
+      setIsModalOpen(false);
+    } catch (err) {
+      const message = getApiErrorMessage(err, 'No fue posible crear el usuario.');
+      setActionError(message);
+      throw err;
+    }
+  };
+
+  const handleUpdateUser = async (data: UpdateUserInput) => {
+    setActionError(null);
+    try {
+      await updateUser.mutateAsync(data);
+      setIsModalOpen(false);
+    } catch (err) {
+      const message = getApiErrorMessage(err, 'No fue posible actualizar el usuario.');
+      setActionError(message);
+      throw err;
+    }
   };
 
   const handleToggleStatus = (user: ManagedUser) => {
@@ -172,6 +205,9 @@ export default function UsersPage() {
         userToEdit={userToEdit}
         roles={roles}
         areas={areas}
+        onCreateUser={handleCreateUser}
+        onUpdateUser={handleUpdateUser}
+        isSubmitting={createUser.isPending || updateUser.isPending}
       />
     </div>
   );

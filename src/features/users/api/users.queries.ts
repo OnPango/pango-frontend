@@ -11,6 +11,7 @@ import {
   updateUser,
 } from './users.api';
 import { usersKeys } from './users.keys';
+import type { ManagedUser } from '../types/users.types';
 
 export function useUsers() {
   return useQuery({
@@ -40,12 +41,15 @@ export function useAreas() {
     queryFn: getAreas,
   });
 }
-
 export function useCreateUser() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createUser,
-    onSuccess: () => {
+    onSuccess: (newUser) => {
+      queryClient.setQueryData<ManagedUser[]>(usersKeys.lists(), (old = []) => [
+        newUser,
+        ...old.filter((u) => u.id !== newUser.id),
+      ]);
       void queryClient.invalidateQueries({ queryKey: usersKeys.all });
       void queryClient.invalidateQueries({ queryKey: usersKeys.roles() });
     },
@@ -57,6 +61,9 @@ export function useUpdateUser() {
   return useMutation({
     mutationFn: updateUser,
     onSuccess: (updated) => {
+      queryClient.setQueryData<ManagedUser[]>(usersKeys.lists(), (old = []) =>
+        old.map((u) => (u.id === updated.id ? updated : u)),
+      );
       void queryClient.invalidateQueries({ queryKey: usersKeys.all });
       void queryClient.invalidateQueries({ queryKey: usersKeys.detail(updated.id) });
       void queryClient.invalidateQueries({ queryKey: usersKeys.roles() });
@@ -70,6 +77,9 @@ export function useToggleUserStatus() {
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       toggleUserStatus(id, isActive),
     onSuccess: (updated) => {
+      queryClient.setQueryData<ManagedUser[]>(usersKeys.lists(), (old = []) =>
+        old.map((u) => (u.id === updated.id ? updated : u)),
+      );
       void queryClient.invalidateQueries({ queryKey: usersKeys.all });
       void queryClient.invalidateQueries({ queryKey: usersKeys.detail(updated.id) });
     },

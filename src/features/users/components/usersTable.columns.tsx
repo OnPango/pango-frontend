@@ -127,10 +127,10 @@ export function getUsersTableColumns({
           aria-label={`Editar ${row.name}`}
           title="Editar datos del usuario"
         >
-          <p className='text-md'>Editar</p>
+          <p className="text-md">Editar</p>
           <MdEdit className="size-4" />
         </Button>
-      )
+      ),
     },
   ];
 }

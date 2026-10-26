@@ -35,14 +35,39 @@ export interface UserRow {
 
 export const MOCK_PASSWORD = 'Pango123*';
 
-export const areas: AreaRow[] = [
+const USERS_STORAGE_KEY = 'pango_mock_db_users';
+const ROLES_STORAGE_KEY = 'pango_mock_db_roles';
+const AREAS_STORAGE_KEY = 'pango_mock_db_areas';
+
+function loadFromStorage<T>(key: string, fallback: T[]): T[] {
+  if (typeof window === 'undefined' || !window.localStorage) return [...fallback];
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [...fallback];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? (parsed as T[]) : [...fallback];
+  } catch {
+    return [...fallback];
+  }
+}
+
+function saveToStorage<T>(key: string, data: T[]): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (err) {
+    console.warn('[mock-db] Error guardando en localStorage:', err);
+  }
+}
+
+const INITIAL_AREAS: AreaRow[] = [
   { id: 'area-admin', name: 'Administración' },
   { id: 'area-warehouse', name: 'Almacén' },
   { id: 'area-purchasing', name: 'Compra' },
   { id: 'area-consultant', name: 'Analista/Consultor' },
 ];
 
-export const roles: RoleRow[] = [
+const INITIAL_ROLES: RoleRow[] = [
   {
     id: 'role-admin',
     name: 'Administrador',
@@ -76,7 +101,7 @@ export const roles: RoleRow[] = [
   },
 ];
 
-export const users: UserRow[] = [
+const INITIAL_USERS: UserRow[] = [
   {
     id: 'usr-001',
     full_name: 'Carlos Arango',
@@ -138,6 +163,36 @@ export const users: UserRow[] = [
     created_at: '2026-10-01T11:00:00Z',
   },
 ];
+
+export const areas: AreaRow[] = loadFromStorage(AREAS_STORAGE_KEY, INITIAL_AREAS);
+export const roles: RoleRow[] = loadFromStorage(ROLES_STORAGE_KEY, INITIAL_ROLES);
+export const users: UserRow[] = loadFromStorage(USERS_STORAGE_KEY, INITIAL_USERS);
+
+export function persistUsers(): void {
+  saveToStorage(USERS_STORAGE_KEY, users);
+}
+
+export function persistRoles(): void {
+  saveToStorage(ROLES_STORAGE_KEY, roles);
+}
+
+export function persistAreas(): void {
+  saveToStorage(AREAS_STORAGE_KEY, areas);
+}
+
+export function resetMockDatabase(): void {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    localStorage.removeItem(USERS_STORAGE_KEY);
+    localStorage.removeItem(ROLES_STORAGE_KEY);
+    localStorage.removeItem(AREAS_STORAGE_KEY);
+  }
+  users.length = 0;
+  users.push(...INITIAL_USERS);
+  roles.length = 0;
+  roles.push(...INITIAL_ROLES);
+  areas.length = 0;
+  areas.push(...INITIAL_AREAS);
+}
 
 export const findUserByEmail = (email: string) =>
   users.find((user) => user.email.toLowerCase() === email.trim().toLowerCase());

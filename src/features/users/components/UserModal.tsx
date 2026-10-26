@@ -2,8 +2,13 @@ import { useState, type FormEvent } from 'react';
 import { IoClose } from 'react-icons/io5';
 import { getApiErrorMessage } from '@/core/api';
 import { Button } from '@/shared/ui/components/Button';
-import { useCreateUser, useUpdateUser } from '../api/users.queries';
-import type { ManagedArea, ManagedRole, ManagedUser } from '../types/users.types';
+import type {
+  CreateUserInput,
+  ManagedArea,
+  ManagedRole,
+  ManagedUser,
+  UpdateUserInput,
+} from '../types/users.types';
 
 interface UserModalProps {
   isOpen: boolean;
@@ -11,6 +16,9 @@ interface UserModalProps {
   userToEdit: ManagedUser | null;
   roles: ManagedRole[];
   areas: ManagedArea[];
+  onCreateUser: (data: CreateUserInput) => Promise<void>;
+  onUpdateUser: (data: UpdateUserInput) => Promise<void>;
+  isSubmitting?: boolean;
 }
 
 interface UserModalContentProps {
@@ -18,12 +26,21 @@ interface UserModalContentProps {
   userToEdit: ManagedUser | null;
   roles: ManagedRole[];
   areas: ManagedArea[];
+  onCreateUser: (data: CreateUserInput) => Promise<void>;
+  onUpdateUser: (data: UpdateUserInput) => Promise<void>;
+  isSubmitting?: boolean;
 }
 
-function UserModalContent({ onClose, userToEdit, roles, areas }: UserModalContentProps) {
+function UserModalContent({
+  onClose,
+  userToEdit,
+  roles,
+  areas,
+  onCreateUser,
+  onUpdateUser,
+  isSubmitting = false,
+}: UserModalContentProps) {
   const isEditing = !!userToEdit;
-  const createUser = useCreateUser();
-  const updateUser = useUpdateUser();
 
   const [name, setName] = useState(userToEdit?.name ?? '');
   const [email, setEmail] = useState(userToEdit?.email ?? '');
@@ -33,43 +50,48 @@ function UserModalContent({ onClose, userToEdit, roles, areas }: UserModalConten
   const [isActive, setIsActive] = useState(userToEdit?.isActive ?? true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const isPending = createUser.isPending || updateUser.isPending;
-
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (isEditing && userToEdit) {
-      updateUser.mutate(
-        {
+    const targetRoleId = roleId || roles[0]?.id || '';
+    const targetAreaId = areaId || areas[0]?.id || '';
+
+    if (!targetRoleId) {
+      setErrorMessage('Debe seleccionar un rol para el usuario.');
+      return;
+    }
+    if (!targetAreaId) {
+      setErrorMessage('Debe seleccionar un área de trabajo para el usuario.');
+      return;
+    }
+
+    try {
+      if (isEditing && userToEdit) {
+        await onUpdateUser({
           id: userToEdit.id,
-          name,
-          email,
-          roleId,
-          areaId,
+          name: name.trim(),
+          email: email.trim(),
+          roleId: targetRoleId,
+          areaId: targetAreaId,
           isActive,
           password: password ? password : undefined,
-        },
-        {
-          onSuccess: () => onClose(),
-          onError: (err) =>
-            setErrorMessage(getApiErrorMessage(err, 'No se pudo actualizar el usuario.')),
-        },
-      );
-    } else {
-      createUser.mutate(
-        {
-          name,
-          email,
-          roleId,
-          areaId,
+        });
+      } else {
+        await onCreateUser({
+          name: name.trim(),
+          email: email.trim(),
+          roleId: targetRoleId,
+          areaId: targetAreaId,
           password: password ? password : undefined,
-        },
-        {
-          onSuccess: () => onClose(),
-          onError: (err) =>
-            setErrorMessage(getApiErrorMessage(err, 'No se pudo crear el usuario.')),
-        },
+        });
+      }
+    } catch (err) {
+      setErrorMessage(
+        getApiErrorMessage(
+          err,
+          isEditing ? 'No se pudo actualizar el usuario.' : 'No se pudo crear el usuario.',
+        ),
       );
     }
   };
@@ -163,6 +185,9 @@ function UserModalContent({ onClose, userToEdit, roles, areas }: UserModalConten
                 onChange={(e) => setRoleId(e.target.value)}
                 className="w-full rounded-xl border border-line bg-surface px-3.5 py-2 text-sm text-fg outline-hidden focus:border-accent focus:ring-1 focus:ring-accent"
               >
+                <option value="" disabled>
+                  Selecciona un rol
+                </option>
                 {roles.map((role) => (
                   <option key={role.id} value={role.id}>
                     {role.name}
@@ -182,6 +207,9 @@ function UserModalContent({ onClose, userToEdit, roles, areas }: UserModalConten
                 onChange={(e) => setAreaId(e.target.value)}
                 className="w-full rounded-xl border border-line bg-surface px-3.5 py-2 text-sm text-fg outline-hidden focus:border-accent focus:ring-1 focus:ring-accent"
               >
+                <option value="" disabled>
+                  Selecciona un área
+                </option>
                 {areas.map((area) => (
                   <option key={area.id} value={area.id}>
                     {area.name}
@@ -228,11 +256,11 @@ function UserModalContent({ onClose, userToEdit, roles, areas }: UserModalConten
               variant="outline"
               size="sm"
               onClick={onClose}
-              disabled={isPending}
+              disabled={isSubmitting}
             >
               Cancelar
             </Button>
-            <Button type="submit" variant="primary" size="sm" isLoading={isPending}>
+            <Button type="submit" variant="primary" size="sm" isLoading={isSubmitting}>
               {isEditing ? 'Guardar Cambios' : 'Crear Usuario'}
             </Button>
           </div>
@@ -242,7 +270,16 @@ function UserModalContent({ onClose, userToEdit, roles, areas }: UserModalConten
   );
 }
 
-export function UserModal({ isOpen, onClose, userToEdit, roles, areas }: UserModalProps) {
+export function UserModal({
+  isOpen,
+  onClose,
+  userToEdit,
+  roles,
+  areas,
+  onCreateUser,
+  onUpdateUser,
+  isSubmitting,
+}: UserModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -252,6 +289,9 @@ export function UserModal({ isOpen, onClose, userToEdit, roles, areas }: UserMod
       userToEdit={userToEdit}
       roles={roles}
       areas={areas}
+      onCreateUser={onCreateUser}
+      onUpdateUser={onUpdateUser}
+      isSubmitting={isSubmitting}
     />
   );
 }

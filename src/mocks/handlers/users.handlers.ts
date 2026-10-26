@@ -6,6 +6,8 @@ import {
   findUserByEmail,
   findUserById,
   MOCK_PASSWORD,
+  persistRoles,
+  persistUsers,
   roles,
   users,
   type RoleRow,
@@ -145,6 +147,8 @@ export const usersRoutes: MockRoutes = {
     };
 
     roles.push(newRole);
+    persistRoles();
+    console.info('[mock] Rol creado y guardado en localStorage:', newRole.name);
     return { status: 201, data: toManagedRoleDto(newRole) };
   },
 
@@ -180,6 +184,8 @@ export const usersRoutes: MockRoutes = {
       role.permissions = data.permissions;
     }
 
+    persistRoles();
+    console.info('[mock] Rol actualizado y guardado en localStorage:', role.name);
     return { status: 200, data: toManagedRoleDto(role) };
   },
 
@@ -226,8 +232,14 @@ export const usersRoutes: MockRoutes = {
       return error(409, 'Ya existe un usuario con este correo electrónico.');
     }
 
+    const nextNum =
+      users.reduce((max, u) => {
+        const match = u.id.match(/^usr-(\d+)$/);
+        return match ? Math.max(max, parseInt(match[1], 10)) : max;
+      }, 0) + 1;
+
     const newUser: UserRow = {
-      id: `usr-${String(users.length + 1).padStart(3, '0')}`,
+      id: `usr-${String(nextNum).padStart(3, '0')}`,
       full_name: data.full_name.trim(),
       email: cleanEmail,
       password: data.password || MOCK_PASSWORD,
@@ -240,6 +252,8 @@ export const usersRoutes: MockRoutes = {
     };
 
     users.unshift(newUser);
+    persistUsers();
+    console.info('[mock] Usuario creado y guardado en localStorage:', newUser);
     return { status: 201, data: toManagedUserDto(newUser) };
   },
 
@@ -273,6 +287,8 @@ export const usersRoutes: MockRoutes = {
     if (data.password?.trim()) user.password = data.password.trim();
     if (typeof data.is_active === 'boolean') user.is_active = data.is_active;
 
+    persistUsers();
+    console.info('[mock] Usuario actualizado y guardado en localStorage:', user);
     return { status: 200, data: toManagedUserDto(user) };
   },
 
@@ -291,6 +307,8 @@ export const usersRoutes: MockRoutes = {
     const data = (body ?? {}) as { is_active?: boolean };
     user.is_active = typeof data.is_active === 'boolean' ? data.is_active : !user.is_active;
 
+    persistUsers();
+    console.info('[mock] Estado de usuario actualizado y guardado en localStorage:', user);
     return { status: 200, data: toManagedUserDto(user) };
   },
 };

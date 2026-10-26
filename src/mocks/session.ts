@@ -30,8 +30,15 @@ function decode(token: string): SessionPayload | null {
 }
 
 function readCookie(): string | null {
-  const entry = document.cookie.split('; ').find((part) => part.startsWith(`${COOKIE_NAME}=`));
-  return entry ? decodeURIComponent(entry.slice(COOKIE_NAME.length + 1)) : null;
+  if (typeof document === 'undefined') return null;
+  const cookies = document.cookie.split(';');
+  for (const raw of cookies) {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith(`${COOKIE_NAME}=`)) {
+      return decodeURIComponent(trimmed.slice(COOKIE_NAME.length + 1));
+    }
+  }
+  return null;
 }
 
 /** Equivalent of the backend's `Set-Cookie: pango_session=<jwt>; Max-Age=28800; ...`. */
