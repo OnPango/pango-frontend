@@ -32,21 +32,13 @@ export default function RolesPermissionsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader
-          title="Roles y Permisos"
-          subtitle="Define y asigna permisos granulares a los diferentes perfiles del sistema."
-        />
-        <Button
-          type="button"
-          variant="primary"
-          onClick={handleOpenCreate}
-          className="flex items-center gap-2 self-start sm:self-auto"
-        >
-          <FiPlus className="size-4" />
-          <span>Nuevo Rol</span>
-        </Button>
-      </div>
+      <PageHeader
+        title="Roles y Permisos"
+        subtitle="Define y asigna permisos granulares a los diferentes perfiles del sistema."
+        onAction={handleOpenCreate}
+        icon={FiPlus}
+        actionText="Nuevo Rol"
+      />
 
       {queryError && (
         <div

@@ -71,21 +71,13 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 rounded-2xl bg-primary/5 p-8">
-        <PageHeader
-          title="Gestión de Usuarios"
-          subtitle="Administra las personas del sistema, asignación de roles y áreas de trabajo."
-        />
-        <Button
-          type="button"
-          variant="primary"
-          onClick={handleOpenCreate}
-          className="flex items-center gap-2 self-start rounded-2xl py-3"
-        >
-          <FiPlus className="size-4" />
-          <span>Nuevo Usuario</span>
-        </Button>
-      </div>
+      <PageHeader
+        title="Gestión de Usuarios"
+        subtitle="Administra las personas del sistema, asignación de roles y áreas de trabajo."
+        onAction={handleOpenCreate}
+        icon={FiPlus}
+        actionText="Nuevo Usuario"
+      />
 
       {actionError && (
         <div
