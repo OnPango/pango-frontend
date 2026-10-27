@@ -35,7 +35,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex h-dvh w-dvw min-w-96 shrink-0 flex-col p-2 transition-all duration-500 ease-in-out">
+    <div className="fixed inset-0 flex flex-col gap-2 overflow-hidden p-2">
       <header className="flex w-full shrink-0 items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-2 md:px-6">
         <section className="flex items-center gap-3">
           <Logo width="30" height="30" />
@@ -89,9 +89,9 @@ export function AppLayout() {
         </section>
       </header>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         <Sidebar />
-        <main className="min-w-0 flex-1 overflow-y-auto p-6">
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6">
           <Outlet />
         </main>
       </div>

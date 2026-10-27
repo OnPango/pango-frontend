@@ -55,7 +55,7 @@ export function DataTable<T>({
     ));
 
   return (
-    <div className={cn('rounded-2xl border border-line bg-surface px-8 py-6', className)}>
+    <div className={cn('min-w-0 rounded-2xl border border-line bg-surface px-4 py-6 sm:px-8', className)}>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm" aria-busy={isLoading}>
           <caption className="sr-only">{caption}</caption>

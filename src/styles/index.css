@@ -2,6 +2,17 @@
 @import './theme.css';
 
 @layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   body {
     @apply bg-canvas font-body text-fg antialiased transition-colors duration-300;
   }

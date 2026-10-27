@@ -20,5 +20,5 @@ export function buildGreeting(userName?: string, now = new Date()): string {
 
 export const DashboardContent: DashboardContentType = {
   id: '1',
-  message: 'Bienvenido al sistema de gestión de inventario Pango',
+  message: 'Lindo verte de nuevo, gestiona tu inventario de forma sencilla',
 };
