@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { getPageItems, getPageRange } from '@/shared/ui/components/pagination/pagination';
+import { getPageItems, getPageRange } from '@/shared/ui/components/pagination/pagination.utils';
 import { Button } from '@/shared/ui/components/Button';
 
 export interface PaginationProps {
