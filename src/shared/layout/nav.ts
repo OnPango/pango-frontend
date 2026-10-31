@@ -48,13 +48,25 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: RiGitPullRequestFill,
         anyOf: ['requests:create', 'requests:attend'],
       },
-      { to: '/movements', label: 'Movimientos', icon: HiOutlineSwitchHorizontal, anyOf: [] },
+      {
+        to: '/movements',
+        label: 'Movimientos',
+        icon: HiOutlineSwitchHorizontal,
+        anyOf: ['movements:view'],
+      },
     ],
   },
   {
     id: 'data',
     label: 'Datos',
-    items: [{ to: '/import-history', label: 'Importar historial', icon: FiUpload, anyOf: [] }],
+    items: [
+      {
+        to: '/import-history',
+        label: 'Importar historial',
+        icon: FiUpload,
+        anyOf: ['movements:import-history'],
+      },
+    ],
   },
   {
     id: 'admin',
@@ -65,9 +77,9 @@ export const NAV_SECTIONS: NavSection[] = [
         to: '/roles-permissions',
         label: 'Roles y Permisos',
         icon: BsShieldFillCheck,
-        anyOf: ['users:manage', 'roles:manage'],
+        anyOf: ['roles:manage'],
       },
-      { to: '/loggbook', label: 'Bitácora', icon: RxActivityLog, anyOf: [] },
+      { to: '/logbook', label: 'Bitácora', icon: RxActivityLog, anyOf: [] },
     ],
   },
   {
@@ -75,8 +87,8 @@ export const NAV_SECTIONS: NavSection[] = [
     label: 'Abastecimiento',
     items: [
       { to: '/suppliers', label: 'Proveedores', icon: FaTruck, anyOf: ['suppliers:manage'] },
-      { to: '/forecast', label: 'Predicción', icon: GoGraph, anyOf: [] },
-      { to: '/alerts', label: 'Alertas', icon: HiBellAlert, anyOf: [] },
+      { to: '/forecast', label: 'Predicción', icon: GoGraph, anyOf: ['forecast:view'] },
+      { to: '/alerts', label: 'Alertas', icon: HiBellAlert, anyOf: ['alerts:view'] },
     ],
   },
 ];

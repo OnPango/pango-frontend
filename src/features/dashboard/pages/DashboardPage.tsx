@@ -18,10 +18,7 @@ export default function DashboardPage() {
   return (
     <div className="flex min-w-0 flex-col gap-10 pb-10">
       {/* Greeting Header */}
-      <PageHeader
-        title={buildGreeting(userName)}
-        subtitle={DashboardContent.message}
-      />
+      <PageHeader title={buildGreeting(userName)} subtitle={DashboardContent.message} />
 
       {/* Top Section: Subdivided Statistics & Recent Activity */}
       <section

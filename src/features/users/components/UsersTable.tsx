@@ -14,7 +14,7 @@ export interface UsersTableProps {
   onPageSizeChange: (pageSize: number) => void;
   onEdit: (user: ManagedUser) => void;
   onToggleStatus: (user: ManagedUser) => void;
-  isTogglingStatus?: boolean;
+  togglingUserId?: string | null;
 }
 
 export function UsersTable({
@@ -29,12 +29,12 @@ export function UsersTable({
   onPageSizeChange,
   onEdit,
   onToggleStatus,
-  isTogglingStatus = false,
+  togglingUserId = null,
 }: UsersTableProps) {
   const columns = getUsersTableColumns({
     onEdit,
     onToggleStatus,
-    isTogglingStatus,
+    togglingUserId,
   });
 
   return (

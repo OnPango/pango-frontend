@@ -65,28 +65,15 @@ export default function UsersPage() {
     setIsModalOpen(true);
   };
 
+  // On failure the promise rejects and the modal shows the error itself; the page only closes it on success.
   const handleCreateUser = async (data: CreateUserInput) => {
-    setActionError(null);
-    try {
-      await createUser.mutateAsync(data);
-      setIsModalOpen(false);
-    } catch (err) {
-      const message = getApiErrorMessage(err, 'No fue posible crear el usuario.');
-      setActionError(message);
-      throw err;
-    }
+    await createUser.mutateAsync(data);
+    setIsModalOpen(false);
   };
 
   const handleUpdateUser = async (data: UpdateUserInput) => {
-    setActionError(null);
-    try {
-      await updateUser.mutateAsync(data);
-      setIsModalOpen(false);
-    } catch (err) {
-      const message = getApiErrorMessage(err, 'No fue posible actualizar el usuario.');
-      setActionError(message);
-      throw err;
-    }
+    await updateUser.mutateAsync(data);
+    setIsModalOpen(false);
   };
 
   const handleToggleStatus = (user: ManagedUser) => {
@@ -195,7 +182,7 @@ export default function UsersPage() {
         onPageSizeChange={setPageSize}
         onEdit={handleOpenEdit}
         onToggleStatus={handleToggleStatus}
-        isTogglingStatus={toggleStatus.isPending}
+        togglingUserId={toggleStatus.isPending ? toggleStatus.variables.id : null}
       />
 
       {/* Create / Edit Modal */}

@@ -28,7 +28,7 @@ function renderMetricIcon(icon: MetricIconType) {
 export function StatOverviewCard({ metrics }: StatOverviewCardProps) {
   return (
     <div className="min-w-0 rounded-2xl border border-line bg-surface p-5 shadow-xs sm:p-6 xl:p-8">
-      <div className="grid grid-cols-1 divide-y divide-line2 sm:grid-cols-2 sm:divide-y sm:divide-x xl:grid-cols-4 xl:divide-y-0 xl:divide-x">
+      <div className="grid grid-cols-1 divide-y divide-line2 sm:grid-cols-2 sm:divide-x sm:divide-y xl:grid-cols-4 xl:divide-x xl:divide-y-0">
         {metrics.map((metric, idx) => {
           const isAlert = metric.icon === 'alert';
           const isUp = metric.trend === 'up';
@@ -72,7 +72,7 @@ export function StatOverviewCard({ metrics }: StatOverviewCardProps) {
                   )}
                   {metric.change}%
                 </span>
-                <span className="whitespace-nowrap text-[11px] text-muted">
+                <span className="text-[11px] whitespace-nowrap text-muted">
                   {metric.changePeriod}
                 </span>
               </div>

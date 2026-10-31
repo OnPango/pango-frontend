@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { getApiErrorMessage } from '@/core/api';
 import type { LoginRedirectState } from '@/core/auth/guards';
+import { asset } from '@/shared/lib/asset';
 import { Leaves2 } from '@/shared/ui/Leaves2';
 import { Leaves3 } from '@/shared/ui/Leaves3';
 import { DoubleArc, SimpleArc } from '@/shared/ui/DecorativeArcs';
@@ -96,7 +97,7 @@ export default function LoginPage() {
         </div>
       </section>
       <section className="absolute bottom-0 z-50 hidden w-screen justify-center lg:flex">
-        <img src="./img/pangolin.png" alt="Pango" width="150" height="150" />
+        <img src={asset('img/pangolin.png')} alt="Pango" width="150" height="150" />
       </section>
 
       <main className="z-50 flex max-w-screen min-w-80 flex-col items-center justify-center gap-10 overflow-hidden p-5">

@@ -1,8 +1,11 @@
 import { isAxiosError } from 'axios';
 
-/** Error body returned by the backend (and by the mock). */
+/**
+ * Error body returned by the backend (and by the mock). NestJS validation errors
+ * (`ValidationPipe`) send `message` as an array of strings, one per failed rule.
+ */
 export interface ApiErrorBody {
-  message?: string;
+  message?: string | string[];
 }
 
 /** User-facing message for a failed request. */
@@ -12,5 +15,7 @@ export function getApiErrorMessage(
 ): string {
   if (!isAxiosError<ApiErrorBody>(error)) return fallback;
   if (!error.response) return 'No se pudo conectar con el servidor.';
-  return error.response.data?.message ?? fallback;
+  const message = error.response.data?.message;
+  if (Array.isArray(message)) return message.join('. ') || fallback;
+  return message || fallback;
 }

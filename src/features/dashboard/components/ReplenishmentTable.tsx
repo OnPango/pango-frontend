@@ -71,8 +71,7 @@ export function ReplenishmentTable({ products }: ReplenishmentTableProps) {
       header: 'Existencia',
       cell: (row) => (
         <div className="font-semibold text-fg">
-          {row.currentStock}{' '}
-          <span className="text-xs font-normal text-muted">{row.unit}</span>
+          {row.currentStock} <span className="text-xs font-normal text-muted">{row.unit}</span>
         </div>
       ),
     },
@@ -81,8 +80,7 @@ export function ReplenishmentTable({ products }: ReplenishmentTableProps) {
       header: 'Punto de reorden',
       cell: (row) => (
         <div className="font-medium text-fg">
-          {row.reorderPoint}{' '}
-          <span className="text-xs font-normal text-muted">{row.unit}</span>
+          {row.reorderPoint} <span className="text-xs font-normal text-muted">{row.unit}</span>
         </div>
       ),
     },
@@ -120,9 +118,7 @@ export function ReplenishmentTable({ products }: ReplenishmentTableProps) {
             type="button"
             onClick={() => setFilter('all')}
             className={`rounded-lg px-3 py-1.5 transition-colors ${
-              filter === 'all'
-                ? 'bg-primary text-primary-fg shadow-xs'
-                : 'text-muted hover:text-fg'
+              filter === 'all' ? 'bg-primary text-primary-fg shadow-xs' : 'text-muted hover:text-fg'
             }`}
           >
             Todos ({products.length})

@@ -21,13 +21,14 @@ export function formatLastLogin(dateStr: string | null): string {
 export interface UsersTableActions {
   onEdit: (user: ManagedUser) => void;
   onToggleStatus: (user: ManagedUser) => void;
-  isTogglingStatus?: boolean;
+  /** Id of the user whose status change is in flight; only that row shows the spinner. */
+  togglingUserId?: string | null;
 }
 
 export function getUsersTableColumns({
   onEdit,
   onToggleStatus,
-  isTogglingStatus = false,
+  togglingUserId = null,
 }: UsersTableActions): Column<ManagedUser>[] {
   return [
     {
@@ -88,30 +89,33 @@ export function getUsersTableColumns({
       key: 'actions',
       header: 'Acciones',
       className: 'text-right',
-      cell: (row) => (
-        <div className="flex w-full items-center justify-end">
-          <Button
-            type="button"
-            variant={row.isActive ? 'ghost' : 'outline'}
-            size="sm"
-            onClick={() => onToggleStatus(row)}
-            disabled={isTogglingStatus}
-            className={`text-xs ${
-              row.isActive ? 'text-danger hover:bg-danger/10' : 'text-success hover:bg-success/10'
-            }`}
-            aria-label={row.isActive ? `Desactivar a ${row.name}` : `Activar a ${row.name}`}
-            title={row.isActive ? 'Desactivar acceso' : 'Activar acceso'}
-          >
-            {isTogglingStatus ? (
-              <Spinner className="size-3" />
-            ) : row.isActive ? (
-              'Desactivar'
-            ) : (
-              'Activar'
-            )}
-          </Button>
-        </div>
-      ),
+      cell: (row) => {
+        const isToggling = togglingUserId === row.id;
+        return (
+          <div className="flex w-full items-center justify-end">
+            <Button
+              type="button"
+              variant={row.isActive ? 'ghost' : 'outline'}
+              size="sm"
+              onClick={() => onToggleStatus(row)}
+              disabled={isToggling}
+              className={`text-xs ${
+                row.isActive ? 'text-danger hover:bg-danger/10' : 'text-success hover:bg-success/10'
+              }`}
+              aria-label={row.isActive ? `Desactivar a ${row.name}` : `Activar a ${row.name}`}
+              title={row.isActive ? 'Desactivar acceso' : 'Activar acceso'}
+            >
+              {isToggling ? (
+                <Spinner className="size-3" />
+              ) : row.isActive ? (
+                'Desactivar'
+              ) : (
+                'Activar'
+              )}
+            </Button>
+          </div>
+        );
+      },
     },
     {
       key: 'Edit',

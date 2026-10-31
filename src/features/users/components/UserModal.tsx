@@ -44,8 +44,9 @@ function UserModalContent({
 
   const [name, setName] = useState(userToEdit?.name ?? '');
   const [email, setEmail] = useState(userToEdit?.email ?? '');
-  const [roleId, setRoleId] = useState(userToEdit?.roleId ?? roles[0]?.id ?? '');
-  const [areaId, setAreaId] = useState(userToEdit?.areaId ?? areas[0]?.id ?? '');
+  // No default on create: privileges (role) must be an explicit choice, never "whatever is first".
+  const [roleId, setRoleId] = useState(userToEdit?.roleId ?? '');
+  const [areaId, setAreaId] = useState(userToEdit?.areaId ?? '');
   const [password, setPassword] = useState('');
   const [isActive, setIsActive] = useState(userToEdit?.isActive ?? true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -54,14 +55,11 @@ function UserModalContent({
     e.preventDefault();
     setErrorMessage(null);
 
-    const targetRoleId = roleId || roles[0]?.id || '';
-    const targetAreaId = areaId || areas[0]?.id || '';
-
-    if (!targetRoleId) {
+    if (!roleId) {
       setErrorMessage('Debe seleccionar un rol para el usuario.');
       return;
     }
-    if (!targetAreaId) {
+    if (!areaId) {
       setErrorMessage('Debe seleccionar un área de trabajo para el usuario.');
       return;
     }
@@ -72,8 +70,8 @@ function UserModalContent({
           id: userToEdit.id,
           name: name.trim(),
           email: email.trim(),
-          roleId: targetRoleId,
-          areaId: targetAreaId,
+          roleId,
+          areaId,
           isActive,
           password: password ? password : undefined,
         });
@@ -81,8 +79,8 @@ function UserModalContent({
         await onCreateUser({
           name: name.trim(),
           email: email.trim(),
-          roleId: targetRoleId,
-          areaId: targetAreaId,
+          roleId,
+          areaId,
           password: password ? password : undefined,
         });
       }
@@ -229,7 +227,9 @@ function UserModalContent({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={
-                isEditing ? 'Dejar en blanco para no modificar' : 'Por defecto: Pango123*'
+                isEditing
+                  ? 'Dejar en blanco para no modificar'
+                  : 'Dejar en blanco para usar la predeterminada'
               }
               className="w-full rounded-xl border border-line bg-surface px-3.5 py-2 text-sm text-fg outline-hidden focus:border-accent focus:ring-1 focus:ring-accent"
             />
