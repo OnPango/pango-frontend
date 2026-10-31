@@ -35,10 +35,10 @@ export default function LoginPage() {
 
   return (
     <div className="grid h-screen w-full items-center justify-center">
-      <div className="absolute top-20 left-20 hidden lg:block">
-        <section className="flex items-center justify-center gap-5 lg:items-start lg:justify-start">
+      <div className="absolute top-20 left-20 hidden xl:block">
+        <section className="flex items-center justify-center gap-5 xl:items-start xl:justify-start">
           <Logo width="50" height="50" />
-          <div className="flex flex-col gap-1 text-center lg:text-start">
+          <div className="flex flex-col gap-1 text-center xl:text-start">
             <div className="flex items-center gap-5">
               <h2 className="text-5xl font-bold tracking-wider">PANGO</h2>
             </div>
@@ -46,14 +46,14 @@ export default function LoginPage() {
           </div>
         </section>
       </div>
-      <div className="absolute top-3/7 right-0 hidden lg:block">
+      <div className="absolute top-3/7 right-0 hidden xl:block">
         <Leaves2 />
       </div>
-      <div className="absolute bottom-3/7 left-0 hidden lg:block">
+      <div className="absolute bottom-3/7 left-0 hidden xl:block">
         <Leaves3 />
       </div>
 
-      <section className="absolute hidden h-screen w-screen lg:block">
+      <section className="absolute hidden h-screen w-screen xl:block">
         <div className="absolute top-0 right-0">
           <SimpleArc
             width={'400'}
@@ -96,15 +96,15 @@ export default function LoginPage() {
           </svg>
         </div>
       </section>
-      <section className="absolute bottom-0 z-50 hidden w-screen justify-center lg:flex">
+      <section className="absolute bottom-0 z-50 hidden w-screen justify-center xl:flex">
         <img src={asset('img/pangolin.png')} alt="Pango" width="150" height="150" />
       </section>
 
       <main className="z-50 flex max-w-screen min-w-80 flex-col items-center justify-center gap-10 overflow-hidden p-5">
-        <section className="flex items-center justify-center gap-5 lg:hidden lg:items-start lg:justify-start">
-          <div className="flex flex-col gap-1 text-center lg:text-start">
+        <section className="flex items-center justify-center gap-5 xl:hidden xl:items-start xl:justify-start">
+          <div className="flex flex-col gap-1 text-center xl:text-start">
             <div className="flex items-center gap-5">
-              <div className="lg:hidden">
+              <div className="xl:hidden">
                 <Logo width="50" height="50" />
               </div>
               <h2 className="text-5xl font-bold tracking-wider">PANGO</h2>

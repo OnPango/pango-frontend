@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from './auth.store';
 import { hasAnyPermission } from './permissions';
@@ -48,7 +48,17 @@ export function RequireGuest() {
   return <Outlet />;
 }
 
-export function RequirePermission({ anyOf }: { anyOf: Permission[] }) {
+/**
+ * Renders the child routes only if the user has at least one of `anyOf`. Otherwise it renders
+ * `fallback`: `core` knows nothing about UI screens, so the app passes its own "forbidden" page.
+ */
+export function RequirePermission({
+  anyOf,
+  fallback = <Navigate to="/" replace />,
+}: {
+  anyOf: Permission[];
+  fallback?: ReactNode;
+}) {
   const user = useAuthStore((state) => state.user);
-  return hasAnyPermission(user, anyOf) ? <Outlet /> : <Navigate to="/" replace />;
+  return hasAnyPermission(user, anyOf) ? <Outlet /> : fallback;
 }
