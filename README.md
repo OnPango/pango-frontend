@@ -108,7 +108,11 @@ Browser ──► Frontend (SPA) ──► BFF / API Gateway (NestJS) ──► 
 
 ```
 pango-frontend/
-├─ .github/workflows/ci.yml      # typecheck + build
+├─ .github/
+│  ├─ pull_request_template.md   # PR description template
+│  └─ workflows/
+│     ├─ ci.yml                  # format + lint + typecheck + test + build
+│     └─ commit-convention.yml   # Conventional Commits check on PRs
 ├─ public/                       # static assets (favicon, pangolin illustrations)
 ├─ src/
 │  ├─ main.tsx                   # entry point; initializes the theme
@@ -282,12 +286,14 @@ npm run dev        # http://localhost:5173 — proxies /api → http://localhost
 ## 11. Workflow (Git and CI)
 
 - Branches: `main` (stable) ← `develop` ← `feature/<module>-<description>`. Changes land through Pull Requests.
-- Commits: [Conventional Commits](https://www.conventionalcommits.org/) in English (`feat`, `fix`, `refactor`, `docs`, `chore`, `style`, `test`), with the module as scope.
+- Commits: [Conventional Commits](https://www.conventionalcommits.org/) in English (`feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`), with the module as scope. Format: `<type>(<scope>)!: <description>` (scope and `!` optional, subject up to 100 characters).
 - CI (`.github/workflows/ci.yml`, GitHub Actions) runs on every push to `main`/`develop` and on every PR targeting them, and can be started manually (`workflow_dispatch`). Steps: `npm ci` → `format:check` → `lint` → `typecheck` → `test` → `build`. A new push to a PR cancels its previous run.
-- Branch protection (recommended): require the **CI / Checks** status check on `main` and `develop`, and at least one approving review.
+- Commit convention (`.github/workflows/commit-convention.yml`) runs on every PR targeting `main`/`develop` and fails if the PR title or any non-merge commit in it does not follow Conventional Commits (the title matters because squash merges use it). Merge commits and history prior to the PR are ignored. Examples: `feat(auth): add organization registration`, `fix(layout)!: drop the legacy sidebar prop`.
+- Branch protection (recommended): require the **CI / Checks** and **Commit convention / Conventional Commits** status checks on `main` and `develop`, and at least one approving review.
+- PR template (`.github/pull_request_template.md`) pre-fills every PR description (summary, changes, how to test, screenshots, checklist, reviewer notes).
 - PR checklist: `npm run format:check`, `npm run lint`, `npm test` and `npm run build` pass · looks right in light and dark · handles loading, error and empty states · new behavior has tests · a new feature is added to `FEATURES` in `eslint.config.js`.
 
-## 12. Reference documents
+## 12. Reference documents.
 
 - Platform SRS (use cases, requirements and actors).
 - Entity–Relationship diagram (ERD) and initial proposed architecture (Lucidchart).
