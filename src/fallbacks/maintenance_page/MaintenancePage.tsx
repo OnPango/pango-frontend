@@ -1,18 +1,21 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { asset } from '@/shared/lib/asset';
 import './style.css';
 import { content } from './content';
 
 export const MaintenancePage = () => {
+  const dustRef = useRef<HTMLDivElement>(null);
+
+  // Runs once on mount. The particles are removed on cleanup, so Strict Mode's double run
+  // (or a remount) never leaves duplicates behind.
   useEffect(() => {
-    const box = document.getElementById('dust');
+    const box = dustRef.current;
+    if (!box) return;
+
     let s = 7;
     function r() {
       s = (s * 16807) % 2147483647;
       return s / 2147483647;
-    }
-
-    if (!box) {
-      throw new Error('Box not found');
     }
 
     // [x%, y%] de los montículos de arena y la base del cono
@@ -63,7 +66,9 @@ export const MaintenancePage = () => {
         'px';
       box.appendChild(m);
     }
-  });
+
+    return () => box.replaceChildren();
+  }, []);
 
   return (
     <div className="flex flex-col items-center justify-center gap-10 p-5">
@@ -75,48 +80,48 @@ export const MaintenancePage = () => {
         <h2 className="absolute -top-36 left-1/2 -translate-x-1/2 transform font-body text-[200px] font-bold opacity-5 md:-top-62.5 md:text-[400px]">
           {content.error}
         </h2>
-        <img className="full" src="img/base.png" alt="" />
+        <img className="full" src={asset('img/base.png')} alt="" />
         <img
           className="leaf l"
           style={{ left: '1.537%', top: '68.462%', width: '13.904%' }}
-          src="img/leafL.png"
+          src={asset('img/leafL.png')}
           alt=""
         />
         <img
           className="leaf r"
           style={{ left: '91.644%', top: '70.308%', width: '7.487%' }}
-          src="img/leafR.png"
+          src={asset('img/leafR.png')}
           alt=""
         />
         <img
           className="marks"
           style={{ left: '56.283%', top: '3.846%', width: '6.952%' }}
-          src="img/lines.png"
+          src={asset('img/lines.png')}
           alt=""
         />
         <div className="lamp"></div>
         <div className="body">
-          <img className="full" src="img/base.png" alt="" />
+          <img className="full" src={asset('img/base.png')} alt="" />
           <img
             className="eye"
             style={{ left: '40.107%', top: '57.231%', width: '4.211%' }}
-            src="img/eyeL.png"
+            src={asset('img/eyeL.png')}
             alt=""
           />
           <img
             className="eye"
             style={{ left: '55.080%', top: '51.385%', width: '3.610%' }}
-            src="img/eyeR.png"
+            src={asset('img/eyeR.png')}
             alt=""
           />
           <img
             className="nose"
             style={{ left: '47.259%', top: '60.769%', width: '8.088%' }}
-            src="img/nose.png"
+            src={asset('img/nose.png')}
             alt=""
           />
         </div>
-        <div className="dust" id="dust"></div>
+        <div className="dust" ref={dustRef}></div>
       </div>
 
       <section className="flex flex-col items-center justify-center gap-6 text-center">

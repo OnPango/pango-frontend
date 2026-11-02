@@ -2,6 +2,17 @@
 @import './theme.css';
 
 @layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   body {
     @apply bg-canvas font-body text-fg antialiased transition-colors duration-300;
   }
@@ -12,5 +23,32 @@
   }
   ::selection {
     @apply bg-primary/30;
+  }
+}
+
+/* Fade the top and bottom edges of a scroll area */
+@utility edge-fade-y {
+  mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+}
+
+/* Items grow and brighten near the center of the scroll area and shrink/fade near the edges. */
+@keyframes nav-focus {
+  0%,
+  100% {
+    opacity: 0.25;
+    scale: 0.85;
+  }
+  50% {
+    opacity: 1;
+    scale: 1;
+  }
+}
+@utility nav-focus {
+  @supports (animation-timeline: view()) {
+    animation: nav-focus linear both;
+    animation-timeline: view();
+  }
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
   }
 }
