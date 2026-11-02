@@ -7,7 +7,8 @@ import { Button } from '@/shared/ui/components/Button';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { useRoles } from '../api/users.queries';
 import { RoleModal } from '../components/RoleModal';
-import { PERMISSION_DEFINITIONS, type ManagedRole } from '../types/users.types';
+import { PERMISSION_CATALOG } from '../content/permissions.catalog';
+import type { ManagedRole } from '../types/users.types';
 
 export default function RolesPermissionsPage() {
   const { data: roles = [], isLoading, error: queryError } = useRoles();
@@ -22,11 +23,6 @@ export default function RolesPermissionsPage() {
   const handleOpenEdit = (role: ManagedRole) => {
     setRoleToEdit(role);
     setIsModalOpen(true);
-  };
-
-  const getPermissionLabel = (key: string) => {
-    const meta = PERMISSION_DEFINITIONS.find((p) => p.key === key);
-    return meta?.label ?? key;
   };
 
   return (
@@ -113,7 +109,7 @@ export default function RolesPermissionsPage() {
                           key={permKey}
                           className="inline-flex items-center rounded-lg border border-line2 bg-canvas px-2.5 py-1 text-[11px] font-medium text-fg"
                         >
-                          {getPermissionLabel(permKey)}
+                          {PERMISSION_CATALOG[permKey]?.label ?? permKey}
                         </span>
                       ))}
                     </div>

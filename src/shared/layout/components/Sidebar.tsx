@@ -7,7 +7,6 @@ const SIDEBAR_ID = 'sidebar';
 /** Desktop sidebar (md and up): sticky, full height, collapsible to icons. */
 export function Sidebar() {
   const isCollapsed = useSidebarStore((state) => state.isCollapsed);
-  const toggle = useSidebarStore((state) => state.toggle);
 
   return (
     <aside
@@ -17,7 +16,7 @@ export function Sidebar() {
         isCollapsed ? 'w-18' : 'w-60 border-r border-line2',
       )}
     >
-      <SidebarContent isCollapsed={isCollapsed} onToggleCollapse={toggle} controlsId={SIDEBAR_ID} />
+      <SidebarContent isCollapsed={isCollapsed} />
     </aside>
   );
 }

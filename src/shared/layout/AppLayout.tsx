@@ -11,28 +11,39 @@ import { ThemeToggle } from '@/shared/ui/components/ThemeToggle';
 import { Sidebar } from './components/Sidebar';
 import { MobileNav } from './components/MobileNav';
 import { useSidebarStore } from './sidebar.store';
+import { NavContext, useCurrentNavItem } from './nav.context';
+import type { NavSection } from './nav';
 import { cn } from '../lib/cn';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { AvatarButton } from '../ui/components/AvatarButton';
 import { Logo } from '../ui/Logo';
 
-export function AppLayout() {
+interface AppLayoutProps {
+  /** The whole menu. The layout only shows the items the signed-in user may open. */
+  navSections: NavSection[];
+}
+
+/** Provides the menu to the shell: the title in the header reads it from the context too. */
+export function AppLayout({ navSections }: AppLayoutProps) {
+  return (
+    <NavContext value={navSections}>
+      <AppShell />
+    </NavContext>
+  );
+}
+
+function AppShell() {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const isCollapsed = useSidebarStore((state) => state.isCollapsed);
   const toggle = useSidebarStore((state) => state.toggle);
   const user = useAuthStore((state) => state.user);
   const location = useLocation();
+  const currentItem = useCurrentNavItem();
   const ToggleIcon = isCollapsed ? (
     <TbLayoutSidebarRightCollapseFilled className="size-6" />
   ) : (
     <TbLayoutSidebarLeftCollapseFilled className="size-6" />
   );
-
-  function getTitle() {
-    const path = location.pathname.split('/')[1];
-    if (path === '') return 'DASHBOARD';
-    return path.toLocaleUpperCase();
-  }
 
   return (
     <div className="fixed inset-0 flex flex-col gap-2 overflow-hidden p-2">
@@ -40,7 +51,9 @@ export function AppLayout() {
         <section className="flex items-center gap-3">
           <Logo width="30" height="30" />
           {/* Nombre del item */}
-          <span className="text-md hidden font-semibold lg:block">{getTitle()}</span>
+          <span className="text-md hidden font-semibold uppercase lg:block">
+            {currentItem?.label}
+          </span>
           {toggle && (
             <Button
               type="button"
@@ -54,7 +67,7 @@ export function AppLayout() {
               {ToggleIcon}
             </Button>
           )}
-          <span className="hidden font-light text-muted lg:block">/{getTitle().toLowerCase()}</span>
+          <span className="hidden font-light text-muted lg:block">{location.pathname}</span>
           <div className="hidden w-md items-center gap-4 rounded-full border border-line2 px-3 py-1 focus-within:border-accent lg:flex">
             <FiSearch className="size-7 text-lg text-muted" />
             <input

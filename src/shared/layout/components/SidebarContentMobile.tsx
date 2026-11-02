@@ -1,10 +1,9 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/auth.store';
-import { hasAnyPermission } from '@/core/auth/permissions';
 import { useLogout } from '@/core/auth/useLogout';
 import { cn } from '@/shared/lib/cn';
-import { NAV_SECTIONS } from '../nav';
+import { useVisibleNav } from '../nav.context';
 import { Logo } from '@/shared/ui/Logo';
 
 interface SidebarContentMobileProps {
@@ -19,10 +18,7 @@ export function SidebarContentMobile({ onNavigate, headerAction }: SidebarConten
   const { logout, isLoggingOut } = useLogout();
   const scrollerRef = useRef<HTMLElement>(null);
 
-  const sections = NAV_SECTIONS.map((section) => ({
-    ...section,
-    items: section.items.filter((item) => hasAnyPermission(user, item.anyOf ? item.anyOf : [])),
-  })).filter((section) => section.items.length > 0);
+  const sections = useVisibleNav();
 
   // Center the current page when the menu opens. The parent calls showModal() in its own effect,
   // which runs after this one, so wait one frame until the dialog is actually laid out.

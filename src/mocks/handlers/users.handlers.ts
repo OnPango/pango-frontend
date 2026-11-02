@@ -79,7 +79,8 @@ function toManagedRoleDto(role: RoleRow): ManagedRoleDto {
 
 const error = (status: number, message: string) => ({ status, data: { message } });
 
-function checkAdminAuth() {
+/** Session + permission check, like the backend's guard: 401 without a valid session, 403 without one of `anyOf`. */
+function authorize(...anyOf: Permission[]) {
   const session = readSession();
   if (!session) {
     return { error: error(401, 'Tu sesión expiró. Inicia sesión de nuevo.') };
@@ -89,10 +90,8 @@ function checkAdminAuth() {
     return { error: error(401, 'Usuario no encontrado o inactivo.') };
   }
   const role = findRoleById(user.role_id);
-  const hasAccess =
-    role?.permissions.includes('users:manage') || role?.permissions.includes('roles:manage');
-  if (!hasAccess) {
-    return { error: error(403, 'Acceso denegado: Se requiere rol de Administrador.') };
+  if (!role || !anyOf.some((permission) => role.permissions.includes(permission))) {
+    return { error: error(403, 'Acceso denegado: tu rol no tiene permiso para esta operación.') };
   }
   return { user, role };
 }
@@ -108,7 +107,7 @@ export const usersRoutes: MockRoutes = {
 
   // ---- ROLES Y PERMISOS ----
   'GET /roles': () => {
-    const auth = checkAdminAuth();
+    const auth = authorize('role.read', 'role.manage', 'user.manage');
     if (auth.error) return auth.error;
 
     return {
@@ -118,7 +117,7 @@ export const usersRoutes: MockRoutes = {
   },
 
   'POST /roles': ({ body }) => {
-    const auth = checkAdminAuth();
+    const auth = authorize('role.manage');
     if (auth.error) return auth.error;
 
     const data = (body ?? {}) as {
@@ -153,7 +152,7 @@ export const usersRoutes: MockRoutes = {
   },
 
   'PUT /roles/:id': ({ params, body }) => {
-    const auth = checkAdminAuth();
+    const auth = authorize('role.manage');
     if (auth.error) return auth.error;
 
     const role = findRoleById(params.id);
@@ -191,7 +190,7 @@ export const usersRoutes: MockRoutes = {
 
   // ---- USUARIOS ----
   'GET /users': () => {
-    const auth = checkAdminAuth();
+    const auth = authorize('user.read', 'user.manage');
     if (auth.error) return auth.error;
 
     return {
@@ -201,7 +200,7 @@ export const usersRoutes: MockRoutes = {
   },
 
   'GET /users/:id': ({ params }) => {
-    const auth = checkAdminAuth();
+    const auth = authorize('user.read', 'user.manage');
     if (auth.error) return auth.error;
 
     const user = findUserById(params.id);
@@ -211,7 +210,7 @@ export const usersRoutes: MockRoutes = {
   },
 
   'POST /users': ({ body }) => {
-    const auth = checkAdminAuth();
+    const auth = authorize('user.manage');
     if (auth.error) return auth.error;
 
     const data = (body ?? {}) as {
@@ -258,7 +257,7 @@ export const usersRoutes: MockRoutes = {
   },
 
   'PUT /users/:id': ({ params, body }) => {
-    const auth = checkAdminAuth();
+    const auth = authorize('user.manage');
     if (auth.error) return auth.error;
 
     const user = findUserById(params.id);
@@ -293,7 +292,7 @@ export const usersRoutes: MockRoutes = {
   },
 
   'PATCH /users/:id/status': ({ params, body }) => {
-    const auth = checkAdminAuth();
+    const auth = authorize('user.manage');
     if (auth.error) return auth.error;
 
     const user = findUserById(params.id);

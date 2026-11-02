@@ -5,10 +5,12 @@ import type { Permission } from '@/core/auth/user';
 import { Button } from '@/shared/ui/components/Button';
 import { useCreateRole, useUpdateRole } from '../api/users.queries';
 import {
-  PERMISSION_DEFINITIONS,
-  type ManagedRole,
-  type PermissionMeta,
-} from '../types/users.types';
+  PERMISSION_CATALOG,
+  PERMISSION_CATEGORIES,
+  PERMISSIONS_BY_CATEGORY,
+  type PermissionCategoryId,
+} from '../content/permissions.catalog';
+import type { ManagedRole } from '../types/users.types';
 
 interface RoleModalProps {
   isOpen: boolean;
@@ -29,7 +31,7 @@ function RoleModalContent({ onClose, roleToEdit }: RoleModalContentProps) {
   const [name, setName] = useState(roleToEdit?.name ?? '');
   const [description, setDescription] = useState(roleToEdit?.description ?? '');
   const [selectedPermissions, setSelectedPermissions] = useState<Permission[]>(
-    roleToEdit?.permissions ?? ['dashboard:view'],
+    roleToEdit?.permissions ?? [],
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -41,18 +43,8 @@ function RoleModalContent({ onClose, roleToEdit }: RoleModalContentProps) {
     );
   };
 
-  const categories = [
-    { id: 'general', label: 'General' },
-    { id: 'operations', label: 'Operaciones e Inventario' },
-    { id: 'supply', label: 'Abastecimiento y Proveedores' },
-    { id: 'admin', label: 'Administración' },
-  ] as const;
-
-  const getPermissionsByCategory = (cat: string): PermissionMeta[] =>
-    PERMISSION_DEFINITIONS.filter((p) => p.category === cat);
-
-  const toggleCategory = (cat: string) => {
-    const catPerms = getPermissionsByCategory(cat).map((p) => p.key);
+  const toggleCategory = (cat: PermissionCategoryId) => {
+    const catPerms = PERMISSIONS_BY_CATEGORY[cat];
     const allSelected = catPerms.every((k) => selectedPermissions.includes(k));
 
     if (allSelected) {
@@ -186,9 +178,9 @@ function RoleModalContent({ onClose, roleToEdit }: RoleModalContentProps) {
             </div>
 
             <div className="space-y-4">
-              {categories.map((cat) => {
-                const perms = getPermissionsByCategory(cat.id);
-                const allSelected = perms.every((p) => selectedPermissions.includes(p.key));
+              {PERMISSION_CATEGORIES.map((cat) => {
+                const perms = PERMISSIONS_BY_CATEGORY[cat.id];
+                const allSelected = perms.every((key) => selectedPermissions.includes(key));
 
                 return (
                   <div
@@ -209,11 +201,12 @@ function RoleModalContent({ onClose, roleToEdit }: RoleModalContentProps) {
                     </div>
 
                     <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                      {perms.map((perm) => {
-                        const isChecked = selectedPermissions.includes(perm.key);
+                      {perms.map((key) => {
+                        const perm = PERMISSION_CATALOG[key];
+                        const isChecked = selectedPermissions.includes(key);
                         return (
                           <label
-                            key={perm.key}
+                            key={key}
                             className={`flex cursor-pointer items-start gap-3 rounded-xl border p-2.5 transition-all ${
                               isChecked
                                 ? 'border-primary/40 bg-primary/5'
@@ -223,7 +216,7 @@ function RoleModalContent({ onClose, roleToEdit }: RoleModalContentProps) {
                             <input
                               type="checkbox"
                               checked={isChecked}
-                              onChange={() => togglePermission(perm.key)}
+                              onChange={() => togglePermission(key)}
                               className="mt-0.5 size-4 rounded-md border-line text-primary focus:ring-primary/50"
                             />
                             <div className="min-w-0 flex-1">

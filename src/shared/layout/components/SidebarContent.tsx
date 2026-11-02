@@ -1,36 +1,22 @@
 import { IoLogOut } from 'react-icons/io5';
-import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-import { useAuthStore } from '@/core/auth/auth.store';
-import { hasAnyPermission } from '@/core/auth/permissions';
 import { useLogout } from '@/core/auth/useLogout';
 import { cn } from '@/shared/lib/cn';
-import { NAV_SECTIONS } from '../nav';
+import { useVisibleNav } from '../nav.context';
 
 interface SidebarContentProps {
   /** Icon-only mode. Labels stay in the DOM (screen-reader only) and get a native tooltip. */
   isCollapsed: boolean;
   /** Called when a link is clicked; the mobile drawer uses it to close itself. */
   onNavigate?: () => void;
-  /** Desktop only: when given, a collapse/expand button is shown. */
-  onToggleCollapse?: () => void;
-  /** Extra control next to the brand (the drawer's close button). */
-  headerAction?: ReactNode;
-  /** Id of the element the collapse button controls. */
-  controlsId?: string;
 }
 
 const footerButton =
   'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-fg/80 transition hover:bg-sidebar-fg/10 hover:text-sidebar-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/60';
 
 export function SidebarContent({ isCollapsed, onNavigate }: SidebarContentProps) {
-  const user = useAuthStore((state) => state.user);
   const { logout, isLoggingOut } = useLogout();
-
-  const sections = NAV_SECTIONS.map((section) => ({
-    ...section,
-    items: section.items.filter((item) => hasAnyPermission(user, item.anyOf ? item.anyOf : [])),
-  })).filter((section) => section.items.length > 0);
+  const sections = useVisibleNav();
 
   const hiddenWhenCollapsed = isCollapsed && 'sr-only';
   const centerWhenCollapsed = isCollapsed && 'justify-center px-0';

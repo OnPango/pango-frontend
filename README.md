@@ -98,7 +98,7 @@ Browser ──► Frontend (SPA) ──► BFF / API Gateway (NestJS) ──► 
 
 **Requests.** All requests go through `core/api/client.ts`, which adds `Authorization: Bearer <token>` and logs the user out on a 401. The organization (tenant) is resolved by the backend from the JWT; the frontend does not send it.
 
-**Permissions.** The SRS states that profiles and permissions are configurable by each organization's administrator, so the frontend **does not hardcode roles**: the session carries a list of permissions (`resource:action`) and the UI decides based on it (`hasAnyPermission`, `RequirePermission`). Hiding an element is a UX concern only; real authorization is enforced by the backend.
+**Permissions.** The SRS states that profiles and permissions are configurable by each organization's administrator, so the frontend **does not hardcode roles**: the session carries a list of permissions (`resource.action`, e.g. `stock_request.approve`) and the UI decides based on it (`hasAnyPermission`, `RequirePermission`). Hiding an element is a UX concern only; real authorization is enforced by the backend.
 
 **Anti-corruption layer.** Components never use the raw backend JSON: each `features/<x>/api/` converts responses into the frontend's domain types (camelCase, in English). If the contract changes, only that layer is touched.
 
@@ -154,28 +154,19 @@ app ──► features ──► shared ──► core
 
 ## 6. Routes and permissions
 
-URLs are in Spanish and kebab-case. Permissions are provisional until the catalog is closed with the backend.
+URLs are in English and kebab-case (`/roles-permissions`).
 
-| Route          | Feature      | UC           | Required permission (any of)         |
-| -------------- | ------------ | ------------ | ------------------------------------ |
-| `/login`       | `auth`       | CU-01        | public                               |
-| `/`            | `dashboard`  | CU-07        | signed in                            |
-| `/productos`   | `products`   | CU-03        | `products:manage`                    |
-| `/almacenes`   | `warehouses` | CU-04, CU-07 | `warehouses:manage`                  |
-| `/inventario`  | `inventory`  | CU-05, CU-06 | `inventory:record`                   |
-| `/solicitudes` | `requests`   | CU-08, CU-09 | `requests:create`, `requests:attend` |
-| `/proveedores` | `suppliers`  | —            | `suppliers:manage`                   |
-| `/prediccion`  | `forecast`   | CU-10, CU-11 | `forecast:view`                      |
-| `/alertas`     | `alerts`     | CU-12        | `alerts:view`                        |
-| `/areas`       | `areas`      | —            | `areas:manage`                       |
-| `/usuarios`    | `users`      | CU-02        | `users:manage`                       |
+- **Routes.** [`src/app/routes.tsx`](src/app/routes.tsx) is the single place that declares the screens: path, menu label and icon, menu section, required permissions (`anyOf`, empty = any signed-in user) and page. The router, the sidebar menu and the header title are all derived from it. A new screen is one entry there (plus its `pages/<Name>Page.tsx`).
+- **Permissions.** Codes are `resource.action` and mirror the backend's `permissions` table, including its scope (`ORGANIZATION` or `WAREHOUSE`). The list lives in `PERMISSION_SCOPES` in [`src/core/auth/user.ts`](src/core/auth/user.ts); their Spanish names and descriptions, used by the roles screen, in [`permissions.catalog.ts`](src/features/users/content/permissions.catalog.ts). A permission added to the first without the second does not compile.
+- **Roles are configurable.** Each organization defines its own roles (the backend seeds a default set), so the UI must never branch on a role name, only on permissions.
+- `/login` is public and `/` needs only a session; everything else is guarded with `RequirePermission`, which shows the 403 page when the permission is missing.
 
 ## 7. Naming conventions
 
 ### 7.1 Language
 
 - **Code identifiers** (directories, files, components, functions, variables, types, permissions): **English**.
-- **User-facing text and URLs**: **Spanish**.
+- **User-facing text**: **Spanish**.
 - **Documentation, code comments and commit messages**: **English**.
 - ER diagram entities are translated with the glossary below; do not invent synonyms:
   | ER diagram (Spanish)           | Code (English)    |     | ER diagram (Spanish)     | Code (English)   |
@@ -216,8 +207,8 @@ URLs are in Spanish and kebab-case. Permissions are provisional until the catalo
 | Zustand stores                    | `use<Name>Store`                         | `useAuthStore`                                         |
 | Query keys                        | `<feature>Keys` object                   | `productKeys.list(filters)`                            |
 | Providers / contexts              | `<Name>Provider`                         | `ThemeProvider`                                        |
-| Permissions                       | `resource:action` (English)              | `products:manage`                                      |
-| URL routes                        | `kebab-case`, Spanish                    | `/ordenes-de-compra`                                   |
+| Permissions                       | `resource.action` (English)              | `product.manage`                                       |
+| URL routes                        | `kebab-case`, English                    | `/purchase-orders`                                     |
 | Environment variables             | `VITE_` + `UPPER_SNAKE_CASE`             | `VITE_API_URL`                                         |
 | Custom CSS utilities (`@utility`) | `kebab-case`                             | `btn-primary`                                          |
 | Branches                          | `<type>/<module>-<description>`          | `feature/products-crud`                                |

@@ -35,9 +35,11 @@ export interface UserRow {
 
 export const MOCK_PASSWORD = 'Pango123*';
 
-const USERS_STORAGE_KEY = 'pango_mock_db_users';
-const ROLES_STORAGE_KEY = 'pango_mock_db_roles';
-const AREAS_STORAGE_KEY = 'pango_mock_db_areas';
+// Bump the version when the shape or the permission codes of the seed data change: data saved by
+// an older version would otherwise be loaded as is (e.g. roles holding permissions that no longer exist).
+const USERS_STORAGE_KEY = 'pango_mock_db_users_v2';
+const ROLES_STORAGE_KEY = 'pango_mock_db_roles_v2';
+const AREAS_STORAGE_KEY = 'pango_mock_db_areas_v2';
 
 function loadFromStorage<T>(key: string, fallback: T[]): T[] {
   if (typeof window === 'undefined' || !window.localStorage) return [...fallback];
@@ -79,25 +81,32 @@ const INITIAL_ROLES: RoleRow[] = [
     name: 'Almacenista',
     description: 'Gestión física y registros de inventario y almacenes',
     permissions: [
-      'dashboard:view',
-      'warehouses:manage',
-      'inventory:record',
-      'requests:attend',
-      'movements:view',
-      'alerts:view',
+      'catalog.read',
+      'warehouse.read',
+      'location.manage',
+      'stock.read',
+      'replenishment.manage',
+      'movement.read',
+      'movement.create',
+      'movement.confirm',
+      'movement.receive',
+      'stock_request.read',
+      'stock_request.approve',
+      'alert.read',
+      'alert.resolve',
     ],
   },
   {
     id: 'role-purchasing',
     name: 'Compras',
     description: 'Gestión de proveedores, compras y proyecciones',
-    permissions: ['dashboard:view', 'suppliers:manage', 'forecast:view', 'alerts:view'],
+    permissions: ['catalog.read', 'supplier.manage', 'forecast.read', 'alert.read'],
   },
   {
     id: 'role-requester',
     name: 'Solicitante',
     description: 'Creación y seguimiento de solicitudes de materiales',
-    permissions: ['dashboard:view', 'requests:create'],
+    permissions: ['catalog.read', 'stock_request.read', 'stock_request.create'],
   },
 ];
 
