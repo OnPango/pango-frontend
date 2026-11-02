@@ -290,7 +290,7 @@ npm run dev        # http://localhost:5173 — proxies /api → http://localhost
 - Branch protection (recommended): require the **CI / Checks** and **Commit convention / Conventional Commits** status checks on `main` and `develop`, and at least one approving review.
 - PR checklist: `npm run format:check`, `npm run lint`, `npm test` and `npm run build` pass · looks right in light and dark · handles loading, error and empty states · new behavior has tests · a new feature is added to `FEATURES` in `eslint.config.js`.
 
-## 12. Reference documents.
+## 12. Reference documents
 
 - Platform SRS (use cases, requirements and actors).
 - Entity–Relationship diagram (ERD) and initial proposed architecture (Lucidchart).
