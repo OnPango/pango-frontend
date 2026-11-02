@@ -3,6 +3,7 @@ import { BsShieldCheck } from 'react-icons/bs';
 import { FiPlus } from 'react-icons/fi';
 import { MdEdit } from 'react-icons/md';
 import { getApiErrorMessage } from '@/core/api';
+import { Badge } from '@/shared/ui/components/Badge';
 import { Button } from '@/shared/ui/components/Button';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { useRoles } from '../api/users.queries';
@@ -69,9 +70,9 @@ export default function RolesPermissionsPage() {
                         <div className="flex items-center gap-2">
                           <h3 className="text-lg font-bold text-fg">{role.name}</h3>
                           {isAdminRole && (
-                            <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary uppercase">
+                            <Badge tone="primary" size="sm" className="tracking-wide uppercase">
                               Sistema
-                            </span>
+                            </Badge>
                           )}
                         </div>
                         <p className="mt-0.5 text-xs text-muted">

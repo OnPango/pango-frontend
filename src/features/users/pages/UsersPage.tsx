@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react';
 import { FiPlus, FiSearch } from 'react-icons/fi';
 import { getApiErrorMessage } from '@/core/api';
+import { Alert } from '@/shared/ui/components/Alert';
+import { TextBox } from '@/shared/ui/components/form/TextBox';
+import { Select } from '@/shared/ui/components/form/select/Select';
+import type { SelectOption } from '@/shared/ui/components/form/select/select.types';
 import { usePagination } from '@/shared/ui/components/pagination/usePagination';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import {
@@ -15,6 +19,14 @@ import { UserModal } from '../components/UserModal';
 import { UsersTable } from '../components/UsersTable';
 import type { CreateUserInput, ManagedUser, UpdateUserInput } from '../types/users.types';
 
+type StatusFilter = 'all' | 'active' | 'inactive';
+
+const STATUS_OPTIONS: SelectOption[] = [
+  { value: 'all', label: 'Todos los estados' },
+  { value: 'active', label: 'Solo activos' },
+  { value: 'inactive', label: 'Solo inactivos' },
+];
+
 export default function UsersPage() {
   const { data: users = [], isLoading, error: queryError } = useUsers();
   const { data: roles = [] } = useRoles();
@@ -26,11 +38,26 @@ export default function UsersPage() {
   const [search, setSearch] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
   const [selectedArea, setSelectedArea] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [selectedStatus, setSelectedStatus] = useState<StatusFilter>('all');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<ManagedUser | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const roleOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: 'all', label: 'Todos los roles' },
+      ...roles.map((r) => ({ value: r.id, label: r.name })),
+    ],
+    [roles],
+  );
+  const areaOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: 'all', label: 'Todas las áreas' },
+      ...areas.map((a) => ({ value: a.id, label: a.name })),
+    ],
+    [areas],
+  );
 
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
@@ -98,70 +125,42 @@ export default function UsersPage() {
         actionText="Nuevo Usuario"
       />
 
-      {actionError && (
-        <div
-          role="alert"
-          className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
-        >
-          {actionError}
-        </div>
-      )}
+      {actionError && <Alert tone="danger">{actionError}</Alert>}
 
       {/* Filters Bar */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative flex-1">
-          <FiSearch className="absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted" />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre o correo electrónico…"
-            className="w-full rounded-2xl border border-line bg-surface py-3 pr-4 pl-10 text-sm text-fg outline-hidden focus:border-accent"
-          />
-        </div>
+        <TextBox
+          type="search"
+          aria-label="Buscar usuarios"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por nombre o correo electrónico…"
+          leadingIcon={FiSearch}
+          containerClassName="flex-1"
+        />
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Rol filter */}
-          <select
-            value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
-            className="rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-fg outline-hidden focus:border-accent"
+          <Select
             aria-label="Filtrar por rol"
-          >
-            <option value="all">Todos los roles</option>
-            {roles.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Área filter */}
-          <select
-            value={selectedArea}
-            onChange={(e) => setSelectedArea(e.target.value)}
-            className="rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-fg outline-hidden focus:border-accent"
+            value={selectedRole}
+            onChange={setSelectedRole}
+            options={roleOptions}
+            className="w-full sm:w-44"
+          />
+          <Select
             aria-label="Filtrar por área"
-          >
-            <option value="all">Todas las áreas</option>
-            {areas.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Estado filter */}
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value as 'all' | 'active' | 'inactive')}
-            className="rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-fg outline-hidden focus:border-accent"
+            value={selectedArea}
+            onChange={setSelectedArea}
+            options={areaOptions}
+            className="w-full sm:w-44"
+          />
+          <Select
             aria-label="Filtrar por estado"
-          >
-            <option value="all">Todos los estados</option>
-            <option value="active">Solo Activos</option>
-            <option value="inactive">Solo Inactivos</option>
-          </select>
+            value={selectedStatus}
+            onChange={(value) => setSelectedStatus(value as StatusFilter)}
+            options={STATUS_OPTIONS}
+            className="w-full sm:w-44"
+          />
         </div>
       </div>
 

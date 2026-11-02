@@ -26,6 +26,45 @@
   }
 }
 
+/*
+ * Scrollbars: one thin, discreet line with no arrow buttons, identical in every browser.
+ * - Chromium / Safari / WebKit: the ::-webkit-scrollbar pseudo-elements draw it. (Chromium 121+ ignores
+ *   them once `scrollbar-width` or `scrollbar-color` is set, so those are applied only where the
+ *   pseudo-elements do not exist.)
+ * - Firefox: the standard `scrollbar-width` / `scrollbar-color` properties approximate it.
+ */
+@supports selector(::-webkit-scrollbar) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--line2);
+    background-clip: content-box;
+    border: 2px solid transparent;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover,
+  ::-webkit-scrollbar-thumb:active {
+    background-color: var(--muted);
+  }
+}
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line2) transparent;
+  }
+}
+
 /* Fade the top and bottom edges of a scroll area */
 @utility edge-fade-y {
   mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
