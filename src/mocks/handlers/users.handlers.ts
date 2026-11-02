@@ -79,6 +79,12 @@ function toManagedRoleDto(role: RoleRow): ManagedRoleDto {
 
 const error = (status: number, message: string) => ({ status, data: { message } });
 
+/** A user of another organization does not exist as far as the caller is concerned (RF-ORG-003). */
+const findUserInOrganization = (id: string, organizationId: string) => {
+  const user = findUserById(id);
+  return user?.organization_id === organizationId ? user : undefined;
+};
+
 /** Session + permission check, like the backend's guard: 401 without a valid session, 403 without one of `anyOf`. */
 function authorize(...anyOf: Permission[]) {
   const session = readSession();
@@ -195,7 +201,9 @@ export const usersRoutes: MockRoutes = {
 
     return {
       status: 200,
-      data: users.map(toManagedUserDto),
+      data: users
+        .filter((u) => u.organization_id === auth.user.organization_id)
+        .map(toManagedUserDto),
     };
   },
 
@@ -203,7 +211,7 @@ export const usersRoutes: MockRoutes = {
     const auth = authorize('user.read', 'user.manage');
     if (auth.error) return auth.error;
 
-    const user = findUserById(params.id);
+    const user = findUserInOrganization(params.id, auth.user.organization_id);
     if (!user) return error(404, 'Usuario no encontrado.');
 
     return { status: 200, data: toManagedUserDto(user) };
@@ -244,7 +252,7 @@ export const usersRoutes: MockRoutes = {
       password: data.password || MOCK_PASSWORD,
       role_id: data.role_id,
       area_id: data.area_id,
-      organization_id: 'org-pango',
+      organization_id: auth.user.organization_id,
       is_active: true,
       last_login_at: null,
       created_at: new Date().toISOString(),
@@ -260,7 +268,7 @@ export const usersRoutes: MockRoutes = {
     const auth = authorize('user.manage');
     if (auth.error) return auth.error;
 
-    const user = findUserById(params.id);
+    const user = findUserInOrganization(params.id, auth.user.organization_id);
     if (!user) return error(404, 'Usuario no encontrado.');
 
     const data = (body ?? {}) as {
@@ -295,7 +303,7 @@ export const usersRoutes: MockRoutes = {
     const auth = authorize('user.manage');
     if (auth.error) return auth.error;
 
-    const user = findUserById(params.id);
+    const user = findUserInOrganization(params.id, auth.user.organization_id);
     if (!user) return error(404, 'Usuario no encontrado.');
 
     // Prevenir desactivarse a uno mismo si es el único admin

@@ -14,6 +14,15 @@ export interface RoleRow {
   permissions: Permission[];
 }
 
+export interface OrganizationRow {
+  id: string;
+  name: string;
+  /** Unique across the platform. */
+  tax_id: string;
+  contact_phone: string;
+  created_at: string;
+}
+
 export interface AreaRow {
   id: string;
   name: string;
@@ -40,6 +49,7 @@ export const MOCK_PASSWORD = 'Pango123*';
 const USERS_STORAGE_KEY = 'pango_mock_db_users_v2';
 const ROLES_STORAGE_KEY = 'pango_mock_db_roles_v2';
 const AREAS_STORAGE_KEY = 'pango_mock_db_areas_v2';
+const ORGANIZATIONS_STORAGE_KEY = 'pango_mock_db_organizations_v2';
 
 function loadFromStorage<T>(key: string, fallback: T[]): T[] {
   if (typeof window === 'undefined' || !window.localStorage) return [...fallback];
@@ -61,6 +71,16 @@ function saveToStorage<T>(key: string, data: T[]): void {
     console.warn('[mock-db] Error guardando en localStorage:', err);
   }
 }
+
+const INITIAL_ORGANIZATIONS: OrganizationRow[] = [
+  {
+    id: 'org-pango',
+    name: 'Pango',
+    tax_id: '900123456-7',
+    contact_phone: '+57 300 000 0000',
+    created_at: '2026-09-01T08:00:00Z',
+  },
+];
 
 const INITIAL_AREAS: AreaRow[] = [
   { id: 'area-admin', name: 'Administración' },
@@ -173,6 +193,10 @@ const INITIAL_USERS: UserRow[] = [
   },
 ];
 
+export const organizations: OrganizationRow[] = loadFromStorage(
+  ORGANIZATIONS_STORAGE_KEY,
+  INITIAL_ORGANIZATIONS,
+);
 export const areas: AreaRow[] = loadFromStorage(AREAS_STORAGE_KEY, INITIAL_AREAS);
 export const roles: RoleRow[] = loadFromStorage(ROLES_STORAGE_KEY, INITIAL_ROLES);
 export const users: UserRow[] = loadFromStorage(USERS_STORAGE_KEY, INITIAL_USERS);
@@ -185,6 +209,10 @@ export function persistRoles(): void {
   saveToStorage(ROLES_STORAGE_KEY, roles);
 }
 
+export function persistOrganizations(): void {
+  saveToStorage(ORGANIZATIONS_STORAGE_KEY, organizations);
+}
+
 export function persistAreas(): void {
   saveToStorage(AREAS_STORAGE_KEY, areas);
 }
@@ -194,6 +222,7 @@ export function resetMockDatabase(): void {
     localStorage.removeItem(USERS_STORAGE_KEY);
     localStorage.removeItem(ROLES_STORAGE_KEY);
     localStorage.removeItem(AREAS_STORAGE_KEY);
+    localStorage.removeItem(ORGANIZATIONS_STORAGE_KEY);
   }
   users.length = 0;
   users.push(...INITIAL_USERS);
@@ -201,6 +230,8 @@ export function resetMockDatabase(): void {
   roles.push(...INITIAL_ROLES);
   areas.length = 0;
   areas.push(...INITIAL_AREAS);
+  organizations.length = 0;
+  organizations.push(...INITIAL_ORGANIZATIONS);
 }
 
 export const findUserByEmail = (email: string) =>
@@ -209,5 +240,11 @@ export const findUserByEmail = (email: string) =>
 export const findUserById = (id: string) => users.find((user) => user.id === id);
 
 export const findRoleById = (id: string) => roles.find((role) => role.id === id);
+
+/** Tax ids are compared ignoring case, dots, dashes and spaces: "900.123.456-7" is "9001234567". */
+const normalizeTaxId = (taxId: string) => taxId.replace(/[^a-z0-9]/gi, '').toLowerCase();
+
+export const findOrganizationByTaxId = (taxId: string) =>
+  organizations.find((org) => normalizeTaxId(org.tax_id) === normalizeTaxId(taxId));
 
 export const findAreaById = (id: string) => areas.find((area) => area.id === id);

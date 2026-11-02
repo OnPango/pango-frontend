@@ -5,9 +5,12 @@ import { hasAnyPermission } from './permissions';
 import { restoreSession } from './session.api';
 import { type Permission } from '@/core/auth/user';
 
-/** Location the user tried to open before being sent to /login. */
+/** What /login may receive through the router state. */
 export interface LoginRedirectState {
+  /** Location the user tried to open before being sent to /login. */
   from?: string;
+  /** Set right after registering an organization: the login shows a confirmation and fills the email. */
+  registeredEmail?: string;
 }
 
 function SessionCheck() {

@@ -12,6 +12,7 @@ import { RouteErrorPage } from '@/fallbacks/error-pages/RouteErrorPage';
 import { AppLayout } from '@/shared/layout/AppLayout';
 
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
+const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'));
 
 /**
  * One screen of `APP_ROUTES`, behind its permission check. Pages declare their own `errorElement`
@@ -39,7 +40,10 @@ export const router = createBrowserRouter(
         { path: '*', element: <NotFoundPage /> },
         {
           element: <RequireGuest />,
-          children: [{ path: '/login', element: page({ Page: LoginPage }) }],
+          children: [
+            { path: '/login', element: page({ Page: LoginPage }) },
+            { path: '/register', element: page({ Page: RegisterPage }) },
+          ],
         },
         {
           element: <RequireAuth />,

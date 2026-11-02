@@ -27,6 +27,7 @@ Pango web application (SPA), a multi-organization SaaS platform for intelligent 
 | Light / dark / system theme with Tailwind v4                             | ✅ Done                          |
 | Session (store + JWT on requests), permission-based route guards, layout | ⏳ Pending                       |
 | Module screens                                                           | ⏳ Placeholders                  |
+| Organization registration (US-001 / CU-13)                               | ✅ Done (against the mock)       |
 | Base components (table, modal, status badges, form fields)               | ⏳ Pending                       |
 | Login with the pangolin illustration and "under construction" screen     | ⏳ Pending                       |
 | ESLint + Prettier, tests (Vitest + Testing Library)                      | ⏳ Pending                       |
@@ -75,7 +76,7 @@ The frontend is the presentation layer for the use cases in the SRS. It consumes
 | React Router          | 7                                       | Routing (`createBrowserRouter`, `lazy` routes) |
 | TanStack Query        | 5                                       | Server state: caching, retries, invalidation   |
 | Zustand               | 5.0.15                                  | Client state (session, theme)                  |
-| React Hook Form + Zod | 7 / 3                                   | Forms and validation                           |
+| React Hook Form + Zod | 7 / 4 (`@hookform/resolvers` 7)         | Forms and validation                           |
 | Axios                 | 1                                       | HTTP client with interceptors                  |
 
 Requirements: Node.js 20+ and pnpm. Modern browsers (Chrome 111+, Safari 16.4+, Firefox 128+), due to Tailwind v4.
