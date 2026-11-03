@@ -15,6 +15,7 @@ import { NavContext, useCurrentNavItem } from './nav.context';
 import type { NavSection } from './nav';
 import { cn } from '../lib/cn';
 import { useAuthStore } from '@/core/auth/auth.store';
+import { TextBox } from '../ui/components/form/TextBox';
 import { AvatarButton } from '../ui/components/AvatarButton';
 import { Logo } from '../ui/Logo';
 
@@ -68,16 +69,17 @@ function AppShell() {
             </Button>
           )}
           <span className="hidden font-light text-muted lg:block">{location.pathname}</span>
-          <div className="hidden w-md items-center gap-4 rounded-full border border-line2 px-3 py-1 focus-within:border-accent lg:flex">
-            <FiSearch className="size-7 text-lg text-muted" />
-            <input
-              type="search"
-              name="search"
-              id="header-search"
-              placeholder="Búscar producto, código o alerta..."
-              className="hidden w-full outline-none md:block"
-            />
-          </div>
+          <TextBox
+            type="search"
+            name="search"
+            id="header-search"
+            aria-label="Buscar"
+            placeholder="Buscar producto, código o alerta..."
+            leadingIcon={FiSearch}
+            size="sm"
+            shape="full"
+            containerClassName="hidden w-md lg:block"
+          />
           <Button
             variant="ghost"
             size="sm"

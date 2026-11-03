@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { FiAlertCircle, FiBox } from 'react-icons/fi';
+import { Badge } from '@/shared/ui/components/Badge';
 import { DataTable } from '@/shared/ui/components/DataTable';
 import type { Column } from '@/shared/types/dataTable';
 import type { ReplenishmentProduct, StockStatus } from '../types/dashboard.types';
@@ -8,30 +9,22 @@ interface ReplenishmentTableProps {
   products: ReplenishmentProduct[];
 }
 
+const STATUS_BADGES: Record<
+  StockStatus,
+  { tone: 'danger' | 'warning' | 'success'; label: string }
+> = {
+  critico: { tone: 'danger', label: 'Crítico' },
+  preventivo: { tone: 'warning', label: 'Preventivo' },
+  normal: { tone: 'success', label: 'Normal' },
+};
+
 function getStatusBadge(status: StockStatus) {
-  switch (status) {
-    case 'critico':
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-danger/30 bg-danger/10 px-3 py-0.5 text-xs font-semibold text-danger">
-          <span className="size-1.5 rounded-full bg-danger" />
-          Crítico
-        </span>
-      );
-    case 'preventivo':
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-3 py-0.5 text-xs font-semibold text-warning">
-          <span className="size-1.5 rounded-full bg-warning" />
-          Preventivo
-        </span>
-      );
-    case 'normal':
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-3 py-0.5 text-xs font-semibold text-success">
-          <span className="size-1.5 rounded-full bg-success" />
-          Normal
-        </span>
-      );
-  }
+  const { tone, label } = STATUS_BADGES[status];
+  return (
+    <Badge tone={tone} dot>
+      {label}
+    </Badge>
+  );
 }
 
 export function ReplenishmentTable({ products }: ReplenishmentTableProps) {
@@ -101,10 +94,9 @@ export function ReplenishmentTable({ products }: ReplenishmentTableProps) {
               Productos por reponer
             </h2>
             {criticalCount > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-danger/10 px-2.5 py-0.5 text-xs font-medium text-danger">
-                <FiAlertCircle className="size-3" />
+              <Badge tone="danger" icon={FiAlertCircle}>
                 {criticalCount} en crítico
-              </span>
+              </Badge>
             )}
           </div>
           <p className="text-xs text-muted sm:text-sm">

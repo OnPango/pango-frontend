@@ -6,6 +6,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getApiErrorMessage } from '@/core/api';
 import type { LoginRedirectState } from '@/core/auth/guards';
 import { Logo } from '@/shared/ui/Logo';
+import { Alert } from '@/shared/ui/components/Alert';
+import { Checkbox } from '@/shared/ui/components/form/Checkbox';
+import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { Button } from '@/shared/ui/components/Button';
 import { useLogin } from '../api/useLogin';
 import { AuthBackdrop } from '../components/AuthBackdrop';
@@ -69,45 +72,32 @@ export default function LoginPage() {
           )}
 
           <section className="flex flex-col gap-3">
-            <div className="flex items-center gap-4 rounded-2xl border border-line2 p-3 focus-within:border-accent">
-              <FaUserLarge className="text-lg text-accent" />
-              <input
-                className="w-full outline-none"
-                name="email"
-                type="email"
-                autoComplete="username"
-                aria-label="Email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="flex items-center gap-4 rounded-2xl border border-line2 p-3 focus-within:border-accent">
-              <RiLockPasswordFill className="text-xl text-accent" />
-              <input
-                className="w-full outline-none"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                aria-label="Contraseña"
-                placeholder="Contraseña"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            {error && (
-              <p role="alert" className="text-sm text-danger">
-                {error}
-              </p>
-            )}
-            <div className="flex items-center justify-between text-[12px]">
-              <div className="flex items-center gap-1">
-                <input type="checkbox" id="remember" />
-                <label htmlFor="remember">Recordarme</label>
-              </div>
-              <a href="/" className="text-primary">
+            <TextBox
+              name="email"
+              type="email"
+              autoComplete="username"
+              aria-label="Email"
+              placeholder="Email"
+              leadingIcon={FaUserLarge}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <TextBox
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              aria-label="Contraseña"
+              placeholder="Contraseña"
+              leadingIcon={RiLockPasswordFill}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            {error && <Alert tone="danger">{error}</Alert>}
+            <div className="flex items-center justify-between">
+              <Checkbox label="Recordarme" />
+              <a href="/" className="text-primary text-xs text-end">
                 Olvidé mi contraseña
               </a>
             </div>

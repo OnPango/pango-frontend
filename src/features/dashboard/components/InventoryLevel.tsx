@@ -1,3 +1,4 @@
+import { Badge } from '@/shared/ui/components/Badge';
 import type { InventoryLevelItem, StockStatus } from '../types/dashboard.types';
 
 interface InventoryLevelProps {
@@ -10,21 +11,21 @@ function getStatusStyle(status: StockStatus) {
       return {
         barBg: 'bg-danger',
         textColor: 'text-danger',
-        badgeBg: 'bg-danger/10 text-danger',
+        badgeTone: 'danger' as const,
         label: 'Crítico',
       };
     case 'preventivo':
       return {
         barBg: 'bg-warning',
         textColor: 'text-warning',
-        badgeBg: 'bg-warning/15 text-warning',
+        badgeTone: 'warning' as const,
         label: 'Preventivo',
       };
     case 'normal':
       return {
         barBg: 'bg-success',
         textColor: 'text-success',
-        badgeBg: 'bg-success/15 text-success',
+        badgeTone: 'success' as const,
         label: 'Normal',
       };
   }
@@ -103,12 +104,9 @@ export function InventoryLevel({ items }: InventoryLevelProps) {
         {(['critico', 'preventivo', 'normal'] as StockStatus[]).map((status) => {
           const style = getStatusStyle(status);
           return (
-            <span
-              key={status}
-              className={`rounded-full px-3.5 py-1 text-xs font-semibold ${style.badgeBg}`}
-            >
+            <Badge key={status} tone={style.badgeTone} dot>
               {style.label}
-            </span>
+            </Badge>
           );
         })}
       </div>

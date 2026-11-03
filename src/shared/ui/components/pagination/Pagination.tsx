@@ -2,6 +2,7 @@ import { useId } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { getPageItems, getPageRange } from '@/shared/ui/components/pagination/pagination.utils';
 import { Button } from '@/shared/ui/components/Button';
+import { Select } from '@/shared/ui/components/form/select/Select';
 
 export interface PaginationProps {
   /** Current page, 1-based. */
@@ -49,21 +50,19 @@ export function Pagination({
       <div className="flex flex-wrap items-center gap-3">
         {showPageSize && (
           <div className="flex items-center gap-2">
-            <label htmlFor={selectId} className="text-muted">
-              Filas por página
-            </label>
-            <select
+            <span className="text-muted">Filas por página</span>
+            <Select
               id={selectId}
-              value={pageSize}
-              onChange={(event) => onPageSizeChange(Number(event.target.value))}
-              className="rounded-lg border border-line bg-surface px-2 py-1.5 text-fg focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-hidden"
-            >
-              {pageSizeOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+              size="sm"
+              aria-label="Filas por página"
+              value={String(pageSize)}
+              onChange={(value) => onPageSizeChange(Number(value))}
+              options={pageSizeOptions.map((option) => ({
+                value: String(option),
+                label: String(option),
+              }))}
+              className="w-20"
+            />
           </div>
         )}
 

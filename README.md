@@ -237,6 +237,8 @@ Rules marked 🔒 are enforced by ESLint (`eslint.config.js`) and fail CI; the r
 - 🔒 **Styles**: only semantic theme tokens (`bg-surface`, `text-fg`, `border-line`, `bg-primary`…). **Literal colors are forbidden** in `className` (`bg-white`, `text-gray-500`, `bg-[#fff]`): they break dark mode.
 - **Data**: read with `useQuery`, write with `useMutation` plus invalidation through the `*Keys` objects. No `fetch`/Axios calls inside components.
 - **Forms**: React Hook Form with `zodResolver`; the Zod schema lives in `types/<feature>.schema.ts`.
+- **Shared UI**: do not hand-roll controls; use `shared/ui/components`. Form: `form/TextBox`, `form/TextArea`, `form/select/Select`, `form/select/MultiSelect`, `form/date/DatePicker`, `form/Checkbox`, `form/Switch`, `form/RadioGroup` (label, hint, error and `aria-*` wiring included; `TextBox`, `TextArea`, `Checkbox` and `Switch` forward their ref, so they work with React Hook Form's `register`, while `Select`, `MultiSelect` and `DatePicker` take `value`/`onChange`, so use RHF's `Controller`). Display: `Avatar`, `Badge`, `Alert`, `Modal` (native `<dialog>`), `Button`. Dates travel as local `YYYY-MM-DD` strings.
+- **Scrollbars**: styled once, globally, in `styles/index.css` (thin line, no arrows, same in Chromium/WebKit and Firefox). Do not restyle them per component.
 - **Errors**: screens handle three explicit states — loading, error and empty — in addition to the data state.
 - 🔒 **Accessibility**: real interactive elements (`button`, `a`) and `aria-label` on icon-only controls (`jsx-a11y` rules); visible focus and legible contrast in both themes are review items.
 - **Security**: store no sensitive data besides the session token; never rely on the UI for authorization.
