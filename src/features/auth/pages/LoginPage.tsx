@@ -97,7 +97,7 @@ export default function LoginPage() {
             {error && <Alert tone="danger">{error}</Alert>}
             <div className="flex items-center justify-between">
               <Checkbox label="Recordarme" />
-              <a href="/" className="text-primary text-xs text-end">
+              <a href="/" className="text-end text-xs text-primary">
                 Olvidé mi contraseña
               </a>
             </div>

@@ -9,8 +9,12 @@ import { useFieldIds } from './useFieldIds';
 export interface TextBoxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string;
   hint?: string;
+  /** Shows "(opcional)" after the label. */
+  optional?: boolean;
   /** Error message. Marks the control as invalid and replaces the hint. */
   error?: string;
+  /** Invalid styling without a message (when the caller renders its own feedback). */
+  invalid?: boolean;
   leadingIcon?: IconType;
   /** Element at the end of the control (a unit, a button…). */
   trailing?: ReactNode;
@@ -25,7 +29,9 @@ export const TextBox = forwardRef<HTMLInputElement, TextBoxProps>(function TextB
   {
     label,
     hint,
+    optional,
     error,
+    invalid = false,
     leadingIcon: LeadingIcon,
     trailing,
     size = 'md',
@@ -53,9 +59,14 @@ export const TextBox = forwardRef<HTMLInputElement, TextBoxProps>(function TextB
       hint={hint}
       error={error}
       required={required}
+      optional={optional}
       className={containerClassName}
     >
-      <div className={cn(controlStyles({ size, shape, invalid: !!error, disabled: !!disabled }))}>
+      <div
+        className={cn(
+          controlStyles({ size, shape, invalid: !!error || invalid, disabled: !!disabled }),
+        )}
+      >
         {LeadingIcon && <LeadingIcon aria-hidden className="size-4 shrink-0 text-muted" />}
         <input
           ref={ref}
@@ -63,7 +74,7 @@ export const TextBox = forwardRef<HTMLInputElement, TextBoxProps>(function TextB
           type={isPassword && revealed ? 'text' : type}
           required={required}
           disabled={disabled}
-          aria-invalid={error ? true : undefined}
+          aria-invalid={error || invalid ? true : undefined}
           aria-describedby={describedBy}
           className={cn(bareInputClass, className)}
           {...props}

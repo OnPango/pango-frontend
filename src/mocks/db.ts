@@ -17,9 +17,16 @@ export interface RoleRow {
 export interface OrganizationRow {
   id: string;
   name: string;
-  /** Unique across the platform. */
-  tax_id: string;
-  contact_phone: string;
+  /** Workspace subdomain (`<slug>.onpango.com`), unique. Absent in rows persisted before it existed. */
+  slug?: string;
+  /** Unique across the platform when present. */
+  tax_id: string | null;
+  sector?: string;
+  team_size?: string;
+  items_range?: string | null;
+  country?: string;
+  city?: string | null;
+  contact_phone: string | null;
   created_at: string;
 }
 
@@ -76,6 +83,7 @@ const INITIAL_ORGANIZATIONS: OrganizationRow[] = [
   {
     id: 'org-pango',
     name: 'Pango',
+    slug: 'pango',
     tax_id: '900123456-7',
     contact_phone: '+57 300 000 0000',
     created_at: '2026-09-01T08:00:00Z',
@@ -245,6 +253,22 @@ export const findRoleById = (id: string) => roles.find((role) => role.id === id)
 const normalizeTaxId = (taxId: string) => taxId.replace(/[^a-z0-9]/gi, '').toLowerCase();
 
 export const findOrganizationByTaxId = (taxId: string) =>
-  organizations.find((org) => normalizeTaxId(org.tax_id) === normalizeTaxId(taxId));
+  organizations.find((org) => !!org.tax_id && normalizeTaxId(org.tax_id) === normalizeTaxId(taxId));
+
+/** Addresses nobody can claim, on top of the ones already used by an organization. */
+const RESERVED_SLUGS = [
+  'pango',
+  'www',
+  'app',
+  'api',
+  'admin',
+  'demo',
+  'soporte',
+  'ayuda',
+  'status',
+];
+
+export const isWorkspaceSlugTaken = (slug: string) =>
+  RESERVED_SLUGS.includes(slug) || organizations.some((org) => org.slug === slug);
 
 export const findAreaById = (id: string) => areas.find((area) => area.id === id);

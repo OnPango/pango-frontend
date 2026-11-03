@@ -127,12 +127,15 @@ pango-frontend/
 │  ├─ shared/                    # reusable, no business logic
 │  │  ├─ ui/                     # base components (PageHeader, ThemeToggle, …)
 │  │  ├─ layout/                 # AppLayout, nav.ts
-│  │  ├─ hooks/                  # generic hooks (useDebounce, …)
+│  │  ├─ hooks/                  # generic hooks (useDebouncedValue, useShake, …)
 │  │  └─ lib/                    # pure utilities (formatDate, formatQuantity, …)
 │  ├─ features/                  # one directory per domain module
 │  │  └─ <feature>/
 │  │     ├─ api/                 # <feature>.api.ts · <feature>.keys.ts · <feature>.mappers.ts · query hooks
 │  │     ├─ components/          # feature-specific components
+│     ├─ content/             # static catalogs and copy (select options, permission catalog…)
+│     ├─ hooks/               # feature logic that composes forms/queries (useRegisterForm)
+│     ├─ lib/                 # pure business rules of the feature (no React, no I/O)
 │  │     ├─ pages/               # <Name>Page.tsx (one per route)
 │  │     └─ types/               # <feature>.types.ts · <feature>.schema.ts (Zod)
 │  └─ styles/

@@ -4,9 +4,10 @@ import type { User } from '@/core/auth/user';
 import type {
   LoginRequest,
   LoginResponseDto,
-  RegisterOrganizationDto,
   RegisterOrganizationRequest,
+  WorkspaceAvailabilityDto,
 } from '../types/auth';
+import { toRegisterOrganizationDto } from './auth.mappers';
 
 /**
  * `POST /auth/login`. On success the backend sets the session cookie and returns the user.
@@ -21,22 +22,23 @@ export async function login(credentials: LoginRequest): Promise<User> {
 }
 
 /**
- * `POST /auth/register` (CU-13). Creates the organization, its isolated environment and its first
+ * `POST /auth/register` (CU-13). Creates the organization, its isolated workspace and its first
  * administrator. It does not sign anyone in: the user goes to the login screen afterwards.
- * Rejects with 409 if the tax id or the email is already registered, 422 if fields are missing.
+ * Rejects with 409 if the workspace address, the tax id or the email is already registered,
+ * 422 if required fields are missing.
  */
 export async function registerOrganization(request: RegisterOrganizationRequest): Promise<void> {
-  const body: RegisterOrganizationDto = {
-    organization: {
-      name: request.organizationName,
-      tax_id: request.taxId,
-      contact_phone: request.contactPhone,
-    },
-    admin: {
-      full_name: request.adminName,
-      email: request.adminEmail.toLowerCase(),
-      password: request.password,
-    },
-  };
-  await http.post('/auth/register', body);
+  await http.post('/auth/register', toRegisterOrganizationDto(request));
+}
+
+/** `GET /auth/workspaces/:slug/availability`: is `<slug>.onpango.com` free? */
+export async function checkWorkspaceAvailability(
+  slug: string,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  const { data } = await http.get<WorkspaceAvailabilityDto>(
+    `/auth/workspaces/${encodeURIComponent(slug)}/availability`,
+    { signal },
+  );
+  return data.available;
 }

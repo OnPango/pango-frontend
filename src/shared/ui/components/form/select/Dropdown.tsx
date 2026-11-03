@@ -21,6 +21,7 @@ export interface DropdownProps {
   hint?: string;
   error?: string;
   required?: boolean;
+  optional?: boolean;
   disabled?: boolean;
   size?: 'sm' | 'md';
   className?: string;
@@ -52,6 +53,7 @@ export function Dropdown({
   hint,
   error,
   required,
+  optional,
   disabled = false,
   size = 'md',
   className,
@@ -195,6 +197,7 @@ export function Dropdown({
       hint={hint}
       error={error}
       required={required}
+      optional={optional}
       className={className}
     >
       <div ref={rootRef} className="relative">

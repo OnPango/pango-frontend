@@ -5,6 +5,7 @@ import {
   findRoleById,
   findUserByEmail,
   findUserById,
+  isWorkspaceSlugTaken,
   organizations,
   persistOrganizations,
   persistUsers,
@@ -43,6 +44,7 @@ const readCredentials = (body: unknown) => {
 };
 
 const MIN_PASSWORD_LENGTH = 8;
+const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/;
 
 export const authRoutes: MockRoutes = {
   /**
@@ -50,21 +52,43 @@ export const authRoutes: MockRoutes = {
    * first row is written, so a rejection never leaves a half-created organization behind.
    */
   'POST /auth/register': ({ body }) => {
-    const { organization, admin } = (body ?? {}) as Partial<RegisterOrganizationDto>;
+    const {
+      organization,
+      admin,
+      terms_accepted: termsAccepted,
+    } = (body ?? {}) as Partial<RegisterOrganizationDto>;
     const name = organization?.name?.trim() ?? '';
-    const taxId = organization?.tax_id?.trim() ?? '';
-    const contactPhone = organization?.contact_phone?.trim() ?? '';
+    const slug = organization?.slug?.trim().toLowerCase() ?? '';
+    const taxId = organization?.tax_id?.trim() || null;
     const adminName = admin?.full_name?.trim() ?? '';
     const adminEmail = admin?.email?.trim().toLowerCase() ?? '';
     const password = admin?.password ?? '';
 
-    if (!name || !taxId || !contactPhone || !adminName || !adminEmail || !password) {
-      return error(422, 'Completa todos los datos de la organización y del administrador.');
+    if (
+      !name ||
+      !slug ||
+      !organization?.sector ||
+      !organization.team_size ||
+      !organization.country ||
+      !adminName ||
+      !adminEmail ||
+      !password
+    ) {
+      return error(422, 'Completa todos los datos de la empresa y de tu cuenta.');
+    }
+    if (termsAccepted !== true) {
+      return error(422, 'Debes aceptar los términos de uso y la política de privacidad.');
+    }
+    if (!SLUG_PATTERN.test(slug)) {
+      return error(422, 'La dirección del espacio no es válida.');
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
       return error(422, `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`);
     }
-    if (findOrganizationByTaxId(taxId)) {
+    if (isWorkspaceSlugTaken(slug)) {
+      return error(409, 'Esa dirección ya está en uso. Elige otra para tu espacio.');
+    }
+    if (taxId && findOrganizationByTaxId(taxId)) {
       return error(409, 'Ya existe una organización registrada con ese identificador tributario.');
     }
     // The email is unique across the whole platform (RN-013), not only within one organization.
@@ -77,8 +101,14 @@ export const authRoutes: MockRoutes = {
     const newOrganization: OrganizationRow = {
       id: `org-${suffix}`,
       name,
+      slug,
       tax_id: taxId,
-      contact_phone: contactPhone,
+      sector: organization.sector,
+      team_size: organization.team_size,
+      items_range: organization.items_range ?? null,
+      country: organization.country,
+      city: organization.city ?? null,
+      contact_phone: organization.contact_phone ?? null,
       created_at: now,
     };
     const newAdmin: UserRow = {
@@ -99,7 +129,15 @@ export const authRoutes: MockRoutes = {
     users.unshift(newAdmin);
     persistOrganizations();
     persistUsers();
-    return { status: 201, data: { organization: { id: newOrganization.id, name } } };
+    return { status: 201, data: { organization: { id: newOrganization.id, name, slug } } };
+  },
+
+  'GET /auth/workspaces/:slug/availability': ({ params }) => {
+    const slug = (params.slug ?? '').toLowerCase();
+    return {
+      status: 200,
+      data: { available: SLUG_PATTERN.test(slug) && !isWorkspaceSlugTaken(slug) },
+    };
   },
 
   'POST /auth/login': ({ body }) => {
