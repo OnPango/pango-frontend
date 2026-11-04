@@ -16,16 +16,17 @@ export interface RoleRow {
 
 export interface OrganizationRow {
   id: string;
+  /** Legal name. */
   name: string;
-  /** Workspace subdomain (`<slug>.onpango.com`), unique. Absent in rows persisted before it existed. */
-  slug?: string;
+  /** Subdomain (`<slug>.onpango.com`), unique. */
+  slug: string;
   /** Unique across the platform when present. */
   tax_id: string | null;
-  sector?: string;
+  business_sector?: string;
   team_size?: string;
-  items_range?: string | null;
+  product_count?: string;
   country?: string;
-  city?: string | null;
+  city?: string;
   contact_phone: string | null;
   created_at: string;
 }
@@ -44,6 +45,8 @@ export interface UserRow {
   role_id: string;
   area_id: string;
   organization_id: string;
+  /** Owners must confirm their email before logging in; seed users and invitees are verified. */
+  email_verified?: boolean;
   is_active: boolean;
   last_login_at: string | null;
   created_at: string;
@@ -53,10 +56,10 @@ export const MOCK_PASSWORD = 'Pango123*';
 
 // Bump the version when the shape or the permission codes of the seed data change: data saved by
 // an older version would otherwise be loaded as is (e.g. roles holding permissions that no longer exist).
-const USERS_STORAGE_KEY = 'pango_mock_db_users_v2';
+const USERS_STORAGE_KEY = 'pango_mock_db_users_v3';
 const ROLES_STORAGE_KEY = 'pango_mock_db_roles_v2';
 const AREAS_STORAGE_KEY = 'pango_mock_db_areas_v2';
-const ORGANIZATIONS_STORAGE_KEY = 'pango_mock_db_organizations_v2';
+const ORGANIZATIONS_STORAGE_KEY = 'pango_mock_db_organizations_v3';
 
 function loadFromStorage<T>(key: string, fallback: T[]): T[] {
   if (typeof window === 'undefined' || !window.localStorage) return [...fallback];
@@ -85,6 +88,11 @@ const INITIAL_ORGANIZATIONS: OrganizationRow[] = [
     name: 'Pango',
     slug: 'pango',
     tax_id: '900123456-7',
+    business_sector: 'TECHNOLOGY',
+    team_size: 'SIZE_6_20',
+    product_count: 'COUNT_101_500',
+    country: 'CO',
+    city: 'Barranquilla',
     contact_phone: '+57 300 000 0000',
     created_at: '2026-09-01T08:00:00Z',
   },
@@ -255,20 +263,56 @@ const normalizeTaxId = (taxId: string) => taxId.replace(/[^a-z0-9]/gi, '').toLow
 export const findOrganizationByTaxId = (taxId: string) =>
   organizations.find((org) => !!org.tax_id && normalizeTaxId(org.tax_id) === normalizeTaxId(taxId));
 
-/** Addresses nobody can claim, on top of the ones already used by an organization. */
-const RESERVED_SLUGS = [
-  'pango',
-  'www',
-  'app',
-  'api',
-  'admin',
-  'demo',
-  'soporte',
-  'ayuda',
-  'status',
-];
+export const findOrganizationBySlug = (slug: string) =>
+  organizations.find((org) => org.slug === slug);
 
-export const isWorkspaceSlugTaken = (slug: string) =>
-  RESERVED_SLUGS.includes(slug) || organizations.some((org) => org.slug === slug);
+export const findOrganizationById = (id: string) => organizations.find((org) => org.id === id);
 
 export const findAreaById = (id: string) => areas.find((area) => area.id === id);
+
+/** An invitation sent by an administrator. In memory only: reloading the page restores the seed. */
+export interface InvitationRow {
+  token: string;
+  email: string;
+  organization_id: string;
+  role_id: string;
+  area_id: string;
+  invited_by: string;
+  expires_at: string;
+  used: boolean;
+}
+
+export const invitations: InvitationRow[] = [
+  {
+    token: 'invite-demo',
+    email: 'nuevo@pango.co',
+    organization_id: 'org-pango',
+    role_id: 'role-requester',
+    area_id: 'area-consultant',
+    invited_by: 'Carlos Arango',
+    expires_at: '2099-01-01T00:00:00Z',
+    used: false,
+  },
+];
+
+const VERIFICATION_STORAGE_KEY = 'pango_mock_verification_tokens_v1';
+
+/** Pending email confirmations: token → email. Persisted so a reload does not lose the link. */
+export function loadVerificationTokens(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(VERIFICATION_STORAGE_KEY) ?? '{}') as Record<
+      string,
+      string
+    >;
+  } catch {
+    return {};
+  }
+}
+
+export function saveVerificationTokens(tokens: Record<string, string>): void {
+  try {
+    localStorage.setItem(VERIFICATION_STORAGE_KEY, JSON.stringify(tokens));
+  } catch {
+    // Storage unavailable: the link only works until the page closes.
+  }
+}

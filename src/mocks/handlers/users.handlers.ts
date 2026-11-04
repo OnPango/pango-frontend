@@ -13,8 +13,8 @@ import {
   type RoleRow,
   type UserRow,
 } from '../db';
-import type { MockRoutes } from '../server';
-import { readSession } from '../session';
+import { requestContext, type MockRoutes } from '../server';
+import { readBearer } from '../session';
 
 export interface ManagedUserDto {
   id: string;
@@ -77,7 +77,10 @@ function toManagedRoleDto(role: RoleRow): ManagedRoleDto {
   };
 }
 
-const error = (status: number, message: string) => ({ status, data: { message } });
+const error = (status: number, message: string, code?: string) => ({
+  status,
+  data: { statusCode: status, ...(code ? { code } : {}), message },
+});
 
 /** A user of another organization does not exist as far as the caller is concerned (RF-ORG-003). */
 const findUserInOrganization = (id: string, organizationId: string) => {
@@ -87,9 +90,9 @@ const findUserInOrganization = (id: string, organizationId: string) => {
 
 /** Session + permission check, like the backend's guard: 401 without a valid session, 403 without one of `anyOf`. */
 function authorize(...anyOf: Permission[]) {
-  const session = readSession();
+  const session = readBearer(requestContext.headers);
   if (!session) {
-    return { error: error(401, 'Tu sesión expiró. Inicia sesión de nuevo.') };
+    return { error: error(401, 'Tu sesión expiró. Inicia sesión de nuevo.', 'UNAUTHENTICATED') };
   }
   const user = findUserById(session.sub);
   if (!user || !user.is_active) {
