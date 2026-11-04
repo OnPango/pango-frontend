@@ -1,36 +1,42 @@
-import axios from 'axios';
-import { env } from '@/core/config/env';
+import { isAxiosError, type AxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/core/auth/auth.store';
+import { refreshSession } from '@/core/auth/session.api';
+import { createApiClient } from './client';
 
-export const http = axios.create({
-  baseURL: env.apiBaseUrl,
-  timeout: 15000,
-  // The session token is an httpOnly cookie set by the backend: the browser attaches it,
-  // JS never reads it. Cross-origin, the backend must answer with
-  // `Access-Control-Allow-Credentials: true` and an explicit `Access-Control-Allow-Origin`.
-  withCredentials: true,
-  // CSRF (double-submit cookie): if the backend sets a readable `XSRF-TOKEN` cookie,
-  // Axios echoes it in this header on every request.
-  xsrfCookieName: 'XSRF-TOKEN',
-  xsrfHeaderName: 'X-XSRF-TOKEN',
-  headers: {
-    'Content-Type': 'application/json',
-  },
+/** Marks a request that was already retried after refreshing the session. */
+interface RetriableConfig extends AxiosRequestConfig {
+  _retried?: boolean;
+}
+
+/**
+ * Client for everything that needs a signed-in user: it sends `Authorization: Bearer <access token>`.
+ * When the API answers 401 (the 15-minute access token expired) it renews the session once with the
+ * refresh token and repeats the request; if that fails the local session is dropped and the guards
+ * send the user to /login.
+ */
+export const http = createApiClient();
+
+http.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().accessToken;
+  if (token) config.headers.set('Authorization', `Bearer ${token}`);
+  return config;
 });
 
 http.interceptors.response.use(
   (response) => response,
-  (error) => {
-    // Expired or invalid cookie: drop the local session; the guards redirect to /login.
-    if (axios.isAxiosError(error) && error.response?.status === 401) {
-      useAuthStore.getState().clearSession();
+  async (error: unknown) => {
+    if (!isAxiosError(error) || error.response?.status !== 401 || !error.config) {
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
+    const config = error.config as RetriableConfig;
+    if (config._retried) return Promise.reject(error);
+
+    const renewed = await refreshSession();
+    if (!renewed) {
+      useAuthStore.getState().clearSession();
+      return Promise.reject(error);
+    }
+    config._retried = true;
+    return http.request(config);
   },
 );
-
-export type ApiResponse<T> = {
-  data: T;
-  message?: string;
-  success?: boolean;
-};

@@ -1,11 +1,19 @@
 import { isAxiosError } from 'axios';
 
 /**
- * Error body returned by the backend (and by the mock). NestJS validation errors
- * (`ValidationPipe`) send `message` as an array of strings, one per failed rule.
+ * Error body returned by the backend. Domain errors carry a stable `code` (`INVALID_CREDENTIALS`,
+ * `SUBDOMAIN_TAKEN`…) the UI branches on; NestJS validation errors (`ValidationPipe`) have no code
+ * and send `message` as an array of strings, one per failed rule.
  */
 export interface ApiErrorBody {
+  statusCode?: number;
+  code?: string;
   message?: string | string[];
+}
+
+/** Stable error code of a failed request, if the backend sent one. */
+export function getApiErrorCode(error: unknown): string | null {
+  return isAxiosError<ApiErrorBody>(error) ? (error.response?.data?.code ?? null) : null;
 }
 
 /** User-facing message for a failed request. */

@@ -1,38 +1,64 @@
-import { PERMISSIONS, type Permission, type User } from './user';
+import { PERMISSIONS, type Permission, type RoleGrant, type User } from './user';
 
 /**
- * User as the backend sends it. Only this file and the API functions know this shape;
- * the rest of the app uses `User`. If the contract changes, adjust it here.
+ * What the backend sends (see `docs/auth.md` in pango-core). Only this file and the API functions
+ * know these shapes; the rest of the app uses `User`. If the contract changes, adjust it here.
  */
-export interface UserDto {
-  id: string;
-  full_name: string;
-  email: string;
-  role: {
-    id: string;
-    name: string;
-    permissions: string[];
-  };
-  area_id: string;
-  organization_id: string;
+export interface RoleGrantDto {
+  id: number;
+  name: string;
+  isSystem: boolean;
+  warehouse: { id: number; name: string } | null;
+  permissions: string[];
 }
 
-/** Response body of `POST /auth/login` and `GET /auth/me`. The token travels in an httpOnly cookie. */
-export interface SessionResponseDto {
-  user: UserDto;
+/** Body of `GET /auth/me`. */
+export interface SessionProfileDto {
+  account: { id: number; email: string; name: string };
+  organization: { id: number; subdomain: string; legalName: string };
+  user: { id: number; jobTitle: string | null; roles: RoleGrantDto[] };
+}
+
+/**
+ * Body of login, refresh, invitation acceptance and the sign-up of a verified account. The refresh
+ * token is not here: it only travels in an HttpOnly cookie.
+ */
+export interface SessionResponseDto extends SessionProfileDto {
+  tokenType: 'Bearer';
+  accessToken: string;
+  /** Access token lifetime in seconds. */
+  expiresIn: number;
+  /** When the refresh cookie (the session) ends. */
+  refreshTokenExpiresAt: string;
 }
 
 const isPermission = (value: string): value is Permission =>
   (PERMISSIONS as readonly string[]).includes(value);
 
-export function toUser(dto: UserDto): User {
+function toRoleGrant(dto: RoleGrantDto): RoleGrant {
   return {
-    id: dto.id,
-    name: dto.full_name,
-    email: dto.email,
-    roleName: dto.role.name,
-    areaId: dto.area_id,
-    organizationId: dto.organization_id,
-    permissions: dto.role.permissions.filter(isPermission),
+    id: String(dto.id),
+    name: dto.name,
+    isSystem: dto.isSystem,
+    warehouse: dto.warehouse ? { id: String(dto.warehouse.id), name: dto.warehouse.name } : null,
+    // Unknown codes (a newer backend) are discarded instead of breaking the session.
+    permissions: dto.permissions.filter(isPermission),
+  };
+}
+
+export function toUser(dto: SessionProfileDto): User {
+  const roles = dto.user.roles.map(toRoleGrant);
+  return {
+    id: String(dto.user.id),
+    name: dto.account.name,
+    email: dto.account.email,
+    jobTitle: dto.user.jobTitle,
+    organization: {
+      id: String(dto.organization.id),
+      subdomain: dto.organization.subdomain,
+      legalName: dto.organization.legalName,
+    },
+    roles,
+    permissions: [...new Set(roles.flatMap((role) => role.permissions))],
   };
 }

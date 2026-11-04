@@ -9,8 +9,6 @@ import { type Permission } from '@/core/auth/user';
 export interface LoginRedirectState {
   /** Location the user tried to open before being sent to /login. */
   from?: string;
-  /** Set right after registering an organization: the login shows a confirmation and fills the email. */
-  registeredEmail?: string;
 }
 
 function SessionCheck() {
@@ -21,7 +19,7 @@ function SessionCheck() {
   );
 }
 
-/** Checks the session cookie (`GET /auth/me`) once per app load, while the status is `unknown`. */
+/** Exchanges the stored refresh token for a session once per app load, while the status is `unknown`. */
 function useSessionStatus() {
   const status = useAuthStore((state) => state.status);
   useEffect(() => {
