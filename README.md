@@ -21,17 +21,17 @@ Pango web application (SPA), a multi-organization SaaS platform for intelligent 
 
 ## 1. Project status
 
-| Area                                                                     | Status                           |
-| ------------------------------------------------------------------------ | -------------------------------- |
-| Skeleton (Vite + React + TS), feature-based structure, CI                | ✅ Done                          |
-| Light / dark / system theme with Tailwind v4                             | ✅ Done                          |
-| Session (store + JWT on requests), permission-based route guards, layout | ⏳ Pending                       |
-| Module screens                                                           | ⏳ Placeholders                  |
-| Organization registration (US-001 / CU-13)                               | ✅ Done (against the mock)       |
-| Base components (table, modal, status badges, form fields)               | ⏳ Pending                       |
-| Login with the pangolin illustration and "under construction" screen     | ⏳ Pending                       |
-| ESLint + Prettier, tests (Vitest + Testing Library)                      | ⏳ Pending                       |
-| API contract and final permission catalog                                | ⏳ To be agreed with the backend |
+| Area                                                                       | Status                               |
+| -------------------------------------------------------------------------- | ------------------------------------ |
+| Skeleton (Vite + React + TS), feature-based structure, CI                  | ✅ Done                              |
+| Light / dark / system theme with Tailwind v4                               | ✅ Done                              |
+| Session (Bearer + refresh rotation), permission-based route guards, layout | ✅ Done                              |
+| Module screens                                                             | ⏳ Placeholders                      |
+| Owner sign-up, login, email confirmation, invitations (US-001 / CU-13)     | ✅ Against `pango-core` and the mock |
+| Base components (table, modal, status badges, form fields)                 | ⏳ Pending                           |
+| Login with the pangolin illustration and "under construction" screen       | ⏳ Pending                           |
+| ESLint + Prettier, tests (Vitest + Testing Library)                        | ⏳ Pending                           |
+| API contract and final permission catalog                                  | ⏳ To be agreed with the backend     |
 
 ## 2. Scope
 
@@ -167,7 +167,7 @@ URLs are in English and kebab-case (`/roles-permissions`).
 - **Routes.** [`src/app/routes.tsx`](src/app/routes.tsx) is the single place that declares the screens: path, menu label and icon, menu section, required permissions (`anyOf`, empty = any signed-in user) and page. The router, the sidebar menu and the header title are all derived from it. A new screen is one entry there (plus its `pages/<Name>Page.tsx`).
 - **Permissions.** Codes are `resource.action` and mirror the backend's `permissions` table, including its scope (`ORGANIZATION` or `WAREHOUSE`). The list lives in `PERMISSION_SCOPES` in [`src/core/auth/user.ts`](src/core/auth/user.ts); their Spanish names and descriptions, used by the roles screen, in [`permissions.catalog.ts`](src/features/users/content/permissions.catalog.ts). A permission added to the first without the second does not compile.
 - **Roles are configurable.** Each organization defines its own roles (the backend seeds a default set), so the UI must never branch on a role name, only on permissions.
-- `/login` is public and `/` needs only a session; everything else is guarded with `RequirePermission`, which shows the 403 page when the permission is missing.
+- `/login`, `/register`, `/verify-email` and `/invitations/accept` are public (the last two are opened from emails); `/` needs only a session; everything else is guarded with `RequirePermission`, which shows the 403 page when the permission is missing.
 
 ## 7. Naming conventions
 
@@ -244,7 +244,7 @@ Rules marked 🔒 are enforced by ESLint (`eslint.config.js`) and fail CI; the r
 - **Scrollbars**: styled once, globally, in `styles/index.css` (thin line, no arrows, same in Chromium/WebKit and Firefox). Do not restyle them per component.
 - **Errors**: screens handle three explicit states — loading, error and empty — in addition to the data state.
 - 🔒 **Accessibility**: real interactive elements (`button`, `a`) and `aria-label` on icon-only controls (`jsx-a11y` rules); visible focus and legible contrast in both themes are review items.
-- **Security**: store no sensitive data besides the session token; never rely on the UI for authorization.
+- **Security**: keep the access token in memory only; the refresh token is an HttpOnly cookie that JS never touches; never rely on the UI for authorization.
 - **Performance**: pages are lazy-loaded; long lists are paginated server-side.
 
 ### Testing
@@ -285,9 +285,24 @@ npm run dev        # http://localhost:5173 — proxies /api → http://localhost
 | `pnpm test` / `npm run test:watch`         | Vitest (single run / watch mode)                |
 | `pnpm run test:coverage`                   | Vitest with a V8 coverage report in `coverage/` |
 
-| Variable       | Description                       | Default |
-| -------------- | --------------------------------- | ------- |
-| `VITE_API_URL` | Base URL of the BFF / API Gateway | `/api`  |
+| Variable               | Description                                                                                  | Default                 |
+| ---------------------- | -------------------------------------------------------------------------------------------- | ----------------------- |
+| `VITE_API_BASE_URL`    | Base URL of `pango-core` (no path prefix, no trailing slash)                                 | `http://localhost:3000` |
+| `VITE_APP_BASE_DOMAIN` | Domain organizations hang from: `<subdomain>.<domain>`. Must equal `APP_BASE_DOMAIN` in core | `localhost`             |
+| `VITE_DEV_TENANT`      | Pins the organization instead of reading it from the hostname (single-host dev, mock)        | _(empty)_               |
+| `VITE_USE_MOCK`        | `true` = in-browser mock backend instead of `pango-core`                                     | `false`                 |
+
+### Authentication and organizations
+
+The contract is `docs/auth.md` in `pango-core`. In short:
+
+- **Organization-first.** Every organization lives on its own subdomain (`mi-empresa.onpango.com`) and a session belongs to exactly one. The frontend reads the organization from the hostname (`core/tenant/tenant.ts`) and sends it as `X-Tenant`. On the main domain `/login` first asks for the workspace address and redirects there.
+- **Tokens.** The short-lived (15 min) access token is in the response body and lives **only in memory** (`useAuthStore`); it goes out as `Authorization: Bearer`. The refresh token is an **HttpOnly cookie** (`pango_refresh_<subdomain>`, `SameSite=Strict`, path `/auth`) set by the API: JavaScript never sees it, nothing token-like is written to storage, and the browser sends it only to `/auth/refresh` and `/auth/logout`. On boot, and on a 401, the `http` client calls `POST /auth/refresh` (no body) and repeats the request once; refresh tokens rotate and reusing one ends every session, so concurrent refreshes share one request and tabs serialize through the Web Locks API. Because JS cannot tell whether the cookie exists, `localStorage` keeps a non-secret hint (`pango.session_until`: when the session ends) so first-time visitors do not trigger a pointless refresh. A script injected into the page (XSS) could still read the in-memory access token and make requests, so keep the CSP strict and never render untrusted HTML.
+- **Two clients.** `authHttp` (login, signup, refresh, logout, verify email, invitations: sends credentials so the cookie travels, never sends the access token or refreshes) and `http` (everything else: Bearer only).
+- **Errors** carry a stable `code`; `features/auth/lib/auth.errors.ts` maps them to Spanish copy.
+- **Sign-up** (`/register`, main domain) creates the account and the organization; the owner must confirm the email (`/verify-email?token=`) before logging in. Invited users join from `/invitations/accept?token=` on the organization's subdomain.
+
+With `VITE_USE_MOCK=true` set `VITE_DEV_TENANT=pango`. Seed login: `carlosarango1107@outlook.com` / `Pango123*`; invitation link: `/invitations/accept?token=invite-demo`. The mock imitates the refresh cookie with a private cookie jar and "sends" confirmation emails to the browser console. The users/roles/areas screens only exist in the mock: `pango-core` has no endpoints for them yet.
 
 ## 11. Workflow (Git and CI)
 
