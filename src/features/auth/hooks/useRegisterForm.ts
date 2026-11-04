@@ -2,11 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { getApiErrorCode } from '@/core/api';
+import type { SignupResult } from '@/core/auth/auth.types';
 import { toSignupRequest } from '../api/auth.mappers';
 import { useRegisterOrganization } from '../api/useRegisterOrganization';
 import { getAuthErrorMessage } from '../lib/auth.errors';
 import { slugify } from '../lib/register.rules';
-import type { SignupResult } from '../types/auth';
 import {
   ACCOUNT_STEP_FIELDS,
   registerOrganizationSchema,

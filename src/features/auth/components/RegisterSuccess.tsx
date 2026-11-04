@@ -1,7 +1,7 @@
 import { FiArrowRight, FiMail } from 'react-icons/fi';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Button } from '@/shared/ui/components/Button';
-import type { SignupResult } from '../types/auth';
+import type { SignupResult } from '@/core/auth/auth.types';
 import { WORKSPACE_DOMAIN } from '../lib/register.rules';
 
 interface RegisterSuccessProps {

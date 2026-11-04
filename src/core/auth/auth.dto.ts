@@ -1,9 +1,36 @@
-import type { SessionResponseDto } from './user.mappers';
+/**
+ * Bodies of the backend's auth contract (`docs/auth.md` in pango-core), next to the functions that
+ * send them (`auth.api.ts`). Only `auth.api.ts` and `auth.mappers.ts` know these shapes: the rest of
+ * the app works with the domain types (`User`, `Session`…). If the contract changes, adjust it here.
+ */
+
+export interface RoleGrantDto {
+  id: number;
+  name: string;
+  isSystem: boolean;
+  warehouse: { id: number; name: string } | null;
+  permissions: string[];
+}
+
+/** Body of `GET /auth/me`. */
+export interface SessionProfileDto {
+  account: { id: number; email: string; name: string };
+  organization: { id: number; subdomain: string; legalName: string };
+  user: { id: number; jobTitle: string | null; roles: RoleGrantDto[] };
+}
 
 /**
- * Bodies of the backend's auth endpoints (`docs/auth.md` in pango-core), next to the functions that
- * send them (`auth.api.ts`). The session shapes live in `user.mappers.ts`.
+ * Body of login, refresh, invitation acceptance and the sign-up of a verified account. The refresh
+ * token is not here: it only travels in an HttpOnly cookie.
  */
+export interface SessionResponseDto extends SessionProfileDto {
+  tokenType: 'Bearer';
+  accessToken: string;
+  /** Access token lifetime in seconds. */
+  expiresIn: number;
+  /** When the refresh cookie (the session) ends. */
+  refreshTokenExpiresAt: string;
+}
 
 /** `POST /auth/login` */
 export type LoginDto = { email: string; password: string };

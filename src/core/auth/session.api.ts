@@ -1,19 +1,19 @@
 import { isAxiosError } from 'axios';
 import { getCurrentTenant } from '@/core/tenant/tenant';
 import { logout, refresh } from './auth.api';
+import type { Session } from './auth.types';
 import { useAuthStore } from './auth.store';
 import { coordinateRefresh } from './refresh.coordinator';
 import { clearSessionHint, hasSessionHint, saveSessionHint } from './session.hint';
-import { toUser, type SessionResponseDto } from './user.mappers';
 
 /**
- * Starts the local session from a login / refresh / invitation response: the access token goes to
- * memory and the user to the store. The refresh token is not in the response: the browser got it as
- * an HttpOnly cookie. Only the hint (when the session ends) is remembered.
+ * Starts the local session from a login / refresh / invitation: the access token goes to memory and
+ * the user to the store. The refresh token is not part of it: the browser got it as an HttpOnly
+ * cookie. Only the hint (when the session ends) is remembered.
  */
-export function applySession(session: SessionResponseDto) {
-  saveSessionHint(session.refreshTokenExpiresAt);
-  useAuthStore.getState().setSession(toUser(session), session.accessToken);
+export function applySession(session: Session) {
+  saveSessionHint(session.expiresAt);
+  useAuthStore.getState().setSession(session.user, session.accessToken);
 }
 
 /** Server said the session is no good (cookie missing, expired, revoked, reused) rather than being unreachable. */

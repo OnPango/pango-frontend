@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import type { InvitationPreviewDto } from '@/core/auth/auth.dto';
+import type { InvitationPreview } from '@/core/auth/auth.types';
 import { buildTenantUrl, getCurrentTenant } from '@/core/tenant/tenant';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Button } from '@/shared/ui/components/Button';
@@ -16,13 +16,7 @@ import { WORKSPACE_DOMAIN } from '../lib/register.rules';
 import { acceptInvitationSchema, type AcceptInvitationValues } from '../types/invitation.schema';
 
 /** Form for a loaded invitation. Mounted only once the preview is known (it decides the fields). */
-function AcceptInvitationForm({
-  token,
-  preview,
-}: {
-  token: string;
-  preview: InvitationPreviewDto;
-}) {
+function AcceptInvitationForm({ token, preview }: { token: string; preview: InvitationPreview }) {
   const navigate = useNavigate();
   const accept = useAcceptInvitation();
   const { hasAccount } = preview;

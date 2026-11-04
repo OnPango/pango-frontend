@@ -1,4 +1,4 @@
-import type { SessionProfileDto } from '@/core/auth/user.mappers';
+import type { SessionProfileDto } from '@/core/auth/auth.dto';
 import {
   areas,
   findOrganizationById,
