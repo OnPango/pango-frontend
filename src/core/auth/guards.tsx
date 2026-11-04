@@ -11,12 +11,13 @@ export interface LoginRedirectState {
   from?: string;
 }
 
-function SessionCheck() {
-  return (
-    <div role="status" className="flex h-dvh w-full items-center justify-center text-sm text-muted">
-      Verificando sesión…
-    </div>
-  );
+/**
+ * The status is `unknown` until the session is restored once per app load. `core` knows nothing
+ * about UI screens, so the app passes what to show meanwhile (`loadingFallback`), as it does with
+ * the `fallback` of `RequirePermission`.
+ */
+interface SessionGuardProps {
+  loadingFallback: ReactNode;
 }
 
 /** Exchanges the stored refresh token for a session once per app load, while the status is `unknown`. */
@@ -28,11 +29,11 @@ function useSessionStatus() {
   return status;
 }
 
-export function RequireAuth() {
+export function RequireAuth({ loadingFallback }: SessionGuardProps) {
   const status = useSessionStatus();
   const location = useLocation();
 
-  if (status === 'unknown') return <SessionCheck />;
+  if (status === 'unknown') return loadingFallback;
   if (status === 'anonymous') {
     const state: LoginRedirectState = { from: location.pathname + location.search };
     return <Navigate to="/login" replace state={state} />;
@@ -41,10 +42,10 @@ export function RequireAuth() {
 }
 
 /** For public-only pages (login): an authenticated user is sent to the app. */
-export function RequireGuest() {
+export function RequireGuest({ loadingFallback }: SessionGuardProps) {
   const status = useSessionStatus();
 
-  if (status === 'unknown') return <SessionCheck />;
+  if (status === 'unknown') return loadingFallback;
   if (status === 'authenticated') return <Navigate to="/" replace />;
   return <Outlet />;
 }

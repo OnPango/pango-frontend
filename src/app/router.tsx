@@ -4,6 +4,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import { RequireAuth, RequireGuest, RequirePermission } from '../core/auth/guards';
 import { page } from './load';
 import { APP_ROUTES, NAV_SECTIONS, type AppRoute } from './routes';
+import { SessionCheck } from './SessionCheck';
 
 import type { RouteObject } from 'react-router-dom';
 import { ForbiddenPage } from '@/fallbacks/error-pages/ForbiddenPage';
@@ -41,7 +42,7 @@ export const router = createBrowserRouter(
       children: [
         { path: '*', element: <NotFoundPage /> },
         {
-          element: <RequireGuest />,
+          element: <RequireGuest loadingFallback={<SessionCheck />} />,
           children: [
             { path: '/login', element: page({ Page: LoginPage }) },
             { path: '/register', element: page({ Page: RegisterPage }) },
@@ -51,7 +52,7 @@ export const router = createBrowserRouter(
         { path: '/verify-email', element: page({ Page: VerifyEmailPage }) },
         { path: '/invitations/accept', element: page({ Page: AcceptInvitationPage }) },
         {
-          element: <RequireAuth />,
+          element: <RequireAuth loadingFallback={<SessionCheck />} />,
           children: [
             {
               element: <AppLayout navSections={NAV_SECTIONS} />,
