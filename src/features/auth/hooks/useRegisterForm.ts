@@ -1,12 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { getApiErrorMessage } from '@/core/api';
-import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
-import { toRegisterOrganizationRequest } from '../api/auth.mappers';
+import { getApiErrorCode } from '@/core/api';
+import { toSignupRequest } from '../api/auth.mappers';
 import { useRegisterOrganization } from '../api/useRegisterOrganization';
-import { useWorkspaceAvailability } from '../api/useWorkspaceAvailability';
-import { getWorkspaceStatus, slugify } from '../lib/register.rules';
+import { getAuthErrorMessage } from '../lib/auth.errors';
+import { slugify } from '../lib/register.rules';
+import type { SignupResult } from '../types/auth';
 import {
   ACCOUNT_STEP_FIELDS,
   registerOrganizationSchema,
@@ -16,25 +16,35 @@ import {
 export type RegisterStep = 'account' | 'company' | 'done';
 
 const DEFAULT_VALUES: RegisterOrganizationValues = {
-  adminName: '',
-  adminEmail: '',
+  name: '',
+  email: '',
   password: '',
   acceptTerms: false,
-  organizationName: '',
-  workspaceSlug: '',
+  legalName: '',
+  subdomain: '',
   taxId: '',
-  sector: '',
+  businessSector: '',
   teamSize: '',
-  itemsRange: '',
+  productCount: '',
   country: 'CO',
   city: '',
   contactPhone: '',
 };
 
+/** Server rejections that belong to one field: show them there and go back to the step that has it. */
+const FIELD_ERRORS: Record<
+  string,
+  { field: keyof RegisterOrganizationValues; step: Exclude<RegisterStep, 'done'> }
+> = {
+  EMAIL_TAKEN: { field: 'password', step: 'account' },
+  SUBDOMAIN_TAKEN: { field: 'subdomain', step: 'company' },
+  SUBDOMAIN_INVALID: { field: 'subdomain', step: 'company' },
+  TAX_ID_TAKEN: { field: 'taxId', step: 'company' },
+};
+
 /**
- * State and rules of the two-step registration (CU-13 / US-001): one form, validated step by step,
- * with the workspace address derived from the company name and checked for availability as you type.
- * The page only renders what this returns.
+ * State and rules of the two-step owner sign-up (CU-13 / US-001): one form, validated step by step,
+ * with the subdomain derived from the company name. The page only renders what this returns.
  */
 export function useRegisterForm() {
   const registration = useRegisterOrganization();
@@ -46,39 +56,26 @@ export function useRegisterForm() {
 
   const [step, setStep] = useState<RegisterStep>('account');
   const [direction, setDirection] = useState<'forward' | 'back'>('forward');
+  const [result, setResult] = useState<SignupResult | null>(null);
   /** Bumped on every rejected attempt so the form can play its "shake" again. */
   const [rejections, setRejections] = useState(0);
   /** Once the person edits the address by hand, stop overwriting it from the company name. */
-  const slugEditedByHand = useRef(false);
+  const subdomainEditedByHand = useRef(false);
 
   const { control, setValue, setError, trigger, handleSubmit } = form;
   const password = useWatch({ control, name: 'password' });
-  const adminEmail = useWatch({ control, name: 'adminEmail' });
-  const slug = useWatch({ control, name: 'workspaceSlug' });
-
-  const checkedSlug = useDebouncedValue(slug, 400);
-  const availability = useWorkspaceAvailability(checkedSlug);
-  const workspaceStatus = getWorkspaceStatus({
-    slug,
-    checkedSlug,
-    isFetching: availability.isFetching,
-    isError: availability.isError,
-    available: availability.data,
-  });
+  const subdomain = useWatch({ control, name: 'subdomain' });
 
   const reject = () => setRejections((count) => count + 1);
 
-  const onOrganizationNameChange = (event: ChangeEvent<HTMLInputElement>) => {
-    if (slugEditedByHand.current) return;
-    setValue('workspaceSlug', slugify(event.target.value), { shouldDirty: true });
+  const onLegalNameChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (subdomainEditedByHand.current) return;
+    setValue('subdomain', slugify(event.target.value), { shouldDirty: true });
   };
 
-  const onWorkspaceSlugChange = (event: ChangeEvent<HTMLInputElement>) => {
-    slugEditedByHand.current = event.target.value !== '';
-    setValue('workspaceSlug', slugify(event.target.value), {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
+  const onSubdomainChange = (event: ChangeEvent<HTMLInputElement>) => {
+    subdomainEditedByHand.current = event.target.value !== '';
+    setValue('subdomain', slugify(event.target.value), { shouldDirty: true, shouldValidate: true });
   };
 
   const continueToCompany = async () => {
@@ -95,16 +92,22 @@ export function useRegisterForm() {
   };
 
   const finish = handleSubmit((values) => {
-    if (workspaceStatus === 'taken') {
-      setError('workspaceSlug', { message: 'Esa dirección ya está en uso. Prueba con otra.' });
-      return reject();
-    }
-    registration.mutate(toRegisterOrganizationRequest(values), {
-      onSuccess: () => {
+    registration.mutate(toSignupRequest(values), {
+      onSuccess: (outcome) => {
+        setResult(outcome);
         setDirection('forward');
         setStep('done');
       },
-      onError: reject,
+      onError: (error) => {
+        reject();
+        const mapped = FIELD_ERRORS[getApiErrorCode(error) ?? ''];
+        if (!mapped) return;
+        setError(mapped.field, { message: getAuthErrorMessage(error, '') }, { shouldFocus: true });
+        setDirection(mapped.step === 'account' ? 'back' : 'forward');
+        setStep(mapped.step);
+        // The field now explains the problem; a banner on top would say it twice.
+        registration.reset();
+      },
     });
   }, reject);
 
@@ -123,16 +126,15 @@ export function useRegisterForm() {
     direction,
     rejections,
     password,
-    adminEmail,
-    slug,
-    workspaceStatus,
+    subdomain,
+    result,
     isSubmitting: registration.isPending,
     serverError: registration.isError
-      ? getApiErrorMessage(registration.error, 'No se pudo registrar la organización.')
+      ? getAuthErrorMessage(registration.error, 'No se pudo registrar la organización.')
       : null,
     submit,
     goBack,
-    onOrganizationNameChange,
-    onWorkspaceSlugChange,
+    onLegalNameChange,
+    onSubdomainChange,
   };
 }

@@ -38,8 +38,8 @@ export function AccountStep({ form, password }: AccountStepProps) {
           required
           autoComplete="name"
           placeholder="Nombre y apellido"
-          error={errors.adminName?.message}
-          {...register('adminName')}
+          error={errors.name?.message}
+          {...register('name')}
         />
       </Reveal>
 
@@ -50,8 +50,8 @@ export function AccountStep({ form, password }: AccountStepProps) {
           type="email"
           autoComplete="email"
           placeholder="tu@empresa.co"
-          error={errors.adminEmail?.message}
-          {...register('adminEmail')}
+          error={errors.email?.message}
+          {...register('email')}
         />
       </Reveal>
 

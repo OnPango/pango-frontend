@@ -1,6 +1,7 @@
 import { useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import type { LoginRedirectState } from '@/core/auth/guards';
+import { Link } from 'react-router-dom';
+import { buildTenantUrl } from '@/core/tenant/tenant';
+import { useCountdown } from '@/shared/hooks/useCountdown';
 import { useShake } from '@/shared/hooks/useShake';
 import { Logo } from '@/shared/ui/Logo';
 import { Alert } from '@/shared/ui/components/Alert';
@@ -9,41 +10,52 @@ import { CompanyStep } from '../components/CompanyStep';
 import { RegisterHero } from '../components/RegisterHero';
 import { RegisterProgress } from '../components/RegisterProgress';
 import { RegisterSuccess } from '../components/RegisterSuccess';
+import { useResendVerification } from '../api/useVerifyEmail';
 import { useRegisterForm } from '../hooks/useRegisterForm';
 
 /** CU-13 / US-001: register an organization together with its first administrator, in two steps. */
 export default function RegisterPage() {
-  const navigate = useNavigate();
   const {
     form,
     step,
     direction,
     rejections,
     password,
-    adminEmail,
-    slug,
-    workspaceStatus,
+    subdomain,
+    result,
     isSubmitting,
     serverError,
     submit,
     goBack,
-    onOrganizationNameChange,
-    onWorkspaceSlugChange,
+    onLegalNameChange,
+    onSubdomainChange,
   } = useRegisterForm();
 
   const formRef = useRef<HTMLFormElement>(null);
   useShake(formRef, rejections);
 
+  const resend = useResendVerification();
+  const [resendCooldown, startResendCooldown] = useCountdown(60);
+
   const goToLogin = () => {
-    const state: LoginRedirectState = { registeredEmail: adminEmail };
-    navigate('/login', { replace: true, state });
+    if (!result) return;
+    const path = `/login?email=${encodeURIComponent(result.email)}`;
+    window.location.assign(buildTenantUrl(result.subdomain, path));
+  };
+
+  const resendEmail = () => {
+    if (!result) return;
+    resend.mutate(
+      { email: result.email, subdomain: result.subdomain },
+      { onSuccess: startResendCooldown },
+    );
   };
 
   const slide = direction === 'forward' ? 'animate-slide-in-right' : 'animate-slide-in-left';
 
   return (
     <div className="flex h-dvh w-full">
-      <RegisterHero slug={slug} />
+      <RegisterHero slug={subdomain} />
 
       {/* Only this column scrolls: the app shell is `overflow: hidden`. */}
       <div className="min-w-0 flex-1 overflow-y-auto">
@@ -53,7 +65,16 @@ export default function RegisterPage() {
           </Link>
 
           {step === 'done' ? (
-            <RegisterSuccess email={adminEmail} slug={slug} onContinue={goToLogin} />
+            result && (
+              <RegisterSuccess
+                result={result}
+                onContinue={goToLogin}
+                onResend={resendEmail}
+                isResending={resend.isPending}
+                resendCooldown={resendCooldown}
+                resendFailed={resend.isError}
+              />
+            )
           ) : (
             <>
               <RegisterProgress step={step} />
@@ -69,12 +90,10 @@ export default function RegisterPage() {
                   ) : (
                     <CompanyStep
                       form={form}
-                      slug={slug}
-                      workspaceStatus={workspaceStatus}
                       isSubmitting={isSubmitting}
                       onBack={goBack}
-                      onOrganizationNameChange={onOrganizationNameChange}
-                      onWorkspaceSlugChange={onWorkspaceSlugChange}
+                      onLegalNameChange={onLegalNameChange}
+                      onSubdomainChange={onSubdomainChange}
                     />
                   )}
                 </div>

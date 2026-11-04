@@ -1,52 +1,47 @@
+import type { SessionResponseDto } from '@/core/auth/user.mappers';
 import type { RegisterOrganizationValues } from '../types/auth.schema';
-import type { RegisterOrganizationDto, RegisterOrganizationRequest } from '../types/auth';
+import type { SignupRequest, SignupResponseDto, SignupResult } from '../types/auth';
 
-const orNull = (value: string | undefined) => {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
+const orUndefined = (value: string) => {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
 };
 
-/** Form values → request: optional fields left empty become `undefined`. */
-export function toRegisterOrganizationRequest(
-  values: RegisterOrganizationValues,
-): RegisterOrganizationRequest {
+/** Form values → request: optional fields left empty are omitted. */
+export function toSignupRequest(values: RegisterOrganizationValues): SignupRequest {
   return {
-    adminName: values.adminName,
-    adminEmail: values.adminEmail,
+    name: values.name,
+    email: values.email,
     password: values.password,
-    organizationName: values.organizationName,
-    workspaceSlug: values.workspaceSlug,
-    taxId: orNull(values.taxId) ?? undefined,
-    sector: values.sector,
-    teamSize: values.teamSize,
-    itemsRange: orNull(values.itemsRange) ?? undefined,
-    country: values.country,
-    city: orNull(values.city) ?? undefined,
-    contactPhone: orNull(values.contactPhone) ?? undefined,
+    organization: {
+      legalName: values.legalName,
+      subdomain: values.subdomain,
+      country: values.country,
+      city: values.city,
+      businessSector: values.businessSector,
+      teamSize: values.teamSize,
+      productCount: values.productCount,
+      taxId: orUndefined(values.taxId),
+      contactPhone: orUndefined(values.contactPhone),
+    },
   };
 }
 
-/** Request → wire format (snake_case). */
-export function toRegisterOrganizationDto(
-  request: RegisterOrganizationRequest,
-): RegisterOrganizationDto {
+const isSession = (dto: SignupResponseDto): dto is SessionResponseDto =>
+  !('verificationRequired' in dto);
+
+/**
+ * The API answers with a session when the email already belonged to a verified account. That
+ * session is for a subdomain this page is not on, so it is dropped: the owner logs in there.
+ */
+export function toSignupResult(dto: SignupResponseDto, request: SignupRequest): SignupResult {
+  if (isSession(dto)) {
+    return { kind: 'ready', email: dto.account.email, subdomain: dto.organization.subdomain };
+  }
   return {
-    organization: {
-      name: request.organizationName.trim(),
-      slug: request.workspaceSlug,
-      tax_id: orNull(request.taxId),
-      sector: request.sector,
-      team_size: request.teamSize,
-      items_range: orNull(request.itemsRange),
-      country: request.country,
-      city: orNull(request.city),
-      contact_phone: orNull(request.contactPhone),
-    },
-    admin: {
-      full_name: request.adminName.trim(),
-      email: request.adminEmail.trim().toLowerCase(),
-      password: request.password,
-    },
-    terms_accepted: true,
+    kind: 'verification',
+    email: dto.email,
+    subdomain: dto.organization.subdomain || request.organization.subdomain,
+    emailSent: dto.verificationEmailSent,
   };
 }

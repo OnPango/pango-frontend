@@ -1,13 +1,12 @@
 import { useMutation } from '@tanstack/react-query';
-import { useAuthStore } from '@/core/auth/auth.store';
+import { applySession } from '@/core/auth/session.api';
+import type { LoginRequest } from '../types/auth';
 import { login } from './auth.service';
 
-/** Login mutation: on success the user goes to the store; the cookie is already in the browser. */
+/** Login mutation: on success the session (tokens + user) is started. */
 export function useLogin() {
-  const setSession = useAuthStore((state) => state.setSession);
-
   return useMutation({
-    mutationFn: login,
-    onSuccess: (user) => setSession(user),
+    mutationFn: (credentials: LoginRequest) => login(credentials),
+    onSuccess: (session) => applySession(session),
   });
 }

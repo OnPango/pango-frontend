@@ -5,44 +5,63 @@ export type LoginRequest = {
   password: string;
 };
 
-/** `POST /auth/login` body. No token: the backend sends it as an httpOnly cookie (`Set-Cookie`). */
-export type LoginResponseDto = SessionResponseDto;
+/** `POST /auth/login` body. */
+export type LoginDto = { email: string; password: string };
 
-/** What the backend needs to create an organization together with its first administrator. */
-export type RegisterOrganizationRequest = {
-  adminName: string;
-  adminEmail: string;
+/** What the owner sign-up form collects. */
+export type SignupRequest = {
+  name: string;
+  email: string;
   password: string;
-  organizationName: string;
-  /** Subdomain of the organization's workspace: `<slug>.onpango.com`. */
-  workspaceSlug: string;
-  taxId?: string;
-  sector: string;
-  teamSize: string;
-  itemsRange?: string;
-  country: string;
-  city?: string;
-  contactPhone?: string;
-};
-
-/** `POST /auth/register` body. The whole thing is created in one operation or not at all. */
-export type RegisterOrganizationDto = {
   organization: {
-    name: string;
-    slug: string;
-    tax_id: string | null;
-    sector: string;
-    team_size: string;
-    items_range: string | null;
+    legalName: string;
+    /** Organization subdomain: `<subdomain>.onpango.com`. */
+    subdomain: string;
+    /** ISO 3166-1 alpha-2 code. */
     country: string;
-    city: string | null;
-    contact_phone: string | null;
+    city: string;
+    businessSector: string;
+    teamSize: string;
+    productCount: string;
+    taxId?: string;
+    contactPhone?: string;
   };
-  admin: { full_name: string; email: string; password: string };
-  terms_accepted: true;
 };
 
-/** `GET /auth/workspaces/:slug/availability` */
-export type WorkspaceAvailabilityDto = {
-  available: boolean;
+/** `POST /auth/signup` body. Same shape as the request: the API already speaks camelCase. */
+export type SignupDto = SignupRequest;
+
+/** `POST /auth/signup` for a new account: no session until the email is confirmed. */
+export type VerificationRequiredDto = {
+  verificationRequired: true;
+  email: string;
+  organization: { subdomain: string };
+  /** False if the email could not be sent; resending retries. */
+  verificationEmailSent: boolean;
+};
+
+export type SignupResponseDto = VerificationRequiredDto | SessionResponseDto;
+
+/** Outcome of an owner sign-up, as the UI needs it. */
+export type SignupResult =
+  /** New account: the organization exists but the owner must confirm the email first. */
+  | { kind: 'verification'; email: string; subdomain: string; emailSent: boolean }
+  /** Existing verified account: the organization is ready, log in on its subdomain. */
+  | { kind: 'ready'; email: string; subdomain: string };
+
+/** `GET /invitations/preview` */
+export type InvitationPreviewDto = {
+  email: string;
+  organization: { subdomain: string; legalName: string };
+  invitedBy: string;
+  expiresAt: string;
+  /** False: the form asks for a name and a new password. True: the current password. */
+  hasAccount: boolean;
+};
+
+export type AcceptInvitationRequest = {
+  token: string;
+  /** Required when the invited email has no account yet. */
+  name?: string;
+  password: string;
 };

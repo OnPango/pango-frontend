@@ -7,22 +7,19 @@ import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { Reveal } from '@/shared/ui/components/Reveal';
 import {
   COUNTRY_OPTIONS,
-  ITEMS_RANGE_OPTIONS,
-  SECTOR_OPTIONS,
+  PRODUCT_COUNT_OPTIONS,
+  BUSINESS_SECTOR_OPTIONS,
   TEAM_SIZE_OPTIONS,
 } from '../content/registration.options';
-import type { WorkspaceStatus } from '../lib/register.rules';
 import type { RegisterOrganizationValues } from '../types/auth.schema';
 import { WorkspaceAddressField } from './WorkspaceAddressField';
 
 interface CompanyStepProps {
   form: UseFormReturn<RegisterOrganizationValues>;
-  slug: string;
-  workspaceStatus: WorkspaceStatus;
   isSubmitting: boolean;
   onBack: () => void;
-  onOrganizationNameChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  onWorkspaceSlugChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onLegalNameChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onSubdomainChange: (event: ChangeEvent<HTMLInputElement>) => void;
 }
 
 const STAGGER_MS = 50;
@@ -30,12 +27,10 @@ const STAGGER_MS = 50;
 /** Step 2: the organization, its workspace address and where it operates. */
 export function CompanyStep({
   form,
-  slug,
-  workspaceStatus,
   isSubmitting,
   onBack,
-  onOrganizationNameChange,
-  onWorkspaceSlugChange,
+  onLegalNameChange,
+  onSubdomainChange,
 }: CompanyStepProps) {
   const {
     register,
@@ -58,17 +53,15 @@ export function CompanyStep({
           required
           autoComplete="organization"
           placeholder="Ej.: Distribuidora del Caribe"
-          error={errors.organizationName?.message}
-          {...register('organizationName', { onChange: onOrganizationNameChange })}
+          error={errors.legalName?.message}
+          {...register('legalName', { onChange: onLegalNameChange })}
         />
       </Reveal>
 
       <Reveal delay={STAGGER_MS * 2}>
         <WorkspaceAddressField
-          slug={slug}
-          status={workspaceStatus}
-          error={errors.workspaceSlug?.message}
-          {...register('workspaceSlug', { onChange: onWorkspaceSlugChange })}
+          error={errors.subdomain?.message}
+          {...register('subdomain', { onChange: onSubdomainChange })}
         />
       </Reveal>
 
@@ -86,11 +79,11 @@ export function CompanyStep({
       <Reveal delay={STAGGER_MS * 4} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormSelect
           control={control}
-          name="sector"
+          name="businessSector"
           label="Sector"
           required
           placeholder="Selecciona…"
-          options={SECTOR_OPTIONS}
+          options={BUSINESS_SECTOR_OPTIONS}
         />
         <FormSelect
           control={control}
@@ -105,13 +98,12 @@ export function CompanyStep({
       <Reveal delay={STAGGER_MS * 5}>
         <FormSelect
           control={control}
-          name="itemsRange"
-          label="¿Cuántos materiales manejas, más o menos?"
-          optional
-          clearable
+          name="productCount"
+          label="¿Cuántos productos manejas, más o menos?"
+          required
           placeholder="Selecciona…"
           hint="Nos ayuda a preparar tu importación de historial."
-          options={ITEMS_RANGE_OPTIONS}
+          options={PRODUCT_COUNT_OPTIONS}
         />
       </Reveal>
 
@@ -125,6 +117,7 @@ export function CompanyStep({
         />
         <TextBox
           label="Ciudad"
+          required
           autoComplete="address-level2"
           placeholder="Ej.: Barranquilla"
           error={errors.city?.message}

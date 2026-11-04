@@ -13,6 +13,8 @@ import { AppLayout } from '@/shared/layout/AppLayout';
 
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'));
+const VerifyEmailPage = lazy(() => import('@/features/auth/pages/VerifyEmailPage'));
+const AcceptInvitationPage = lazy(() => import('@/features/auth/pages/AcceptInvitationPage'));
 
 /**
  * One screen of `APP_ROUTES`, behind its permission check. Pages declare their own `errorElement`
@@ -45,6 +47,9 @@ export const router = createBrowserRouter(
             { path: '/register', element: page({ Page: RegisterPage }) },
           ],
         },
+        // Opened from an email: reachable whether or not someone is already signed in.
+        { path: '/verify-email', element: page({ Page: VerifyEmailPage }) },
+        { path: '/invitations/accept', element: page({ Page: AcceptInvitationPage }) },
         {
           element: <RequireAuth />,
           children: [
