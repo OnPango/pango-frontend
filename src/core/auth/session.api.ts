@@ -1,6 +1,6 @@
 import { isAxiosError } from 'axios';
-import { authHttp } from '@/core/api/authHttp';
 import { getCurrentTenant } from '@/core/tenant/tenant';
+import { logout, refresh } from './auth.api';
 import { useAuthStore } from './auth.store';
 import { clearSessionHint, hasSessionHint, saveSessionHint } from './session.hint';
 import { toUser, type SessionResponseDto } from './user.mappers';
@@ -42,8 +42,7 @@ export function refreshSession(): Promise<boolean> {
     // Sessions belong to one organization: on the main domain there is nothing to renew.
     if (!getCurrentTenant() || !hasSessionHint()) return false;
     try {
-      const { data } = await authHttp.post<SessionResponseDto>('/auth/refresh');
-      applySession(data);
+      applySession(await refresh());
       return true;
     } catch (error) {
       // Offline or a server hiccup must not log the user out: the cookie is still there.
@@ -68,5 +67,5 @@ export async function restoreSession(): Promise<void> {
  */
 export async function logoutRequest(): Promise<void> {
   clearSessionHint();
-  await authHttp.post('/auth/logout');
+  await logout();
 }

@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { acceptInvitation, getInvitationPreview } from '@/core/auth/auth.api';
 import { applySession } from '@/core/auth/session.api';
 import { authKeys } from './auth.keys';
-import { acceptInvitation, getInvitationPreview } from './auth.service';
 
 /** What the accept page shows before the form. `retry: false`: an invalid link will not fix itself. */
 export function useInvitationPreview(token: string) {

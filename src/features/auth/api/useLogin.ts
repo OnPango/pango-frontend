@@ -1,12 +1,12 @@
 import { useMutation } from '@tanstack/react-query';
+import { login } from '@/core/auth/auth.api';
+import type { LoginDto } from '@/core/auth/auth.dto';
 import { applySession } from '@/core/auth/session.api';
-import type { LoginRequest } from '../types/auth';
-import { login } from './auth.service';
 
 /** Login mutation: on success the session (tokens + user) is started. */
 export function useLogin() {
   return useMutation({
-    mutationFn: (credentials: LoginRequest) => login(credentials),
+    mutationFn: (credentials: LoginDto) => login(credentials),
     onSuccess: (session) => applySession(session),
   });
 }

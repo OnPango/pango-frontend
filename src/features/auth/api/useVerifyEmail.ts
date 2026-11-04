@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { resendVerification, verifyEmail } from '@/core/auth/auth.api';
 import { authKeys } from './auth.keys';
-import { resendVerification, verifyEmail } from './auth.service';
 
 /**
  * Consumes the token of the emailed link as soon as the page opens. A query (not a mutation in an

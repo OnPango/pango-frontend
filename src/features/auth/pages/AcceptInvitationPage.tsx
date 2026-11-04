@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import type { InvitationPreviewDto } from '@/core/auth/auth.dto';
 import { buildTenantUrl, getCurrentTenant } from '@/core/tenant/tenant';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Button } from '@/shared/ui/components/Button';
@@ -12,7 +13,6 @@ import { AuthCard, AuthPageShell } from '../components/AuthPageShell';
 import { PasswordStrength } from '../components/PasswordStrength';
 import { getAuthErrorMessage } from '../lib/auth.errors';
 import { WORKSPACE_DOMAIN } from '../lib/register.rules';
-import type { InvitationPreviewDto } from '../types/auth';
 import { acceptInvitationSchema, type AcceptInvitationValues } from '../types/invitation.schema';
 
 /** Form for a loaded invitation. Mounted only once the preview is known (it decides the fields). */
@@ -102,7 +102,7 @@ export default function AcceptInvitationPage() {
       <AuthCard
         eyebrow="INVITACIÓN"
         title={<h2>Únete a tu equipo en Pango</h2>}
-        className="sm:w-[30rem]"
+        className="sm:w-120"
       >
         {preview.isLoading && (
           <p role="status" className="flex items-center gap-3 text-muted">
