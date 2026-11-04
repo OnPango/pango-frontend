@@ -1,6 +1,4 @@
 import { isAxiosError, type AxiosRequestConfig } from 'axios';
-import { useAuthStore } from '@/core/auth/auth.store';
-import { refreshSession } from '@/core/auth/session.api';
 import { createApiClient } from './client';
 
 /** Marks a request that was already retried after refreshing the session. */
@@ -9,15 +7,36 @@ interface RetriableConfig extends AxiosRequestConfig {
 }
 
 /**
+ * What the client needs to know about the session. It is injected (`configureHttpAuth`) instead of
+ * imported, so this module knows nothing about how the session is stored or renewed: `core/auth`
+ * depends on `core/api`, never the other way around.
+ */
+export interface HttpAuthHooks {
+  /** Short-lived Bearer token of the signed-in user, if any. */
+  getAccessToken: () => string | null;
+  /** Renews the session. Resolves `true` when it was renewed and the request can be repeated. */
+  refresh: () => Promise<boolean>;
+  /** The session could not be renewed: it is over. */
+  onSessionExpired: () => void;
+}
+
+let authHooks: HttpAuthHooks | null = null;
+
+/** Connects `http` to the session. Call it once at startup, before the first request. */
+export function configureHttpAuth(hooks: HttpAuthHooks): void {
+  authHooks = hooks;
+}
+
+/**
  * Client for everything that needs a signed-in user: it sends `Authorization: Bearer <access token>`.
- * When the API answers 401 (the 15-minute access token expired) it renews the session once with the
- * refresh token and repeats the request; if that fails the local session is dropped and the guards
- * send the user to /login.
+ * When the API answers 401 (the 15-minute access token expired) it renews the session once and
+ * repeats the request; if that fails the session is reported as over and the guards send the user
+ * to /login. Without `configureHttpAuth` it behaves like a plain client.
  */
 export const http = createApiClient();
 
 http.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken;
+  const token = authHooks?.getAccessToken();
   if (token) config.headers.set('Authorization', `Bearer ${token}`);
   return config;
 });
@@ -25,15 +44,15 @@ http.interceptors.request.use((config) => {
 http.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
-    if (!isAxiosError(error) || error.response?.status !== 401 || !error.config) {
+    if (!authHooks || !isAxiosError(error) || error.response?.status !== 401 || !error.config) {
       return Promise.reject(error);
     }
     const config = error.config as RetriableConfig;
     if (config._retried) return Promise.reject(error);
 
-    const renewed = await refreshSession();
+    const renewed = await authHooks.refresh();
     if (!renewed) {
-      useAuthStore.getState().clearSession();
+      authHooks.onSessionExpired();
       return Promise.reject(error);
     }
     config._retried = true;
