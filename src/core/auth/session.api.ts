@@ -2,6 +2,7 @@ import { isAxiosError } from 'axios';
 import { getCurrentTenant } from '@/core/tenant/tenant';
 import { logout, refresh } from './auth.api';
 import { useAuthStore } from './auth.store';
+import { coordinateRefresh } from './refresh.coordinator';
 import { clearSessionHint, hasSessionHint, saveSessionHint } from './session.hint';
 import { toUser, type SessionResponseDto } from './user.mappers';
 
@@ -19,40 +20,27 @@ export function applySession(session: SessionResponseDto) {
 const isRejection = (error: unknown) =>
   isAxiosError(error) && !!error.response && error.response.status < 500;
 
-/**
- * Runs `task` while holding a lock shared by every tab of this origin. The cookie is shared by all
- * tabs and the token inside it rotates; a reused one counts as theft (the backend then ends every
- * session), so two tabs must never refresh at the same time.
- */
-async function withRefreshLock(task: () => Promise<boolean>): Promise<boolean> {
-  if (typeof navigator === 'undefined' || !navigator.locks) return task();
-  return await navigator.locks.request('pango-refresh-session', task);
+/** One renewal attempt. Resolves `true` when the session was renewed, `false` if it could not be. */
+async function renewSession(): Promise<boolean> {
+  // Sessions belong to one organization: on the main domain there is nothing to renew.
+  if (!getCurrentTenant() || !hasSessionHint()) return false;
+  try {
+    applySession(await refresh());
+    return true;
+  } catch (error) {
+    // Offline or a server hiccup must not log the user out: the cookie is still there.
+    if (isRejection(error)) clearSessionHint();
+    return false;
+  }
 }
 
-let pendingRefresh: Promise<boolean> | null = null;
-
 /**
- * `POST /auth/refresh`: the browser sends the refresh cookie, the API rotates it (sets a new one)
- * and returns a new session. Resolves `true` when the session was renewed and `false` when there
- * is nothing to renew or the server refused. Calls made while one is in flight (several 401s at
- * once, StrictMode double effects) share it.
+ * Renews the session from the refresh cookie (the API rotates it and returns a new session).
+ * Resolves `true` when it was renewed and `false` when there is nothing to renew or the server
+ * refused. Concurrent calls share one renewal, also across tabs: see `refresh.coordinator.ts`.
  */
 export function refreshSession(): Promise<boolean> {
-  pendingRefresh ??= withRefreshLock(async () => {
-    // Sessions belong to one organization: on the main domain there is nothing to renew.
-    if (!getCurrentTenant() || !hasSessionHint()) return false;
-    try {
-      applySession(await refresh());
-      return true;
-    } catch (error) {
-      // Offline or a server hiccup must not log the user out: the cookie is still there.
-      if (isRejection(error)) clearSessionHint();
-      return false;
-    }
-  }).finally(() => {
-    pendingRefresh = null;
-  });
-  return pendingRefresh;
+  return coordinateRefresh(renewSession);
 }
 
 /** On boot: rebuild the session from the refresh cookie, or become anonymous. */
