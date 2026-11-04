@@ -1,7 +1,7 @@
 import { FiGlobe } from 'react-icons/fi';
+import { WORKSPACE_DOMAIN } from '@/core/tenant/tenant';
 import { asset } from '@/shared/lib/asset';
 import { Logo } from '@/shared/ui/Logo';
-import { WORKSPACE_DOMAIN } from '../lib/register.rules';
 
 interface RegisterHeroProps {
   /** What the person typed as their workspace address; shown live in the preview pill. */

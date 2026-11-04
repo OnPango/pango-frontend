@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { buildTenantUrl } from '@/core/tenant/tenant';
+import { redirectToTenant } from '@/core/tenant/tenant';
 import { useCountdown } from '@/shared/hooks/useCountdown';
 import { useShake } from '@/shared/hooks/useShake';
 import { Logo } from '@/shared/ui/Logo';
@@ -39,8 +39,7 @@ export default function RegisterPage() {
 
   const goToLogin = () => {
     if (!result) return;
-    const path = `/login?email=${encodeURIComponent(result.email)}`;
-    window.location.assign(buildTenantUrl(result.subdomain, path));
+    redirectToTenant(result.subdomain, `/login?email=${encodeURIComponent(result.email)}`);
   };
 
   const resendEmail = () => {

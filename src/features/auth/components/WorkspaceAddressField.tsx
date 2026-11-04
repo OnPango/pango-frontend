@@ -1,6 +1,6 @@
 import { forwardRef, type InputHTMLAttributes } from 'react';
+import { WORKSPACE_DOMAIN } from '@/core/tenant/tenant';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
-import { WORKSPACE_DOMAIN } from '../lib/register.rules';
 
 interface WorkspaceAddressFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   /** Validation or server error for the address (taken, reserved, malformed). */

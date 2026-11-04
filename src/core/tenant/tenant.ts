@@ -35,6 +35,20 @@ export const RESERVED_SUBDOMAINS: ReadonlySet<string> = new Set([
 export const isValidSubdomain = (subdomain: string) =>
   SUBDOMAIN_PATTERN.test(subdomain) && !RESERVED_SUBDOMAINS.has(subdomain);
 
+/** Domain organizations hang from, as shown to people: `<subdomain>.<WORKSPACE_DOMAIN>`. */
+export const WORKSPACE_DOMAIN = env.appBaseDomain;
+
+/** "Distribuidora del Caribe S.A.S." → "distribuidora-del-caribe-s-a-s". */
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+/, '')
+    .slice(0, SUBDOMAIN_MAX_LENGTH);
+}
+
 /** Organization the app is being served for, or `null` on the main domain. */
 export function getCurrentTenant(): string | null {
   if (env.devTenant) return env.devTenant;
@@ -63,4 +77,12 @@ export function buildTenantUrl(subdomain: string, path = '/'): string {
 export function buildMainUrl(path = '/'): string {
   if (env.devTenant) return path;
   return `${originFor(env.appBaseDomain)}${path}`;
+}
+
+/**
+ * Leaves this page for `path` inside an organization. It is a full navigation: the organization is
+ * another host, so the router cannot do it, and the session (a cookie per organization) starts over.
+ */
+export function redirectToTenant(subdomain: string, path = '/'): void {
+  window.location.assign(buildTenantUrl(subdomain, path));
 }

@@ -1,10 +1,6 @@
 import { z } from 'zod';
-import {
-  isPasswordValid,
-  isValidSubdomain,
-  PASSWORD_MAX_LENGTH,
-  SUBDOMAIN_MAX_LENGTH,
-} from '../lib/register.rules';
+import { isValidSubdomain, SUBDOMAIN_MAX_LENGTH } from '@/core/tenant/tenant';
+import { isPasswordValid, PASSWORD_MAX_LENGTH } from '../lib/register.rules';
 
 /** Step 1 of the sign-up: the person who becomes the organization's owner. */
 export const accountStepSchema = z.object({

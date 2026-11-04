@@ -1,9 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { FiArrowRight } from 'react-icons/fi';
-import { buildTenantUrl } from '@/core/tenant/tenant';
+import {
+  isValidSubdomain,
+  redirectToTenant,
+  slugify,
+  WORKSPACE_DOMAIN,
+} from '@/core/tenant/tenant';
 import { Button } from '@/shared/ui/components/Button';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
-import { isValidSubdomain, slugify, WORKSPACE_DOMAIN } from '../lib/register.rules';
 
 /**
  * Login on the main domain: sessions belong to one organization, so first find its address
@@ -19,7 +23,7 @@ export function FindWorkspaceForm() {
       setError('Escribe la dirección de tu espacio, por ejemplo mi-empresa.');
       return;
     }
-    window.location.assign(buildTenantUrl(subdomain, '/login'));
+    redirectToTenant(subdomain, '/login');
   };
 
   return (

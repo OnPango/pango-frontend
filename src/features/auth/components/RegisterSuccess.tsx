@@ -1,8 +1,8 @@
 import { FiArrowRight, FiMail } from 'react-icons/fi';
+import type { SignupResult } from '@/core/auth/auth.types';
+import { WORKSPACE_DOMAIN } from '@/core/tenant/tenant';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Button } from '@/shared/ui/components/Button';
-import type { SignupResult } from '@/core/auth/auth.types';
-import { WORKSPACE_DOMAIN } from '../lib/register.rules';
 
 interface RegisterSuccessProps {
   result: SignupResult;
