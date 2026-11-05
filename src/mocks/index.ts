@@ -1,4 +1,5 @@
-import { authHttp, http } from '@/core/api';
+import { authHttp } from '@/core/api/authHttp';
+import { http } from '@/core/api/http';
 import { authRoutes } from './handlers/auth.handlers';
 import { usersRoutes } from './handlers/users.handlers';
 import { createMockAdapter } from './server';

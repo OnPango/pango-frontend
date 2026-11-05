@@ -1,4 +1,4 @@
-import { getApiErrorCode, getApiErrorMessage } from '@/core/api';
+import { getApiErrorCode, getApiErrorMessage } from '@/core/api/errors';
 
 /** Spanish copy for the backend's stable error codes (`docs/auth.md` in pango-core). */
 const MESSAGES: Record<string, string> = {

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { FiPlus, FiSearch } from 'react-icons/fi';
-import { getApiErrorMessage } from '@/core/api';
+import { getApiErrorMessage } from '@/core/api/errors';
 import { Alert } from '@/shared/ui/components/Alert';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { Select } from '@/shared/ui/components/form/select/Select';

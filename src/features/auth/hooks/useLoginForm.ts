@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { getApiErrorCode } from '@/core/api';
+import { getApiErrorCode } from '@/core/api/errors';
 import type { LoginRedirectState } from '@/core/auth/guards';
 import { useLogin } from '../api/useLogin';
 import { useResendVerification } from '../api/useVerifyEmail';

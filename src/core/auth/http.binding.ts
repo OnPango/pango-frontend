@@ -1,4 +1,4 @@
-import { configureHttpAuth } from '@/core/api';
+import { configureHttpAuth } from '@/core/api/http';
 import { useAuthStore } from './auth.store';
 import { refreshSession } from './session.api';
 

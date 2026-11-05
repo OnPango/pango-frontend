@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { BsShieldCheck } from 'react-icons/bs';
 import { FiPlus } from 'react-icons/fi';
 import { MdEdit } from 'react-icons/md';
-import { getApiErrorMessage } from '@/core/api';
+import { getApiErrorMessage } from '@/core/api/errors';
 import { Badge } from '@/shared/ui/components/Badge';
 import { Button } from '@/shared/ui/components/Button';
 import { PageHeader } from '@/shared/ui/PageHeader';

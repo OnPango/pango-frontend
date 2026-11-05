@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState, type FormEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { getApiErrorCode } from '@/core/api';
+import { getApiErrorCode } from '@/core/api/errors';
 import type { SignupResult } from '@/core/auth/auth.types';
 import { toSignupRequest } from '../api/auth.mappers';
 import { useRegisterOrganization } from '../api/useRegisterOrganization';

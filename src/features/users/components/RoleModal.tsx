@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { getApiErrorMessage } from '@/core/api';
+import { getApiErrorMessage } from '@/core/api/errors';
 import type { Permission } from '@/core/auth/user';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Button } from '@/shared/ui/components/Button';
