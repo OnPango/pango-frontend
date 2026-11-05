@@ -14,7 +14,7 @@ import {
   type UserRow,
 } from '../db';
 import { requestContext, type MockRoutes } from '../server';
-import { readBearer } from '../session';
+import { readAccessCookie } from '../session';
 
 export interface ManagedUserDto {
   id: string;
@@ -90,7 +90,9 @@ const findUserInOrganization = (id: string, organizationId: string) => {
 
 /** Session + permission check, like the backend's guard: 401 without a valid session, 403 without one of `anyOf`. */
 function authorize(...anyOf: Permission[]) {
-  const session = readBearer(requestContext.headers);
+  const session = readAccessCookie(
+    requestContext.headers['x-tenant']?.trim().toLowerCase() || null,
+  );
   if (!session) {
     return { error: error(401, 'Tu sesión expiró. Inicia sesión de nuevo.', 'UNAUTHENTICATED') };
   }

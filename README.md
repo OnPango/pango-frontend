@@ -21,17 +21,17 @@ Pango web application (SPA), a multi-organization SaaS platform for intelligent 
 
 ## 1. Project status
 
-| Area                                                                       | Status                               |
-| -------------------------------------------------------------------------- | ------------------------------------ |
-| Skeleton (Vite + React + TS), feature-based structure, CI                  | ✅ Done                              |
-| Light / dark / system theme with Tailwind v4                               | ✅ Done                              |
-| Session (Bearer + refresh rotation), permission-based route guards, layout | ✅ Done                              |
-| Module screens                                                             | ⏳ Placeholders                      |
-| Owner sign-up, login, email confirmation, invitations (US-001 / CU-13)     | ✅ Against `pango-core` and the mock |
-| Base components (table, modal, status badges, form fields)                 | ⏳ Pending                           |
-| Login with the pangolin illustration and "under construction" screen       | ⏳ Pending                           |
-| ESLint + Prettier, tests (Vitest + Testing Library)                        | ⏳ Pending                           |
-| API contract and final permission catalog                                  | ⏳ To be agreed with the backend     |
+| Area                                                                                 | Status                               |
+| ------------------------------------------------------------------------------------ | ------------------------------------ |
+| Skeleton (Vite + React + TS), feature-based structure, CI                            | ✅ Done                              |
+| Light / dark / system theme with Tailwind v4                                         | ✅ Done                              |
+| Session (HttpOnly cookies + refresh rotation), permission-based route guards, layout | ✅ Done                              |
+| Module screens                                                                       | ⏳ Placeholders                      |
+| Owner sign-up, login, email confirmation, invitations (US-001 / CU-13)               | ✅ Against `pango-core` and the mock |
+| Base components (table, modal, status badges, form fields)                           | ⏳ Pending                           |
+| Login with the pangolin illustration and "under construction" screen                 | ⏳ Pending                           |
+| ESLint + Prettier, tests (Vitest + Testing Library)                                  | ⏳ Pending                           |
+| API contract and final permission catalog                                            | ⏳ To be agreed with the backend     |
 
 ## 2. Scope
 
@@ -97,7 +97,7 @@ Browser ──► Frontend (SPA) ──► BFF / API Gateway (NestJS) ──► 
 | Form state          | React Hook Form + Zod | create-product form                               |
 | Local UI state      | `useState`            | open modal, active tab                            |
 
-**Requests.** Every request goes through an Axios client built by `core/api/client.ts`, which adds `X-Tenant` (the organization, read from the hostname). `http` (`core/api/http.ts`) is for signed-in calls: it adds `Authorization: Bearer <access token>` and, on a 401, renews the session once and repeats the request. It gets the token and the renewal through `configureHttpAuth`, which `core/auth` fills in at startup (`bindHttpToSession`), so `core/api` never imports `core/auth`. `authHttp` is for the `/auth/*` and `/invitations/*` endpoints (see _Authentication and organizations_).
+**Requests.** Every request goes through an Axios client built by `core/api/client.ts`, which adds `X-Tenant` (the organization, read from the hostname). Every client sends the session cookies (`withCredentials`). `http` (`core/api/http.ts`) is for signed-in calls: on a 401 it renews the session once and repeats the request. It gets the renewal through `configureHttpAuth`, which `core/auth` fills in at startup (`bindHttpToSession`), so `core/api` never imports `core/auth`. `authHttp` is for the `/auth/*` and `/invitations/*` endpoints (see _Authentication and organizations_).
 
 **Permissions.** The SRS states that profiles and permissions are configurable by each organization's administrator, so the frontend **does not hardcode roles**: the session carries a list of permissions (`resource.action`, e.g. `stock_request.approve`) and the UI decides based on it (`hasAnyPermission`, `RequirePermission`). Hiding an element is a UX concern only; real authorization is enforced by the backend.
 
@@ -123,7 +123,7 @@ pango-frontend/
 │  │  ├─ routes.tsx              # the screens: path, menu entry, permissions, page
 │  │  └─ SessionCheck.tsx        # screen shown while the session is restored
 │  ├─ core/                      # cross-cutting infrastructure, no business UI
-│  │  ├─ api/                    # client.ts (Axios factory) · http.ts (Bearer + 401 renewal) · authHttp.ts · errors.ts
+│  │  ├─ api/                    # client.ts (Axios factory) · http.ts (401 renewal) · authHttp.ts · errors.ts
 │  │  ├─ auth/                   # session and auth contract
 │  │  │                          #   auth.api/dto/mappers/types: every /auth and /invitations call
 │  │  │                          #   session.api · refresh.coordinator · session.hint: local session
@@ -251,7 +251,7 @@ Rules marked 🔒 are enforced by ESLint (`eslint.config.js`) and fail CI; the r
 - **Scrollbars**: styled once, globally, in `styles/index.css` (thin line, no arrows, same in Chromium/WebKit and Firefox). Do not restyle them per component.
 - **Errors**: screens handle three explicit states — loading, error and empty — in addition to the data state.
 - 🔒 **Accessibility**: real interactive elements (`button`, `a`) and `aria-label` on icon-only controls (`jsx-a11y` rules); visible focus and legible contrast in both themes are review items.
-- **Security**: keep the access token in memory only; the refresh token is an HttpOnly cookie that JS never touches; never rely on the UI for authorization.
+- **Security**: both tokens are HttpOnly cookies that JS never touches; never rely on the UI for authorization.
 - **Performance**: pages are lazy-loaded; long lists are paginated server-side.
 
 ### Testing
@@ -292,20 +292,20 @@ npm run dev        # http://localhost:5173 — proxies /api → http://localhost
 | `pnpm test` / `npm run test:watch`         | Vitest (single run / watch mode)                |
 | `pnpm run test:coverage`                   | Vitest with a V8 coverage report in `coverage/` |
 
-| Variable               | Description                                                                                  | Default                 |
-| ---------------------- | -------------------------------------------------------------------------------------------- | ----------------------- |
+| Variable               | Description                                                                                                                                                                            | Default     |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
 | `VITE_API_BASE_URL`    | Base URL of `pango-core` (no path prefix, no trailing slash)                                 | `http://localhost:3000` |
-| `VITE_APP_BASE_DOMAIN` | Domain organizations hang from: `<subdomain>.<domain>`. Must equal `APP_BASE_DOMAIN` in core | `localhost`             |
-| `VITE_DEV_TENANT`      | Pins the organization instead of reading it from the hostname (single-host dev, mock)        | _(empty)_               |
-| `VITE_USE_MOCK`        | `true` = in-browser mock backend instead of `pango-core`                                     | `false`                 |
+| `VITE_APP_BASE_DOMAIN` | Domain organizations hang from: `<subdomain>.<domain>`. Must equal `APP_BASE_DOMAIN` in core                                                                                           | `localhost` |
+| `VITE_DEV_TENANT`      | Pins the organization instead of reading it from the hostname (single-host dev, mock)                                                                                                  | _(empty)_   |
+| `VITE_USE_MOCK`        | `true` = in-browser mock backend instead of `pango-core`                                                                                                                               | `false`     |
 
 ### Authentication and organizations
 
 The contract is `docs/auth.md` in `pango-core`. In short:
 
 - **Organization-first.** Every organization lives on its own subdomain (`mi-empresa.onpango.com`) and a session belongs to exactly one. The frontend reads the organization from the hostname (`core/tenant/tenant.ts`) and sends it as `X-Tenant`. On the main domain `/login` first asks for the workspace address and redirects there.
-- **Tokens.** The short-lived (15 min) access token is in the response body and lives **only in memory** (`useAuthStore`); it goes out as `Authorization: Bearer`. The refresh token is an **HttpOnly cookie** (`pango_refresh_<subdomain>`, `SameSite=Strict`, path `/auth`) set by the API: JavaScript never sees it, nothing token-like is written to storage, and the browser sends it only to `/auth/refresh` and `/auth/logout`. On boot, and on a 401, the session module calls `POST /auth/refresh` (no body) and the `http` client repeats the request once; refresh tokens rotate and reusing one ends every session, so concurrent refreshes share one request and tabs serialize through the Web Locks API. Because JS cannot tell whether the cookie exists, `localStorage` keeps a non-secret hint (`pango.session_until`: when the session ends) so first-time visitors do not trigger a pointless refresh. A script injected into the page (XSS) could still read the in-memory access token and make requests, so keep the CSP strict and never render untrusted HTML.
-- **Two clients.** `authHttp` (login, signup, refresh, logout, verify email, invitations: sends credentials so the cookie travels, never sends the access token or refreshes) and `http` (everything else: Bearer only). All the auth calls live in `core/auth/auth.api.ts` and answer with domain types (`Session`, `SignupResult`…), never with the raw bodies.
+- **Tokens.** Both tokens are **HttpOnly cookies** set by the API, one pair per organization: `pango_access_<subdomain>` (15 min, path `/`) and `pango_refresh_<subdomain>` (30 days, path `/auth`), `SameSite=Lax`. JavaScript never sees them and no response body carries a token, so nothing token-like is in memory or storage; the browser attaches them to every request made `withCredentials`. When the access cookie expires the browser stops sending it, the API answers 401 and the `http` client calls `POST /auth/refresh` (no body) and repeats the request once; the same happens on boot. Refresh tokens rotate and reusing one ends every session, so concurrent refreshes share one request and tabs serialize through the Web Locks API. Because JS cannot tell whether the cookie exists, `localStorage` keeps a non-secret hint (`pango.session_until`: when the session ends) so first-time visitors do not trigger a pointless refresh. Cookies are sent automatically, so CSRF is the API's job (`SameSite=Lax` plus an `Origin` check on unsafe methods); a script injected into the page (XSS) cannot read the tokens but can still make requests as the user, so keep the CSP strict and never render untrusted HTML.
+- **Two clients.** `authHttp` (login, signup, refresh, logout, verify email, invitations: never refreshes on a 401) and `http` (everything else: renews the session and retries once on a 401). Both send credentials. All the auth calls live in `core/auth/auth.api.ts` and answer with domain types (`Session`, `SignupResult`…), never with the raw bodies.
 - **Errors** carry a stable `code`; `features/auth/lib/auth.errors.ts` maps them to Spanish copy.
 - **Sign-up** (`/register`, main domain) creates the account and the organization; the owner must confirm the email (`/verify-email?token=`) before logging in. Invited users join from `/invitations/accept?token=` on the organization's subdomain.
 

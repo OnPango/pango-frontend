@@ -20,12 +20,10 @@ export interface SessionProfileDto {
 }
 
 /**
- * Body of login, refresh, invitation acceptance and the sign-up of a verified account. The refresh
- * token is not here: it only travels in an HttpOnly cookie.
+ * Body of login, refresh, invitation acceptance and the sign-up of a verified account. No token is
+ * here: the access and refresh tokens only travel in HttpOnly cookies.
  */
 export interface SessionResponseDto extends SessionProfileDto {
-  tokenType: 'Bearer';
-  accessToken: string;
   /** Access token lifetime in seconds. */
   expiresIn: number;
   /** When the refresh cookie (the session) ends. */

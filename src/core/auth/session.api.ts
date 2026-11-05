@@ -7,13 +7,13 @@ import { coordinateRefresh } from './refresh.coordinator';
 import { clearSessionHint, hasSessionHint, saveSessionHint } from './session.hint';
 
 /**
- * Starts the local session from a login / refresh / invitation: the access token goes to memory and
- * the user to the store. The refresh token is not part of it: the browser got it as an HttpOnly
- * cookie. Only the hint (when the session ends) is remembered.
+ * Starts the local session from a login / refresh / invitation: the user goes to the store. No token
+ * is part of it: the browser got both as HttpOnly cookies. Only the hint (when the session ends) is
+ * remembered.
  */
 export function applySession(session: Session) {
   saveSessionHint(session.expiresAt);
-  useAuthStore.getState().setSession(session.user, session.accessToken);
+  useAuthStore.getState().setSession(session.user);
 }
 
 /** Server said the session is no good (cookie missing, expired, revoked, reused) rather than being unreachable. */
@@ -50,8 +50,8 @@ export async function restoreSession(): Promise<void> {
 
 /**
  * `POST /auth/logout`: the API revokes the refresh cookie's token and clears the cookie. The local
- * hint is dropped first, so the app forgets the session even if the request fails; the access token
- * simply expires on its own.
+ * hint is dropped first, so the app forgets the session even if the request fails; the access cookie
+ * (which JavaScript cannot delete) simply expires on its own.
  */
 export async function logoutRequest(): Promise<void> {
   clearSessionHint();

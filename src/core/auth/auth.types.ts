@@ -3,8 +3,6 @@ import type { User } from './user';
 /** What logging in, renewing or accepting an invitation gives the app. */
 export type Session = {
   user: User;
-  /** Short-lived Bearer token. Memory only: never written to storage. */
-  accessToken: string;
   /** When the session ends (the refresh cookie's expiry). */
   expiresAt: string;
 };

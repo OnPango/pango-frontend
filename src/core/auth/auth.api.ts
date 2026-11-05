@@ -12,8 +12,7 @@ import type { InvitationPreview, Session, SignupResult } from './auth.types';
 
 /**
  * Every call to the backend's auth contract (`/auth/*`, `/invitations/*`), in one place. They all go
- * through `authHttp`: it sends the HttpOnly refresh cookie and has no 401-renewal interceptor, because
- * here a 401 means "wrong credentials" or "no valid session", not "expired access token".
+ * through `authHttp`, which has no 401-renewal interceptor: here a 401 means "wrong credentials" or "no valid session", not "expired access cookie".
  *
  * These functions only talk to the API and answer with domain types (`Session`, `SignupResult`…),
  * never with the raw bodies. Starting or ending the local session is `session.api.ts`.

@@ -42,7 +42,6 @@ export function toUser(dto: SessionProfileDto): User {
 
 export const toSession = (dto: SessionResponseDto): Session => ({
   user: toUser(dto),
-  accessToken: dto.accessToken,
   expiresAt: dto.refreshTokenExpiresAt,
 });
 

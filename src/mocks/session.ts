@@ -1,18 +1,19 @@
 /**
  * Simulates the backend's tokens: a short-lived access JWT and a rotating opaque refresh token.
  *
- * The "JWT" here is just base64 JSON (a mock, nothing is signed). The refresh token is never put in a
- * response body: like the real API it goes into an HttpOnly cookie, which this file imitates with a
- * private "cookie jar" (one cookie per organization, as `pango_refresh_<subdomain>`). The app never
- * reads it; the mock handlers read it for the request, the way the browser would attach it. The jar
- * and the token table live in `localStorage` so a reload keeps the session and rotation / reuse
- * detection work.
+ * The "JWT" here is just base64 JSON (a mock, nothing is signed). Neither token is ever put in a
+ * response body: like the real API they go into HttpOnly cookies, which this file imitates with two
+ * private "cookie jars" (one cookie per organization, as `pango_access_<subdomain>` and
+ * `pango_refresh_<subdomain>`). The app never reads them; the mock handlers read them for the
+ * request, the way the browser would attach them. The jars and the token table live in
+ * `localStorage` so a reload keeps the session and rotation / reuse detection work.
  */
 
 const ACCESS_TTL_SECONDS = 900;
 const REFRESH_TTL_DAYS = 30;
 const REFRESH_STORAGE_KEY = 'pango_mock_refresh_tokens_v1';
 const COOKIE_JAR_KEY = 'pango_mock_cookie_jar_v1';
+const ACCESS_JAR_KEY = 'pango_mock_access_jar_v1';
 
 interface AccessPayload {
   /** User id. */
@@ -70,21 +71,41 @@ const saveJar = (jar: Record<string, string>) => {
   }
 };
 
+function loadAccessJar(): Record<string, AccessPayload> {
+  try {
+    return JSON.parse(localStorage.getItem(ACCESS_JAR_KEY) ?? '{}') as Record<
+      string,
+      AccessPayload
+    >;
+  } catch {
+    return {};
+  }
+}
+
+const saveAccessJar = (jar: Record<string, AccessPayload>) => {
+  try {
+    localStorage.setItem(ACCESS_JAR_KEY, JSON.stringify(jar));
+  } catch {
+    // Storage unavailable: the cookie lasts until the page closes.
+  }
+};
+
 /** The refresh cookie the browser would attach for `subdomain`, or null. */
 export function readRefreshCookie(subdomain: string): string | null {
   return loadJar()[subdomain] ?? null;
 }
 
-/** Equivalent of `Set-Cookie: pango_refresh_<subdomain>=; Max-Age=0`. */
-export function clearRefreshCookie(subdomain: string): void {
+/** Equivalent of `Set-Cookie: pango_refresh_<subdomain>=; Max-Age=0` (and the access cookie too). */
+export function clearSessionCookies(subdomain: string): void {
   const jar = loadJar();
   delete jar[subdomain];
   saveJar(jar);
+  const access = loadAccessJar();
+  delete access[subdomain];
+  saveAccessJar(access);
 }
 
 export interface IssuedTokens {
-  tokenType: 'Bearer';
-  accessToken: string;
   expiresIn: number;
   /** When the refresh cookie ends. The token itself never leaves the cookie. */
   refreshTokenExpiresAt: string;
@@ -92,7 +113,7 @@ export interface IssuedTokens {
 
 /**
  * Equivalent of the backend creating a session for `userId` in `orgId`: returns the body fields and
- * "sets" the refresh cookie of `subdomain`.
+ * "sets" the access and refresh cookies of `subdomain`.
  */
 export function issueTokens(userId: string, orgId: string, subdomain: string): IssuedTokens {
   const payload: AccessPayload = {
@@ -106,29 +127,20 @@ export function issueTokens(userId: string, orgId: string, subdomain: string): I
   tokens[refreshToken] = { userId, orgId, exp: refreshExp, revoked: false };
   saveRefreshTokens(tokens);
   saveJar({ ...loadJar(), [subdomain]: refreshToken });
+  saveAccessJar({ ...loadAccessJar(), [subdomain]: payload });
   return {
-    tokenType: 'Bearer',
-    accessToken: btoa(JSON.stringify(payload)),
     expiresIn: ACCESS_TTL_SECONDS,
     refreshTokenExpiresAt: new Date(refreshExp).toISOString(),
   };
 }
 
-/** Equivalent of the backend verifying `Authorization: Bearer <token>`. */
-export function readBearer(headers: Record<string, string>): AccessPayload | null {
-  const match = /^Bearer (.+)$/.exec(headers['authorization'] ?? '');
-  if (!match) return null;
-  try {
-    const payload = JSON.parse(atob(match[1])) as Partial<AccessPayload>;
-    return typeof payload.sub === 'string' &&
-      typeof payload.org === 'string' &&
-      typeof payload.exp === 'number' &&
-      payload.exp > Date.now()
-      ? { sub: payload.sub, org: payload.org, exp: payload.exp }
-      : null;
-  } catch {
-    return null;
-  }
+/**
+ * Equivalent of the backend verifying the `pango_access_<subdomain>` cookie. An expired cookie is
+ * "dropped" by the browser, so it reads as missing.
+ */
+export function readAccessCookie(subdomain: string | null): AccessPayload | null {
+  const payload = subdomain ? loadAccessJar()[subdomain] : undefined;
+  return payload && payload.exp > Date.now() ? payload : null;
 }
 
 /**

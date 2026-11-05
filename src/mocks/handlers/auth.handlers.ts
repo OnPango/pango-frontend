@@ -19,10 +19,10 @@ import {
 } from '../db';
 import { requestContext, type MockResponse, type MockRoutes } from '../server';
 import {
-  clearRefreshCookie,
+  clearSessionCookies,
   consumeRefreshToken,
   issueTokens,
-  readBearer,
+  readAccessCookie,
   readRefreshCookie,
   revokeRefreshToken,
 } from '../session';
@@ -287,11 +287,11 @@ export const authRoutes: MockRoutes = {
     const user = consumed ? findUserById(consumed.userId) : undefined;
     if (!consumed || !user || !user.is_active) {
       // A rejected token is useless; the API clears the cookie so the client stops sending it.
-      clearRefreshCookie(subdomain);
+      clearSessionCookies(subdomain);
       return error(401, 'INVALID_REFRESH_TOKEN', 'Invalid or expired refresh token');
     }
     if (findOrganizationById(consumed.orgId)?.slug !== subdomain) {
-      clearRefreshCookie(subdomain);
+      clearSessionCookies(subdomain);
       return error(403, 'TENANT_MISMATCH', 'This session belongs to a different organization');
     }
     return startSession(user);
@@ -302,12 +302,12 @@ export const authRoutes: MockRoutes = {
     if (!subdomain) return error(400, 'TENANT_REQUIRED', 'The organization subdomain is required');
     const token = readRefreshCookie(subdomain);
     if (token) revokeRefreshToken(token);
-    clearRefreshCookie(subdomain);
+    clearSessionCookies(subdomain);
     return { status: 204 };
   },
 
   'GET /auth/me': () => {
-    const session = readBearer(requestContext.headers);
+    const session = readAccessCookie(tenantOf());
     const user = session ? findUserById(session.sub) : undefined;
     if (!user || !user.is_active) {
       return error(401, 'UNAUTHENTICATED', 'Missing, invalid or expired access token');

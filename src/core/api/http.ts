@@ -12,8 +12,6 @@ interface RetriableConfig extends AxiosRequestConfig {
  * depends on `core/api`, never the other way around.
  */
 export interface HttpAuthHooks {
-  /** Short-lived Bearer token of the signed-in user, if any. */
-  getAccessToken: () => string | null;
   /** Renews the session. Resolves `true` when it was renewed and the request can be repeated. */
   refresh: () => Promise<boolean>;
   /** The session could not be renewed: it is over. */
@@ -28,18 +26,13 @@ export function configureHttpAuth(hooks: HttpAuthHooks): void {
 }
 
 /**
- * Client for everything that needs a signed-in user: it sends `Authorization: Bearer <access token>`.
- * When the API answers 401 (the 15-minute access token expired) it renews the session once and
- * repeats the request; if that fails the session is reported as over and the guards send the user
- * to /login. Without `configureHttpAuth` it behaves like a plain client.
+ * Client for everything that needs a signed-in user. Authentication is the access cookie, which the
+ * browser attaches by itself. When the API answers 401 (the 15-minute access cookie expired and the
+ * browser stopped sending it) it renews the session once and repeats the request; if that fails the
+ * session is reported as over and the guards send the user to /login. Without `configureHttpAuth`
+ * it behaves like a plain client.
  */
 export const http = createApiClient();
-
-http.interceptors.request.use((config) => {
-  const token = authHooks?.getAccessToken();
-  if (token) config.headers.set('Authorization', `Bearer ${token}`);
-  return config;
-});
 
 http.interceptors.response.use(
   (response) => response,
