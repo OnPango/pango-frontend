@@ -1,6 +1,9 @@
 export const env = {
-  /** Base URL of the Pango API (no trailing slash). */
-  apiBaseUrl: (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000').replace(/\/$/, ''),
+  /**
+   * Base URL of the Pango API (no trailing slash). In development `/api`: the Vite proxy forwards it
+   * to pango-core so the session cookies are same-origin. In production the API's full URL.
+   */
+  apiBaseUrl: (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, ''),
   /** Domain organizations hang from: `<subdomain>.<appBaseDomain>` (production: `onpango.com`). */
   appBaseDomain: (import.meta.env.VITE_APP_BASE_DOMAIN ?? 'localhost').toLowerCase(),
   /**
