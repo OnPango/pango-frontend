@@ -92,11 +92,7 @@ export default function AcceptInvitationPage() {
 
   return (
     <AuthPageShell>
-      <AuthCard
-        eyebrow="INVITACIÓN"
-        title={<h2>Únete a tu equipo en Pango</h2>}
-        className="sm:w-120"
-      >
+      <AuthCard eyebrow="INVITACIÓN" title={<h2>Únete a tu equipo en Pango</h2>}>
         {preview.isLoading && (
           <p role="status" className="flex items-center gap-3 text-muted">
             <Spinner /> Cargando tu invitación…

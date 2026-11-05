@@ -27,7 +27,6 @@ export default function VerifyEmailPage() {
       <AuthCard
         eyebrow="CONFIRMA TU CORREO"
         title={<h2>{verification.isSuccess ? 'Correo confirmado' : 'Tu correo de trabajo'}</h2>}
-        className="sm:w-[30rem]"
       >
         {verification.isLoading && (
           <p role="status" className="flex items-center gap-3 text-muted">

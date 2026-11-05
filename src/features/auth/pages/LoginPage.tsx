@@ -25,7 +25,6 @@ export default function LoginPage() {
               </p>
             </>
           }
-          className="sm:w-120"
         >
           <FindWorkspaceForm />
           <p className="text-center text-sm text-muted">
