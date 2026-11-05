@@ -1,58 +1,84 @@
-import type { Permission } from '@/core/auth/user';
+export interface WarehouseRef {
+  id: string;
+  name: string;
+}
+
+/** A role granted to a user, on one warehouse or on all of them (`warehouse` null). */
+export interface RoleAssignment {
+  roleId: string;
+  roleName: string;
+  isSystem: boolean;
+  warehouse: WarehouseRef | null;
+}
 
 export interface ManagedUser {
+  /** Id of the user inside the organization. */
   id: string;
   name: string;
   email: string;
-  roleId: string;
-  roleName: string;
-  areaId: string;
-  areaName: string;
+  jobTitle: string | null;
+  department: { id: string; name: string } | null;
   isActive: boolean;
-  lastLoginAt: string | null;
+  /** Holds a system role (Owner) on every warehouse. */
+  isAdmin: boolean;
+  roles: RoleAssignment[];
+  joinedAt: string | null;
   createdAt: string;
 }
 
-export interface ManagedRole {
+/** A role the user can be given. */
+export interface RoleOption {
   id: string;
   name: string;
-  description: string;
-  permissions: Permission[];
-  usersCount: number;
+  isSystem: boolean;
 }
 
-export interface ManagedArea {
+export interface WarehouseOption {
   id: string;
   name: string;
 }
 
-export interface CreateUserInput {
-  name: string;
+export interface PendingInvitation {
+  id: string;
   email: string;
   roleId: string;
-  areaId: string;
-  password?: string;
+  roleName: string;
+  /** Null: the role applies to every warehouse. */
+  warehouseId: string | null;
+  invitedBy: string;
+  expiresAt: string;
+  createdAt: string;
+  expired: boolean;
+}
+
+/**
+ * A row of the people table: someone who already belongs to the organization, or someone who was
+ * invited and has not accepted yet. `id` is unique across both kinds.
+ */
+export type UserListItem =
+  | { kind: 'user'; id: string; user: ManagedUser }
+  | { kind: 'invitation'; id: string; invitation: PendingInvitation };
+
+export interface InviteUserInput {
+  email: string;
+  roleId: string;
+  /** Omitted: the role applies to every warehouse. */
+  warehouseId: string | null;
 }
 
 export interface UpdateUserInput {
   id: string;
-  name: string;
-  email: string;
+  /** Null (or empty) clears it. */
+  jobTitle: string | null;
+}
+
+export interface RoleAssignmentInput {
   roleId: string;
-  areaId: string;
-  isActive: boolean;
-  password?: string;
+  /** Null: every warehouse. */
+  warehouseId: string | null;
 }
 
-export interface CreateRoleInput {
-  name: string;
-  description?: string;
-  permissions: Permission[];
-}
-
-export interface UpdateRoleInput {
+export interface SetUserRolesInput {
   id: string;
-  name: string;
-  description?: string;
-  permissions: Permission[];
+  roles: RoleAssignmentInput[];
 }

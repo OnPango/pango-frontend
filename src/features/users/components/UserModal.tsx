@@ -1,100 +1,114 @@
 import { useState, type FormEvent } from 'react';
-import { getApiErrorMessage } from '@/core/api/errors';
+import { FiPlus, FiTrash2 } from 'react-icons/fi';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Button } from '@/shared/ui/components/Button';
 import { Select } from '@/shared/ui/components/form/select/Select';
-import { Switch } from '@/shared/ui/components/form/Switch';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { Modal } from '@/shared/ui/components/Modal';
+import { roleLabel } from '../content/fixedRoles';
+import { usersErrorMessage } from '../content/users.errors';
 import type {
-  CreateUserInput,
-  ManagedArea,
-  ManagedRole,
   ManagedUser,
-  UpdateUserInput,
+  RoleAssignmentInput,
+  RoleOption,
+  WarehouseOption,
 } from '../types/users.types';
+
+/** What the modal changed; a field is absent when it was left as it was. */
+export interface UserChanges {
+  jobTitle?: string | null;
+  roles?: RoleAssignmentInput[];
+}
 
 interface UserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  userToEdit: ManagedUser | null;
-  roles: ManagedRole[];
-  areas: ManagedArea[];
-  onCreateUser: (data: CreateUserInput) => Promise<void>;
-  onUpdateUser: (data: UpdateUserInput) => Promise<void>;
+  user: ManagedUser | null;
+  roles: RoleOption[];
+  warehouses: WarehouseOption[];
+  /** Rejects on failure: the modal shows the error and stays open. */
+  onSave: (user: ManagedUser, changes: UserChanges) => Promise<void>;
   isSubmitting?: boolean;
 }
 
-interface UserModalContentProps {
-  onClose: () => void;
-  userToEdit: ManagedUser | null;
-  roles: ManagedRole[];
-  areas: ManagedArea[];
-  onCreateUser: (data: CreateUserInput) => Promise<void>;
-  onUpdateUser: (data: UpdateUserInput) => Promise<void>;
-  isSubmitting?: boolean;
+/** "Every warehouse" in the select (a real id is never this). */
+const ALL_WAREHOUSES = 'all';
+
+interface Row {
+  key: number;
+  roleId: string;
+  warehouseId: string;
 }
+
+const toRows = (user: ManagedUser): Row[] =>
+  user.roles.map((role, index) => ({
+    key: index,
+    roleId: role.roleId,
+    warehouseId: role.warehouse?.id ?? ALL_WAREHOUSES,
+  }));
+
+const sameAssignments = (a: Row[], b: Row[]) =>
+  a.length === b.length &&
+  a.every((row, i) => row.roleId === b[i]?.roleId && row.warehouseId === b[i]?.warehouseId);
 
 function UserModalContent({
   onClose,
-  userToEdit,
+  user,
   roles,
-  areas,
-  onCreateUser,
-  onUpdateUser,
+  warehouses,
+  onSave,
   isSubmitting = false,
-}: UserModalContentProps) {
-  const isEditing = !!userToEdit;
-
-  const [name, setName] = useState(userToEdit?.name ?? '');
-  const [email, setEmail] = useState(userToEdit?.email ?? '');
-  // No default on create: privileges (role) must be an explicit choice, never "whatever is first".
-  const [roleId, setRoleId] = useState(userToEdit?.roleId ?? '');
-  const [areaId, setAreaId] = useState(userToEdit?.areaId ?? '');
-  const [password, setPassword] = useState('');
-  const [isActive, setIsActive] = useState(userToEdit?.isActive ?? true);
+}: Omit<UserModalProps, 'isOpen' | 'user'> & { user: ManagedUser }) {
+  const [jobTitle, setJobTitle] = useState(user.jobTitle ?? '');
+  const [rows, setRows] = useState<Row[]>(() => toRows(user));
+  const [nextKey, setNextKey] = useState(rows.length);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const warehouseOptions = [
+    { value: ALL_WAREHOUSES, label: 'Todos los almacenes' },
+    ...warehouses.map((warehouse) => ({ value: warehouse.id, label: warehouse.name })),
+  ];
+  const roleOptions = roles.map((role) => ({ value: role.id, label: roleLabel(role.name) }));
+
+  const updateRow = (key: number, patch: Partial<Row>) =>
+    setRows((current) => current.map((row) => (row.key === key ? { ...row, ...patch } : row)));
+
+  const addRow = () => {
+    setRows((current) => [...current, { key: nextKey, roleId: '', warehouseId: ALL_WAREHOUSES }]);
+    setNextKey((key) => key + 1);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!roleId) {
-      setErrorMessage('Debe seleccionar un rol para el usuario.');
+    if (rows.length === 0 || rows.some((row) => !row.roleId)) {
+      setErrorMessage('Cada asignación necesita un rol. El usuario debe tener al menos una.');
       return;
     }
-    if (!areaId) {
-      setErrorMessage('Debe seleccionar un área de trabajo para el usuario.');
+    const seen = new Set(rows.map((row) => `${row.roleId}:${row.warehouseId}`));
+    if (seen.size !== rows.length) {
+      setErrorMessage('El mismo rol no puede asignarse dos veces sobre el mismo almacén.');
+      return;
+    }
+
+    const changes: UserChanges = {};
+    if (jobTitle.trim() !== (user.jobTitle ?? '')) changes.jobTitle = jobTitle.trim() || null;
+    if (!sameAssignments(rows, toRows(user))) {
+      changes.roles = rows.map((row) => ({
+        roleId: row.roleId,
+        warehouseId: row.warehouseId === ALL_WAREHOUSES ? null : row.warehouseId,
+      }));
+    }
+    if (Object.keys(changes).length === 0) {
+      onClose();
       return;
     }
 
     try {
-      if (isEditing && userToEdit) {
-        await onUpdateUser({
-          id: userToEdit.id,
-          name: name.trim(),
-          email: email.trim(),
-          roleId,
-          areaId,
-          isActive,
-          password: password ? password : undefined,
-        });
-      } else {
-        await onCreateUser({
-          name: name.trim(),
-          email: email.trim(),
-          roleId,
-          areaId,
-          password: password ? password : undefined,
-        });
-      }
+      await onSave(user, changes);
     } catch (err) {
-      setErrorMessage(
-        getApiErrorMessage(
-          err,
-          isEditing ? 'No se pudo actualizar el usuario.' : 'No se pudo crear el usuario.',
-        ),
-      );
+      setErrorMessage(usersErrorMessage(err, 'No se pudo actualizar el usuario.'));
     }
   };
 
@@ -102,12 +116,9 @@ function UserModalContent({
 
   return (
     <Modal
-      title={isEditing ? 'Editar Usuario' : 'Nuevo Usuario'}
-      description={
-        isEditing
-          ? 'Actualiza la información de la persona, rol o área asignada.'
-          : 'Registra una nueva persona en el sistema con su rol y área.'
-      }
+      title="Editar usuario"
+      description="Cargo y roles. El nombre y el correo pertenecen a la cuenta de la persona y no se editan aquí."
+      size="lg"
       onClose={onClose}
       dismissible={!isSubmitting}
       footer={
@@ -122,7 +133,7 @@ function UserModalContent({
             Cancelar
           </Button>
           <Button type="submit" form={formId} variant="primary" size="sm" isLoading={isSubmitting}>
-            {isEditing ? 'Guardar Cambios' : 'Crear Usuario'}
+            Guardar cambios
           </Button>
         </>
       }
@@ -130,89 +141,63 @@ function UserModalContent({
       <form id={formId} onSubmit={handleSubmit} className="space-y-4">
         {errorMessage && <Alert tone="danger">{errorMessage}</Alert>}
 
-        <TextBox
-          label="Persona / Nombre completo"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Ej. Andrés Morales"
-        />
-
-        <TextBox
-          label="Correo electrónico"
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="correo@pango.co"
-        />
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Select
-            label="Rol asignado"
-            required
-            value={roleId}
-            onChange={setRoleId}
-            placeholder="Selecciona un rol"
-            options={roles.map((role) => ({ value: role.id, label: role.name }))}
-          />
-          <Select
-            label="Área de trabajo"
-            required
-            value={areaId}
-            onChange={setAreaId}
-            placeholder="Selecciona un área"
-            options={areas.map((area) => ({ value: area.id, label: area.name }))}
-          />
+        <div className="rounded-2xl border border-line2 bg-canvas px-4 py-3">
+          <p className="font-semibold text-fg">{user.name}</p>
+          <p className="text-xs text-muted">{user.email}</p>
         </div>
 
         <TextBox
-          label={isEditing ? 'Nueva contraseña (opcional)' : 'Contraseña temporal'}
-          type="password"
-          autoComplete="new-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder={
-            isEditing
-              ? 'Dejar en blanco para no modificar'
-              : 'Dejar en blanco para usar la predeterminada'
-          }
+          label="Cargo"
+          value={jobTitle}
+          maxLength={80}
+          onChange={(e) => setJobTitle(e.target.value)}
+          placeholder="Ej. Jefe de bodega"
         />
 
-        {isEditing && (
-          <Switch
-            label="Usuario activo en el sistema"
-            checked={isActive}
-            onChange={(e) => setIsActive(e.target.checked)}
-          />
-        )}
+        <fieldset className="space-y-3">
+          <legend className="text-sm font-medium text-fg">Roles</legend>
+          {rows.map((row, index) => (
+            <div
+              key={row.key}
+              className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_1fr_auto]"
+            >
+              <Select
+                aria-label={`Rol ${index + 1}`}
+                value={row.roleId}
+                onChange={(roleId) => updateRow(row.key, { roleId })}
+                placeholder="Selecciona un rol"
+                options={roleOptions}
+              />
+              <Select
+                aria-label={`Almacén del rol ${index + 1}`}
+                value={row.warehouseId}
+                onChange={(warehouseId) => updateRow(row.key, { warehouseId })}
+                options={warehouseOptions}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setRows((current) => current.filter((r) => r.key !== row.key))}
+                disabled={rows.length === 1}
+                aria-label={`Quitar el rol ${index + 1}`}
+                title={rows.length === 1 ? 'Debe quedar al menos un rol' : 'Quitar este rol'}
+                className="text-danger hover:bg-danger/10"
+              >
+                <FiTrash2 className="size-4" />
+              </Button>
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={addRow}>
+            <FiPlus className="mr-1 size-4" /> Añadir rol
+          </Button>
+        </fieldset>
       </form>
     </Modal>
   );
 }
 
-export function UserModal({
-  isOpen,
-  onClose,
-  userToEdit,
-  roles,
-  areas,
-  onCreateUser,
-  onUpdateUser,
-  isSubmitting,
-}: UserModalProps) {
-  if (!isOpen) return null;
-
-  return (
-    <UserModalContent
-      key={userToEdit?.id ?? 'create'}
-      onClose={onClose}
-      userToEdit={userToEdit}
-      roles={roles}
-      areas={areas}
-      onCreateUser={onCreateUser}
-      onUpdateUser={onUpdateUser}
-      isSubmitting={isSubmitting}
-    />
-  );
+export function UserModal({ isOpen, user, ...props }: UserModalProps) {
+  if (!isOpen || !user) return null;
+  return <UserModalContent key={user.id} user={user} {...props} />;
 }

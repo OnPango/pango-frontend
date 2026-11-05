@@ -44,6 +44,7 @@ export interface UserRow {
   password: string;
   role_id: string;
   area_id: string;
+  job_title?: string | null;
   organization_id: string;
   /** Owners must confirm their email before logging in; seed users and invitees are verified. */
   email_verified?: boolean;

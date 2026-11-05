@@ -1,63 +1,70 @@
-import type { Permission } from '@/core/auth/user';
-
 /**
- * Bodies of the users / roles / areas endpoints, as the API names them (snake_case). Only
- * `users.mappers.ts` and `users.api.ts` know these shapes; the rest of the feature uses the types in
- * `types/users.types.ts`.
+ * Bodies of the users, invitations and warehouses endpoints (`docs/auth.md` in pango-core), as the
+ * API names them. Only `users.mappers.ts` and `users.api.ts` know these shapes; the rest of the
+ * feature uses the types in `types/users.types.ts`.
  */
 
-export interface ManagedUserDto {
-  id: string;
-  full_name: string;
+export interface UserRoleDto {
+  id: number;
+  name: string;
+  isSystem: boolean;
+  warehouse: { id: number; name: string } | null;
+}
+
+/** `GET /users`, `GET /users/:id` and the answer of every user write. */
+export interface UserDto {
+  id: number;
+  accountId: number;
   email: string;
-  role: {
-    id: string;
-    name: string;
-  };
-  area: {
-    id: string;
-    name: string;
-  };
-  is_active: boolean;
-  last_login_at: string | null;
-  created_at: string;
-}
-
-export interface ManagedRoleDto {
-  id: string;
   name: string;
-  description: string;
-  permissions: Permission[];
-  users_count: number;
+  jobTitle: string | null;
+  department: { id: number; name: string } | null;
+  isActive: boolean;
+  isAdmin: boolean;
+  roles: UserRoleDto[];
+  joinedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface ManagedAreaDto {
-  id: string;
-  name: string;
+/** `GET /users` filters. */
+export type UserStatusFilterDto = 'ACTIVE' | 'INACTIVE' | 'ALL';
+
+/** `PATCH /users/:id` */
+export interface UpdateUserDto {
+  /** Null or empty clears it. */
+  jobTitle?: string | null;
+  /** Null removes the department. */
+  departmentId?: number | null;
 }
 
-/** `POST /users` */
-export interface CreateUserDto {
-  full_name: string;
+/** `PUT /users/:id/roles`: replaces every assignment (at least one). */
+export interface SetUserRolesDto {
+  roles: { roleId: number; warehouseId?: number }[];
+}
+
+/** `POST /invitations` */
+export interface CreateInvitationDto {
   email: string;
-  role_id: string;
-  area_id: string;
-  password?: string;
+  roleId: number;
+  warehouseId?: number;
 }
 
-/** `PUT /users/:id` */
-export interface UpdateUserDto extends CreateUserDto {
-  is_active: boolean;
+/** `GET /invitations` */
+export interface PendingInvitationDto {
+  id: number;
+  email: string;
+  role: { id: number; name: string | null };
+  warehouseId: number | null;
+  invitedBy: { id: number; name: string };
+  expiresAt: string;
+  createdAt: string;
+  expired: boolean;
 }
 
-/** `PATCH /users/:id/status` */
-export interface UserStatusDto {
-  is_active: boolean;
-}
-
-/** `POST /roles` and `PUT /roles/:id` */
-export interface RoleBodyDto {
+/** `GET /warehouses` (only what the user screens need). */
+export interface WarehouseDto {
+  id: number;
   name: string;
-  description?: string;
-  permissions: Permission[];
+  isActive: boolean;
 }

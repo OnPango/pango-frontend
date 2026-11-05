@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router-dom';
+import { isClientError } from '@/core/api/errors';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { router } from './router';
 
@@ -7,7 +8,8 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
-      retry: 1,
+      // One more try for network failures and 5xx; a 4xx (not found, forbidden…) will not change.
+      retry: (failureCount, error) => failureCount < 1 && !isClientError(error),
       refetchOnWindowFocus: false,
       refetchInterval: false,
     },

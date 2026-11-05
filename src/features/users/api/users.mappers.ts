@@ -1,81 +1,76 @@
 import type {
-  CreateRoleInput,
-  CreateUserInput,
-  ManagedArea,
-  ManagedRole,
+  InviteUserInput,
   ManagedUser,
-  UpdateRoleInput,
+  PendingInvitation,
+  RoleAssignment,
+  SetUserRolesInput,
   UpdateUserInput,
+  WarehouseOption,
 } from '../types/users.types';
 import type {
-  CreateUserDto,
-  ManagedAreaDto,
-  ManagedRoleDto,
-  ManagedUserDto,
-  RoleBodyDto,
+  CreateInvitationDto,
+  PendingInvitationDto,
+  SetUserRolesDto,
   UpdateUserDto,
-  UserStatusDto,
+  UserDto,
+  UserRoleDto,
+  WarehouseDto,
 } from './users.dto';
 
 // ---- Responses → domain ----
 
-export function toManagedUser(dto: ManagedUserDto): ManagedUser {
-  return {
-    id: dto.id,
-    name: dto.full_name,
-    email: dto.email,
-    roleId: dto.role.id,
-    roleName: dto.role.name,
-    areaId: dto.area.id,
-    areaName: dto.area.name,
-    isActive: dto.is_active,
-    lastLoginAt: dto.last_login_at,
-    createdAt: dto.created_at,
-  };
-}
+const toRoleAssignment = (dto: UserRoleDto): RoleAssignment => ({
+  roleId: String(dto.id),
+  roleName: dto.name,
+  isSystem: dto.isSystem,
+  warehouse: dto.warehouse ? { id: String(dto.warehouse.id), name: dto.warehouse.name } : null,
+});
 
-export function toManagedRole(dto: ManagedRoleDto): ManagedRole {
-  return {
-    id: dto.id,
-    name: dto.name,
-    description: dto.description ?? '',
-    permissions: dto.permissions,
-    usersCount: dto.users_count ?? 0,
-  };
-}
+export const toManagedUser = (dto: UserDto): ManagedUser => ({
+  id: String(dto.id),
+  name: dto.name,
+  email: dto.email,
+  jobTitle: dto.jobTitle,
+  department: dto.department ? { id: String(dto.department.id), name: dto.department.name } : null,
+  isActive: dto.isActive,
+  isAdmin: dto.isAdmin,
+  roles: dto.roles.map(toRoleAssignment),
+  joinedAt: dto.joinedAt,
+  createdAt: dto.createdAt,
+});
 
-export function toManagedArea(dto: ManagedAreaDto): ManagedArea {
-  return {
-    id: dto.id,
-    name: dto.name,
-  };
-}
+export const toPendingInvitation = (dto: PendingInvitationDto): PendingInvitation => ({
+  id: String(dto.id),
+  email: dto.email,
+  roleId: String(dto.role.id),
+  roleName: dto.role.name ?? '',
+  warehouseId: dto.warehouseId === null ? null : String(dto.warehouseId),
+  invitedBy: dto.invitedBy.name,
+  expiresAt: dto.expiresAt,
+  createdAt: dto.createdAt,
+  expired: dto.expired,
+});
 
-// ---- Domain → requests ----
+export const toWarehouseOption = (dto: WarehouseDto): WarehouseOption => ({
+  id: String(dto.id),
+  name: dto.name,
+});
 
-export function toCreateUserDto(input: CreateUserInput): CreateUserDto {
-  return {
-    full_name: input.name,
-    email: input.email,
-    role_id: input.roleId,
-    area_id: input.areaId,
-    password: input.password,
-  };
-}
+// ---- Domain → request bodies ----
 
-export function toUpdateUserDto(input: UpdateUserInput): UpdateUserDto {
-  return {
-    ...toCreateUserDto(input),
-    is_active: input.isActive,
-  };
-}
+export const toUpdateUserDto = (input: UpdateUserInput): UpdateUserDto => ({
+  jobTitle: input.jobTitle?.trim() || null,
+});
 
-export const toUserStatusDto = (isActive: boolean): UserStatusDto => ({ is_active: isActive });
+export const toSetUserRolesDto = (input: SetUserRolesInput): SetUserRolesDto => ({
+  roles: input.roles.map((role) => ({
+    roleId: Number(role.roleId),
+    ...(role.warehouseId ? { warehouseId: Number(role.warehouseId) } : {}),
+  })),
+});
 
-export function toRoleBodyDto(input: CreateRoleInput | UpdateRoleInput): RoleBodyDto {
-  return {
-    name: input.name,
-    description: input.description,
-    permissions: input.permissions,
-  };
-}
+export const toCreateInvitationDto = (input: InviteUserInput): CreateInvitationDto => ({
+  email: input.email.trim().toLowerCase(),
+  roleId: Number(input.roleId),
+  ...(input.warehouseId ? { warehouseId: Number(input.warehouseId) } : {}),
+});

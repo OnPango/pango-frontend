@@ -2,325 +2,304 @@ import type { Permission } from '@/core/auth/user';
 import {
   areas,
   findAreaById,
+  findOrganizationById,
   findRoleById,
   findUserByEmail,
   findUserById,
-  MOCK_PASSWORD,
-  persistRoles,
+  invitations,
   persistUsers,
   roles,
   users,
-  type RoleRow,
+  type InvitationRow,
   type UserRow,
 } from '../db';
+import { numericId, roleApiName, roleNumericId } from '../ids';
 import { requestContext, type MockRoutes } from '../server';
 import { readAccessCookie } from '../session';
 
-export interface ManagedUserDto {
-  id: string;
-  full_name: string;
-  email: string;
-  role: {
-    id: string;
-    name: string;
-  };
-  area: {
-    id: string;
-    name: string;
-  };
-  is_active: boolean;
-  last_login_at: string | null;
-  created_at: string;
-}
+/**
+ * The users, invitations and warehouses endpoints of pango-core, on top of the mock database. The
+ * mock keeps one role per user and no warehouse scoping, so `PUT /users/:id/roles` keeps the first
+ * role and warehouses are accepted but not stored. Roles and departments have no list endpoint, like
+ * in the real API.
+ */
 
-export interface ManagedRoleDto {
-  id: string;
-  name: string;
-  description: string;
-  permissions: Permission[];
-  users_count: number;
-}
+const INVITATION_TTL_MS = 72 * 60 * 60 * 1000;
 
-export interface ManagedAreaDto {
-  id: string;
-  name: string;
-}
+const error = (status: number, code: string, message: string) => ({
+  status,
+  data: { statusCode: status, code, message },
+});
 
-function toManagedUserDto(user: UserRow): ManagedUserDto {
+const tenantOf = () => requestContext.headers['x-tenant']?.trim().toLowerCase() || null;
+
+const isAdmin = (user: UserRow) => user.role_id === 'role-admin';
+
+function toUserDto(user: UserRow) {
   const role = findRoleById(user.role_id);
   const area = findAreaById(user.area_id);
   return {
-    id: user.id,
-    full_name: user.full_name,
+    id: numericId(user.id),
+    accountId: numericId(user.id),
     email: user.email,
-    role: {
-      id: role?.id ?? user.role_id,
-      name: role?.name ?? 'Sin rol',
-    },
-    area: {
-      id: area?.id ?? user.area_id,
-      name: area?.name ?? 'Sin área',
-    },
-    is_active: user.is_active,
-    last_login_at: user.last_login_at,
-    created_at: user.created_at,
+    name: user.full_name,
+    jobTitle: user.job_title ?? null,
+    department: area ? { id: numericId(area.id), name: area.name } : null,
+    isActive: user.is_active,
+    isAdmin: isAdmin(user),
+    roles: [
+      {
+        id: roleNumericId(user.role_id),
+        name: roleApiName(user.role_id, role?.name ?? ''),
+        isSystem: isAdmin(user),
+        warehouse: null,
+      },
+    ],
+    joinedAt: user.created_at,
+    createdAt: user.created_at,
+    updatedAt: user.created_at,
   };
 }
 
-function toManagedRoleDto(role: RoleRow): ManagedRoleDto {
-  return {
-    id: role.id,
-    name: role.name,
-    description: role.description ?? '',
-    permissions: role.permissions,
-    users_count: users.filter((u) => u.role_id === role.id).length,
-  };
-}
-
-const error = (status: number, message: string, code?: string) => ({
-  status,
-  data: { statusCode: status, ...(code ? { code } : {}), message },
-});
-
-/** A user of another organization does not exist as far as the caller is concerned (RF-ORG-003). */
-const findUserInOrganization = (id: string, organizationId: string) => {
-  const user = findUserById(id);
-  return user?.organization_id === organizationId ? user : undefined;
-};
+const findRoleByNumericId = (id: number) => roles.find((role) => roleNumericId(role.id) === id);
 
 /** Session + permission check, like the backend's guard: 401 without a valid session, 403 without one of `anyOf`. */
 function authorize(...anyOf: Permission[]) {
-  const session = readAccessCookie(
-    requestContext.headers['x-tenant']?.trim().toLowerCase() || null,
-  );
+  const session = readAccessCookie(tenantOf());
   if (!session) {
-    return { error: error(401, 'Tu sesión expiró. Inicia sesión de nuevo.', 'UNAUTHENTICATED') };
+    return { error: error(401, 'UNAUTHENTICATED', 'Missing, invalid or expired access token') };
   }
   const user = findUserById(session.sub);
   if (!user || !user.is_active) {
-    return { error: error(401, 'Usuario no encontrado o inactivo.') };
+    return { error: error(401, 'UNAUTHENTICATED', 'User not found or inactive') };
   }
   const role = findRoleById(user.role_id);
   if (!role || !anyOf.some((permission) => role.permissions.includes(permission))) {
-    return { error: error(403, 'Acceso denegado: tu rol no tiene permiso para esta operación.') };
+    return { error: error(403, 'FORBIDDEN', 'You do not have permission for this operation') };
   }
   return { user, role };
 }
 
+/** The user of the caller's organization with this API id, or undefined (other organizations do not exist for the caller). */
+function findManagedUser(id: string, organizationId: string) {
+  return users.find(
+    (user) => numericId(user.id) === Number(id) && user.organization_id === organizationId,
+  );
+}
+
+const activeAdmins = (organizationId: string) =>
+  users.filter(
+    (user) => user.organization_id === organizationId && isAdmin(user) && user.is_active,
+  );
+
+function toInvitationDto(invitation: InvitationRow) {
+  const role = findRoleById(invitation.role_id);
+  return {
+    id: numericId(invitation.token),
+    email: invitation.email,
+    role: {
+      id: roleNumericId(invitation.role_id),
+      name: role ? roleApiName(invitation.role_id, role.name) : null,
+    },
+    warehouseId: null,
+    invitedBy: { id: numericId(invitation.invited_by), name: invitation.invited_by },
+    expiresAt: invitation.expires_at,
+    createdAt: new Date(
+      new Date(invitation.expires_at).getTime() - INVITATION_TTL_MS,
+    ).toISOString(),
+    expired: new Date(invitation.expires_at).getTime() <= Date.now(),
+  };
+}
+
+const randomToken = () =>
+  Array.from(crypto.getRandomValues(new Uint8Array(18)), (b) =>
+    b.toString(16).padStart(2, '0'),
+  ).join('');
+
 export const usersRoutes: MockRoutes = {
-  // ---- ÁREAS ----
-  'GET /areas': () => {
-    return {
-      status: 200,
-      data: areas.map((a) => ({ id: a.id, name: a.name })),
-    };
-  },
-
-  // ---- ROLES Y PERMISOS ----
-  'GET /roles': () => {
-    const auth = authorize('role.read', 'role.manage', 'user.manage');
-    if (auth.error) return auth.error;
-
-    return {
-      status: 200,
-      data: roles.map(toManagedRoleDto),
-    };
-  },
-
-  'POST /roles': ({ body }) => {
-    const auth = authorize('role.manage');
-    if (auth.error) return auth.error;
-
-    const data = (body ?? {}) as {
-      name?: string;
-      description?: string;
-      permissions?: Permission[];
-    };
-
-    if (!data.name?.trim()) {
-      return error(422, 'El nombre del rol es obligatorio.');
-    }
-    if (!data.permissions || data.permissions.length === 0) {
-      return error(422, 'Debe asignar al menos un permiso al rol.');
-    }
-
-    const nameClean = data.name.trim();
-    if (roles.some((r) => r.name.toLowerCase() === nameClean.toLowerCase())) {
-      return error(409, 'Ya existe un rol con este nombre.');
-    }
-
-    const newRole: RoleRow = {
-      id: `role-${Date.now().toString(36)}`,
-      name: nameClean,
-      description: data.description?.trim() || '',
-      permissions: data.permissions,
-    };
-
-    roles.push(newRole);
-    persistRoles();
-    console.info('[mock] Rol creado y guardado en localStorage:', newRole.name);
-    return { status: 201, data: toManagedRoleDto(newRole) };
-  },
-
-  'PUT /roles/:id': ({ params, body }) => {
-    const auth = authorize('role.manage');
-    if (auth.error) return auth.error;
-
-    const role = findRoleById(params.id);
-    if (!role) return error(404, 'Rol no encontrado.');
-
-    const data = (body ?? {}) as {
-      name?: string;
-      description?: string;
-      permissions?: Permission[];
-    };
-
-    if (data.name && data.name.trim() !== role.name) {
-      const nameClean = data.name.trim();
-      if (roles.some((r) => r.id !== role.id && r.name.toLowerCase() === nameClean.toLowerCase())) {
-        return error(409, 'Ya existe otro rol con este nombre.');
-      }
-      role.name = nameClean;
-    }
-
-    if (data.description !== undefined) {
-      role.description = data.description.trim();
-    }
-
-    if (data.permissions) {
-      if (data.permissions.length === 0) {
-        return error(422, 'El rol debe tener al menos un permiso.');
-      }
-      role.permissions = data.permissions;
-    }
-
-    persistRoles();
-    console.info('[mock] Rol actualizado y guardado en localStorage:', role.name);
-    return { status: 200, data: toManagedRoleDto(role) };
-  },
-
-  // ---- USUARIOS ----
-  'GET /users': () => {
+  // ---- USERS ----
+  'GET /users': ({ query }) => {
     const auth = authorize('user.read', 'user.manage');
     if (auth.error) return auth.error;
 
-    return {
-      status: 200,
-      data: users
-        .filter((u) => u.organization_id === auth.user.organization_id)
-        .map(toManagedUserDto),
-    };
+    const search = (query.search ?? '').trim().toLowerCase();
+    const status = query.status ?? 'ALL';
+    const roleId = query.roleId ? Number(query.roleId) : null;
+
+    const list = users
+      .filter((user) => user.organization_id === auth.user.organization_id)
+      .filter((user) => !search || `${user.full_name} ${user.email}`.toLowerCase().includes(search))
+      .filter((user) => status === 'ALL' || (status === 'ACTIVE') === user.is_active)
+      .filter((user) => roleId === null || roleNumericId(user.role_id) === roleId)
+      .sort((a, b) => a.full_name.localeCompare(b.full_name));
+    return { status: 200, data: list.map(toUserDto) };
   },
 
   'GET /users/:id': ({ params }) => {
     const auth = authorize('user.read', 'user.manage');
     if (auth.error) return auth.error;
-
-    const user = findUserInOrganization(params.id, auth.user.organization_id);
-    if (!user) return error(404, 'Usuario no encontrado.');
-
-    return { status: 200, data: toManagedUserDto(user) };
+    const user = findManagedUser(params.id, auth.user.organization_id);
+    if (!user) return error(404, 'USER_NOT_FOUND', 'User not found');
+    return { status: 200, data: toUserDto(user) };
   },
 
-  'POST /users': ({ body }) => {
+  'PATCH /users/:id': ({ params, body }) => {
     const auth = authorize('user.manage');
     if (auth.error) return auth.error;
-
-    const data = (body ?? {}) as {
-      full_name?: string;
-      email?: string;
-      role_id?: string;
-      area_id?: string;
-      password?: string;
-    };
-
-    if (!data.full_name?.trim()) return error(422, 'El nombre de la persona es obligatorio.');
-    if (!data.email?.trim()) return error(422, 'El correo electrónico es obligatorio.');
-    if (!data.role_id) return error(422, 'Debe seleccionar un rol.');
-    if (!data.area_id) return error(422, 'Debe seleccionar un área.');
-
-    const cleanEmail = data.email.trim().toLowerCase();
-    if (findUserByEmail(cleanEmail)) {
-      return error(409, 'Ya existe un usuario con este correo electrónico.');
+    const user = findManagedUser(params.id, auth.user.organization_id);
+    if (!user) return error(404, 'USER_NOT_FOUND', 'User not found');
+    if (isAdmin(user) && !isAdmin(auth.user) && user.id !== auth.user.id) {
+      return error(403, 'FORBIDDEN', 'Only administrators can change another administrator');
     }
 
-    const nextNum =
-      users.reduce((max, u) => {
-        const match = u.id.match(/^usr-(\d+)$/);
-        return match ? Math.max(max, parseInt(match[1], 10)) : max;
-      }, 0) + 1;
-
-    const newUser: UserRow = {
-      id: `usr-${String(nextNum).padStart(3, '0')}`,
-      full_name: data.full_name.trim(),
-      email: cleanEmail,
-      password: data.password || MOCK_PASSWORD,
-      role_id: data.role_id,
-      area_id: data.area_id,
-      organization_id: auth.user.organization_id,
-      is_active: true,
-      last_login_at: null,
-      created_at: new Date().toISOString(),
-    };
-
-    users.unshift(newUser);
+    const input = (body ?? {}) as { jobTitle?: string | null };
+    if ('jobTitle' in input) user.job_title = input.jobTitle?.trim() || null;
     persistUsers();
-    console.info('[mock] Usuario creado y guardado en localStorage:', newUser);
-    return { status: 201, data: toManagedUserDto(newUser) };
+    return { status: 200, data: toUserDto(user) };
   },
 
-  'PUT /users/:id': ({ params, body }) => {
+  'PUT /users/:id/roles': ({ params, body }) => {
+    const auth = authorize('user.manage');
+    if (auth.error) return auth.error;
+    const user = findManagedUser(params.id, auth.user.organization_id);
+    if (!user) return error(404, 'USER_NOT_FOUND', 'User not found');
+
+    const input = (body ?? {}) as { roles?: { roleId?: number }[] };
+    if (!input.roles?.length) {
+      return error(400, 'VALIDATION', 'roles must contain at least 1 elements');
+    }
+    const role = findRoleByNumericId(Number(input.roles[0]?.roleId));
+    if (!role) return error(400, 'ROLE_NOT_FOUND', 'Role not found');
+    if (role.id === 'role-admin' && !isAdmin(auth.user)) {
+      return error(403, 'FORBIDDEN', 'Only administrators can grant a system role');
+    }
+    if (
+      isAdmin(user) &&
+      role.id !== 'role-admin' &&
+      activeAdmins(user.organization_id).length <= 1
+    ) {
+      return error(
+        409,
+        'LAST_ADMIN',
+        'The organization must keep at least one active administrator',
+      );
+    }
+
+    user.role_id = role.id;
+    persistUsers();
+    return { status: 200, data: toUserDto(user) };
+  },
+
+  'POST /users/:id/deactivate': ({ params }) => {
+    const auth = authorize('user.manage');
+    if (auth.error) return auth.error;
+    const user = findManagedUser(params.id, auth.user.organization_id);
+    if (!user) return error(404, 'USER_NOT_FOUND', 'User not found');
+    if (user.id === auth.user.id) {
+      return error(409, 'SELF_DEACTIVATION', 'You cannot deactivate your own user');
+    }
+    if (isAdmin(user) && user.is_active && activeAdmins(user.organization_id).length <= 1) {
+      return error(
+        409,
+        'LAST_ADMIN',
+        'The organization must keep at least one active administrator',
+      );
+    }
+    user.is_active = false;
+    persistUsers();
+    return { status: 200, data: toUserDto(user) };
+  },
+
+  'POST /users/:id/activate': ({ params }) => {
+    const auth = authorize('user.manage');
+    if (auth.error) return auth.error;
+    const user = findManagedUser(params.id, auth.user.organization_id);
+    if (!user) return error(404, 'USER_NOT_FOUND', 'User not found');
+    user.is_active = true;
+    persistUsers();
+    return { status: 200, data: toUserDto(user) };
+  },
+
+  // ---- INVITATIONS ----
+  'GET /invitations': () => {
+    const auth = authorize('user.read', 'user.manage');
+    if (auth.error) return auth.error;
+    const pending = invitations.filter(
+      (invitation) => !invitation.used && invitation.organization_id === auth.user.organization_id,
+    );
+    return { status: 200, data: pending.map(toInvitationDto) };
+  },
+
+  'POST /invitations': ({ body }) => {
     const auth = authorize('user.manage');
     if (auth.error) return auth.error;
 
-    const user = findUserInOrganization(params.id, auth.user.organization_id);
-    if (!user) return error(404, 'Usuario no encontrado.');
+    const input = (body ?? {}) as { email?: string; roleId?: number };
+    const email = (input.email ?? '').trim().toLowerCase();
+    const role = findRoleByNumericId(Number(input.roleId));
+    if (!role) return error(400, 'ROLE_NOT_FOUND', 'Role not found');
+    if (role.id === 'role-admin' && !isAdmin(auth.user)) {
+      return error(403, 'FORBIDDEN', 'Only administrators can grant a system role');
+    }
+    const member = findUserByEmail(email);
+    if (member?.organization_id === auth.user.organization_id) {
+      return error(409, 'ALREADY_MEMBER', 'This person already belongs to the organization');
+    }
 
-    const data = (body ?? {}) as {
-      full_name?: string;
-      email?: string;
-      role_id?: string;
-      area_id?: string;
-      is_active?: boolean;
-      password?: string;
-    };
-
-    if (data.email && data.email.trim().toLowerCase() !== user.email) {
-      const cleanEmail = data.email.trim().toLowerCase();
-      if (findUserByEmail(cleanEmail)) {
-        return error(409, 'Ya existe otro usuario con este correo electrónico.');
+    // Inviting an email that already has a pending invitation replaces it.
+    for (let i = invitations.length - 1; i >= 0; i--) {
+      const existing = invitations[i];
+      if (
+        existing &&
+        existing.email === email &&
+        existing.organization_id === auth.user.organization_id &&
+        !existing.used
+      ) {
+        invitations.splice(i, 1);
       }
-      user.email = cleanEmail;
     }
-
-    if (data.full_name?.trim()) user.full_name = data.full_name.trim();
-    if (data.role_id) user.role_id = data.role_id;
-    if (data.area_id) user.area_id = data.area_id;
-    if (data.password?.trim()) user.password = data.password.trim();
-    if (typeof data.is_active === 'boolean') user.is_active = data.is_active;
-
-    persistUsers();
-    console.info('[mock] Usuario actualizado y guardado en localStorage:', user);
-    return { status: 200, data: toManagedUserDto(user) };
+    const invitation: InvitationRow = {
+      token: randomToken(),
+      email,
+      organization_id: auth.user.organization_id,
+      role_id: role.id,
+      area_id: areas[0]?.id ?? '',
+      invited_by: auth.user.full_name,
+      expires_at: new Date(Date.now() + INVITATION_TTL_MS).toISOString(),
+      used: false,
+    };
+    invitations.push(invitation);
+    console.info(
+      `[mock] Invitación para ${email}: ${location.origin}/invitations/accept?token=${invitation.token}`,
+    );
+    return { status: 201, data: toInvitationDto(invitation) };
   },
 
-  'PATCH /users/:id/status': ({ params, body }) => {
+  'DELETE /invitations/:id': ({ params }) => {
     const auth = authorize('user.manage');
     if (auth.error) return auth.error;
+    const index = invitations.findIndex(
+      (invitation) =>
+        !invitation.used &&
+        invitation.organization_id === auth.user.organization_id &&
+        numericId(invitation.token) === Number(params.id),
+    );
+    if (index === -1) return error(404, 'INVITATION_NOT_FOUND', 'Invitation not found');
+    invitations.splice(index, 1);
+    return { status: 204 };
+  },
 
-    const user = findUserInOrganization(params.id, auth.user.organization_id);
-    if (!user) return error(404, 'Usuario no encontrado.');
-
-    // Prevenir desactivarse a uno mismo si es el único admin
-    if (auth.user && auth.user.id === user.id) {
-      return error(400, 'No puedes desactivar tu propia cuenta activa de administrador.');
-    }
-
-    const data = (body ?? {}) as { is_active?: boolean };
-    user.is_active = typeof data.is_active === 'boolean' ? data.is_active : !user.is_active;
-
-    persistUsers();
-    console.info('[mock] Estado de usuario actualizado y guardado en localStorage:', user);
-    return { status: 200, data: toManagedUserDto(user) };
+  // ---- WAREHOUSES ----
+  'GET /warehouses': () => {
+    const auth = authorize('warehouse.read', 'warehouse.manage', 'user.manage');
+    if (auth.error) return auth.error;
+    const organization = findOrganizationById(auth.user.organization_id);
+    return {
+      status: 200,
+      data: [
+        { id: 1, name: `${organization?.name ?? 'Principal'} · Central`, isActive: true },
+        { id: 2, name: `${organization?.name ?? 'Principal'} · Norte`, isActive: true },
+      ],
+    };
   },
 };

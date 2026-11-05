@@ -17,6 +17,7 @@ import {
   type OrganizationRow,
   type UserRow,
 } from '../db';
+import { numericId } from '../ids';
 import { requestContext, type MockResponse, type MockRoutes } from '../server';
 import {
   clearSessionCookies,
@@ -32,10 +33,6 @@ const error = (status: number, code: string, message: string): MockResponse => (
   status,
   data: { statusCode: status, code, message },
 });
-
-/** Mock ids are strings; the real API uses integers. A stable hash keeps the DTO shape. */
-const numericId = (id: string) =>
-  [...id].reduce((hash, c) => (hash * 31 + c.charCodeAt(0)) >>> 0, 7);
 
 const MIN_PASSWORD_LENGTH = 8;
 const SUBDOMAIN_PATTERN = /^[a-z0-9][a-z0-9-]{0,39}[a-z0-9]$/;
@@ -76,7 +73,7 @@ function toSessionProfile(user: UserRow): SessionProfileDto {
     },
     user: {
       id: numericId(user.id),
-      jobTitle: null,
+      jobTitle: user.job_title ?? null,
       roles: [
         {
           id: numericId(user.role_id),

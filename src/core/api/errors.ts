@@ -16,6 +16,14 @@ export function getApiErrorCode(error: unknown): string | null {
   return isAxiosError<ApiErrorBody>(error) ? (error.response?.data?.code ?? null) : null;
 }
 
+/**
+ * The API answered and refused (4xx): repeating the request cannot change that. Network failures
+ * and 5xx are worth one more try.
+ */
+export function isClientError(error: unknown): boolean {
+  return isAxiosError(error) && !!error.response && error.response.status < 500;
+}
+
 /** User-facing message for a failed request. */
 export function getApiErrorMessage(
   error: unknown,

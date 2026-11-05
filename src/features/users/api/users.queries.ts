@@ -1,110 +1,101 @@
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { FIXED_ROLES } from '../content/fixedRoles';
+import type { ManagedUser, RoleOption } from '../types/users.types';
 import {
-  createRole,
-  createUser,
-  getAreas,
-  getRoles,
-  getUser,
+  getInvitations,
   getUsers,
-  toggleUserStatus,
-  updateRole,
+  getWarehouses,
+  inviteUser,
+  revokeInvitation,
+  setUserActive,
+  setUserRoles,
   updateUser,
 } from './users.api';
 import { usersKeys } from './users.keys';
-import type { ManagedUser } from '../types/users.types';
 
 export function useUsers() {
-  return useQuery({
-    queryKey: usersKeys.lists(),
-    queryFn: getUsers,
-  });
+  return useQuery({ queryKey: usersKeys.lists(), queryFn: getUsers });
 }
 
-export function useUser(id: string) {
-  return useQuery({
-    queryKey: usersKeys.detail(id),
-    queryFn: () => getUser(id),
-    enabled: !!id,
-  });
+export function useInvitations() {
+  return useQuery({ queryKey: usersKeys.invitations(), queryFn: getInvitations });
 }
 
-export function useRoles() {
-  return useQuery({
-    queryKey: usersKeys.roles(),
-    queryFn: getRoles,
-  });
+export function useWarehouses() {
+  return useQuery({ queryKey: usersKeys.warehouses(), queryFn: getWarehouses, staleTime: 300_000 });
 }
 
-export function useAreas() {
-  return useQuery({
-    queryKey: usersKeys.areas(),
-    queryFn: getAreas,
-  });
+/**
+ * The roles a user can be given. Without a roles endpoint (see `fixedRoles.ts`) they are the two
+ * fixed ones, overridden by whatever real roles show up in the users and invitations already loaded.
+ */
+export function useRoleOptions(): RoleOption[] {
+  const { data: users } = useUsers();
+  const { data: invitations } = useInvitations();
+
+  return useMemo(() => {
+    const byName = new Map(FIXED_ROLES.map((role) => [role.name, role]));
+    for (const user of users ?? []) {
+      for (const role of user.roles) {
+        byName.set(role.roleName, {
+          id: role.roleId,
+          name: role.roleName,
+          isSystem: role.isSystem,
+        });
+      }
+    }
+    for (const invitation of invitations ?? []) {
+      const known = byName.get(invitation.roleName);
+      if (invitation.roleName && known)
+        byName.set(invitation.roleName, { ...known, id: invitation.roleId });
+    }
+    return [...byName.values()];
+  }, [users, invitations]);
 }
-export function useCreateUser() {
+
+/** Puts the user the API answered with in the cached list, then refetches it. */
+function useApplyUser() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: createUser,
-    onSuccess: (newUser) => {
-      queryClient.setQueryData<ManagedUser[]>(usersKeys.lists(), (old = []) => [
-        newUser,
-        ...old.filter((u) => u.id !== newUser.id),
-      ]);
-      void queryClient.invalidateQueries({ queryKey: usersKeys.all });
-      void queryClient.invalidateQueries({ queryKey: usersKeys.roles() });
-    },
-  });
+  return (updated: ManagedUser) => {
+    queryClient.setQueryData<ManagedUser[]>(usersKeys.lists(), (old = []) =>
+      old.map((user) => (user.id === updated.id ? updated : user)),
+    );
+    void queryClient.invalidateQueries({ queryKey: usersKeys.lists() });
+  };
 }
 
 export function useUpdateUser() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: updateUser,
-    onSuccess: (updated) => {
-      queryClient.setQueryData<ManagedUser[]>(usersKeys.lists(), (old = []) =>
-        old.map((u) => (u.id === updated.id ? updated : u)),
-      );
-      void queryClient.invalidateQueries({ queryKey: usersKeys.all });
-      void queryClient.invalidateQueries({ queryKey: usersKeys.detail(updated.id) });
-      void queryClient.invalidateQueries({ queryKey: usersKeys.roles() });
-    },
-  });
+  const apply = useApplyUser();
+  return useMutation({ mutationFn: updateUser, onSuccess: apply });
 }
 
-export function useToggleUserStatus() {
-  const queryClient = useQueryClient();
+export function useSetUserRoles() {
+  const apply = useApplyUser();
+  return useMutation({ mutationFn: setUserRoles, onSuccess: apply });
+}
+
+export function useSetUserActive() {
+  const apply = useApplyUser();
   return useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      toggleUserStatus(id, isActive),
-    onSuccess: (updated) => {
-      queryClient.setQueryData<ManagedUser[]>(usersKeys.lists(), (old = []) =>
-        old.map((u) => (u.id === updated.id ? updated : u)),
-      );
-      void queryClient.invalidateQueries({ queryKey: usersKeys.all });
-      void queryClient.invalidateQueries({ queryKey: usersKeys.detail(updated.id) });
-    },
+      setUserActive(id, isActive),
+    onSuccess: apply,
   });
 }
 
-export function useCreateRole() {
+export function useInviteUser() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: createRole,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: usersKeys.roles() });
-    },
+    mutationFn: inviteUser,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: usersKeys.invitations() }),
   });
 }
 
-export function useUpdateRole() {
+export function useRevokeInvitation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: updateRole,
-    onSuccess: (updated) => {
-      void queryClient.invalidateQueries({ queryKey: usersKeys.roles() });
-      void queryClient.invalidateQueries({ queryKey: usersKeys.roleDetail(updated.id) });
-      // Invalidate users list since role name/permissions might affect user display
-      void queryClient.invalidateQueries({ queryKey: usersKeys.all });
-    },
+    mutationFn: revokeInvitation,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: usersKeys.invitations() }),
   });
 }

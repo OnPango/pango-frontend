@@ -1,71 +1,78 @@
 import { http } from '@/core/api/http';
 import type {
-  CreateRoleInput,
-  CreateUserInput,
-  ManagedArea,
-  ManagedRole,
+  InviteUserInput,
   ManagedUser,
-  UpdateRoleInput,
+  PendingInvitation,
+  SetUserRolesInput,
   UpdateUserInput,
+  WarehouseOption,
 } from '../types/users.types';
-import type { ManagedAreaDto, ManagedRoleDto, ManagedUserDto } from './users.dto';
+import type { PendingInvitationDto, UserDto, WarehouseDto } from './users.dto';
 import {
-  toCreateUserDto,
-  toManagedArea,
-  toManagedRole,
+  toCreateInvitationDto,
   toManagedUser,
-  toRoleBodyDto,
+  toPendingInvitation,
+  toSetUserRolesDto,
   toUpdateUserDto,
-  toUserStatusDto,
+  toWarehouseOption,
 } from './users.mappers';
 
-// ---- USUARIOS ----
+/**
+ * Every call to the users, invitations and warehouses endpoints, in one place. They answer with the
+ * domain types of `types/users.types.ts`, never with the raw bodies (`users.dto.ts`).
+ */
+
+// ---- Users ----
+
+/** `GET /users`: every user, active or not (the page filters). */
 export async function getUsers(): Promise<ManagedUser[]> {
-  const { data } = await http.get<ManagedUserDto[]>('/users');
+  const { data } = await http.get<UserDto[]>('/users', { params: { status: 'ALL' } });
   return data.map(toManagedUser);
 }
 
-export async function getUser(id: string): Promise<ManagedUser> {
-  const { data } = await http.get<ManagedUserDto>(`/users/${id}`);
-  return toManagedUser(data);
-}
-
-export async function createUser(input: CreateUserInput): Promise<ManagedUser> {
-  const { data } = await http.post<ManagedUserDto>('/users', toCreateUserDto(input));
-  return toManagedUser(data);
-}
-
+/** `PATCH /users/:id`: job title (the department has no list to choose from yet). */
 export async function updateUser(input: UpdateUserInput): Promise<ManagedUser> {
-  const { data } = await http.put<ManagedUserDto>(`/users/${input.id}`, toUpdateUserDto(input));
+  const { data } = await http.patch<UserDto>(`/users/${input.id}`, toUpdateUserDto(input));
   return toManagedUser(data);
 }
 
-export async function toggleUserStatus(id: string, isActive: boolean): Promise<ManagedUser> {
-  const { data } = await http.patch<ManagedUserDto>(
-    `/users/${id}/status`,
-    toUserStatusDto(isActive),
-  );
+/** `PUT /users/:id/roles`: replaces every role assignment of the user. */
+export async function setUserRoles(input: SetUserRolesInput): Promise<ManagedUser> {
+  const { data } = await http.put<UserDto>(`/users/${input.id}/roles`, toSetUserRolesDto(input));
   return toManagedUser(data);
 }
 
-// ---- ROLES ----
-export async function getRoles(): Promise<ManagedRole[]> {
-  const { data } = await http.get<ManagedRoleDto[]>('/roles');
-  return data.map(toManagedRole);
+/** `POST /users/:id/deactivate` or `/activate` (both idempotent). */
+export async function setUserActive(id: string, isActive: boolean): Promise<ManagedUser> {
+  const { data } = await http.post<UserDto>(`/users/${id}/${isActive ? 'activate' : 'deactivate'}`);
+  return toManagedUser(data);
 }
 
-export async function createRole(input: CreateRoleInput): Promise<ManagedRole> {
-  const { data } = await http.post<ManagedRoleDto>('/roles', toRoleBodyDto(input));
-  return toManagedRole(data);
+// ---- Invitations ----
+
+/** `GET /invitations`: pending ones, expired included. */
+export async function getInvitations(): Promise<PendingInvitation[]> {
+  const { data } = await http.get<PendingInvitationDto[]>('/invitations');
+  return data.map(toPendingInvitation);
 }
 
-export async function updateRole(input: UpdateRoleInput): Promise<ManagedRole> {
-  const { data } = await http.put<ManagedRoleDto>(`/roles/${input.id}`, toRoleBodyDto(input));
-  return toManagedRole(data);
+/**
+ * `POST /invitations`: emails the invitation. Inviting an email that already has a pending one
+ * replaces it, which is how an invitation is resent.
+ */
+export async function inviteUser(input: InviteUserInput): Promise<void> {
+  await http.post('/invitations', toCreateInvitationDto(input));
 }
 
-// ---- ÁREAS ----
-export async function getAreas(): Promise<ManagedArea[]> {
-  const { data } = await http.get<ManagedAreaDto[]>('/areas');
-  return data.map(toManagedArea);
+/** `DELETE /invitations/:id` */
+export async function revokeInvitation(id: string): Promise<void> {
+  await http.delete(`/invitations/${id}`);
+}
+
+// ---- Warehouses ----
+
+/** `GET /warehouses`: the active warehouses the user can see, to scope a role to one of them. */
+export async function getWarehouses(): Promise<WarehouseOption[]> {
+  const { data } = await http.get<WarehouseDto[]>('/warehouses');
+  return data.filter((warehouse) => warehouse.isActive).map(toWarehouseOption);
 }
