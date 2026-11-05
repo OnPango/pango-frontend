@@ -59,7 +59,7 @@ The frontend is the presentation layer for the use cases in the SRS. It consumes
 ### Out of scope
 
 - Business logic, forecast computation, reorder point and alert generation (backend / FastAPI service).
-- Multi-tenant isolation: enforced by the backend; the frontend only sends the JWT.
+- Multi-tenant isolation: enforced by the backend; the frontend only tells the API which organization a request targets (`X-Tenant`, taken from the subdomain) and sends the access token.
 - Physical RFID reading: the reader is an external device integrated by the backend (RFID Adapter). The frontend only presents the result.
 - Pricing, billing and last-mile logistics.
 - Native mobile app. The web app must be responsive.
@@ -97,7 +97,7 @@ Browser ──► Frontend (SPA) ──► BFF / API Gateway (NestJS) ──► 
 | Form state          | React Hook Form + Zod | create-product form                               |
 | Local UI state      | `useState`            | open modal, active tab                            |
 
-**Requests.** All requests go through `core/api/client.ts`, which adds `Authorization: Bearer <token>` and logs the user out on a 401. The organization (tenant) is resolved by the backend from the JWT; the frontend does not send it.
+**Requests.** Every request goes through an Axios client built by `core/api/client.ts`, which adds `X-Tenant` (the organization, read from the hostname). `http` (`core/api/http.ts`) is for signed-in calls: it adds `Authorization: Bearer <access token>` and, on a 401, renews the session once and repeats the request. It gets the token and the renewal through `configureHttpAuth`, which `core/auth` fills in at startup (`bindHttpToSession`), so `core/api` never imports `core/auth`. `authHttp` is for the `/auth/*` and `/invitations/*` endpoints (see _Authentication and organizations_).
 
 **Permissions.** The SRS states that profiles and permissions are configurable by each organization's administrator, so the frontend **does not hardcode roles**: the session carries a list of permissions (`resource.action`, e.g. `stock_request.approve`) and the UI decides based on it (`hasAnyPermission`, `RequirePermission`). Hiding an element is a UX concern only; real authorization is enforced by the backend.
 
@@ -116,13 +116,20 @@ pango-frontend/
 │     └─ commit-convention.yml   # Conventional Commits check on PRs
 ├─ public/                       # static assets (favicon, pangolin illustrations)
 ├─ src/
-│  ├─ main.tsx                   # entry point; initializes the theme
+│  ├─ main.tsx                   # entry point; initializes the theme, binds the HTTP client to the session
 │  ├─ app/                       # app composition
 │  │  ├─ App.tsx                 # providers (QueryClient, Router)
-│  │  └─ router.tsx              # route table and guards
+│  │  ├─ router.tsx              # route table and guards
+│  │  ├─ routes.tsx              # the screens: path, menu entry, permissions, page
+│  │  └─ SessionCheck.tsx        # screen shown while the session is restored
 │  ├─ core/                      # cross-cutting infrastructure, no business UI
-│  │  ├─ api/client.ts           # Axios instance + interceptors
-│  │  ├─ auth/                   # auth.store.ts · permissions.ts · guards.tsx
+│  │  ├─ api/                    # client.ts (Axios factory) · http.ts (Bearer + 401 renewal) · authHttp.ts · errors.ts
+│  │  ├─ auth/                   # session and auth contract
+│  │  │                          #   auth.api/dto/mappers/types: every /auth and /invitations call
+│  │  │                          #   session.api · refresh.coordinator · session.hint: local session
+│  │  │                          #   auth.store · user · permissions · guards · http.binding
+│  │  ├─ config/env.ts           # VITE_* variables
+│  │  ├─ tenant/tenant.ts        # organization from the hostname, workspace URLs, slugify
 │  │  └─ theme/theme.store.ts    # light/dark/system mode
 │  ├─ shared/                    # reusable, no business logic
 │  │  ├─ ui/                     # base components (PageHeader, ThemeToggle, …)
@@ -133,9 +140,9 @@ pango-frontend/
 │  │  └─ <feature>/
 │  │     ├─ api/                 # <feature>.api.ts · <feature>.keys.ts · <feature>.mappers.ts · query hooks
 │  │     ├─ components/          # feature-specific components
-│     ├─ content/             # static catalogs and copy (select options, permission catalog…)
-│     ├─ hooks/               # feature logic that composes forms/queries (useRegisterForm)
-│     ├─ lib/                 # pure business rules of the feature (no React, no I/O)
+│  │     ├─ content/             # static catalogs and copy (select options, permission catalog…)
+│  │     ├─ hooks/               # feature logic that composes forms/queries (useLoginForm, useRegisterForm…)
+│  │     ├─ lib/                 # pure business rules of the feature (no React, no I/O)
 │  │     ├─ pages/               # <Name>Page.tsx (one per route)
 │  │     └─ types/               # <feature>.types.ts · <feature>.schema.ts (Zod)
 │  └─ styles/
@@ -297,8 +304,8 @@ npm run dev        # http://localhost:5173 — proxies /api → http://localhost
 The contract is `docs/auth.md` in `pango-core`. In short:
 
 - **Organization-first.** Every organization lives on its own subdomain (`mi-empresa.onpango.com`) and a session belongs to exactly one. The frontend reads the organization from the hostname (`core/tenant/tenant.ts`) and sends it as `X-Tenant`. On the main domain `/login` first asks for the workspace address and redirects there.
-- **Tokens.** The short-lived (15 min) access token is in the response body and lives **only in memory** (`useAuthStore`); it goes out as `Authorization: Bearer`. The refresh token is an **HttpOnly cookie** (`pango_refresh_<subdomain>`, `SameSite=Strict`, path `/auth`) set by the API: JavaScript never sees it, nothing token-like is written to storage, and the browser sends it only to `/auth/refresh` and `/auth/logout`. On boot, and on a 401, the `http` client calls `POST /auth/refresh` (no body) and repeats the request once; refresh tokens rotate and reusing one ends every session, so concurrent refreshes share one request and tabs serialize through the Web Locks API. Because JS cannot tell whether the cookie exists, `localStorage` keeps a non-secret hint (`pango.session_until`: when the session ends) so first-time visitors do not trigger a pointless refresh. A script injected into the page (XSS) could still read the in-memory access token and make requests, so keep the CSP strict and never render untrusted HTML.
-- **Two clients.** `authHttp` (login, signup, refresh, logout, verify email, invitations: sends credentials so the cookie travels, never sends the access token or refreshes) and `http` (everything else: Bearer only).
+- **Tokens.** The short-lived (15 min) access token is in the response body and lives **only in memory** (`useAuthStore`); it goes out as `Authorization: Bearer`. The refresh token is an **HttpOnly cookie** (`pango_refresh_<subdomain>`, `SameSite=Strict`, path `/auth`) set by the API: JavaScript never sees it, nothing token-like is written to storage, and the browser sends it only to `/auth/refresh` and `/auth/logout`. On boot, and on a 401, the session module calls `POST /auth/refresh` (no body) and the `http` client repeats the request once; refresh tokens rotate and reusing one ends every session, so concurrent refreshes share one request and tabs serialize through the Web Locks API. Because JS cannot tell whether the cookie exists, `localStorage` keeps a non-secret hint (`pango.session_until`: when the session ends) so first-time visitors do not trigger a pointless refresh. A script injected into the page (XSS) could still read the in-memory access token and make requests, so keep the CSP strict and never render untrusted HTML.
+- **Two clients.** `authHttp` (login, signup, refresh, logout, verify email, invitations: sends credentials so the cookie travels, never sends the access token or refreshes) and `http` (everything else: Bearer only). All the auth calls live in `core/auth/auth.api.ts` and answer with domain types (`Session`, `SignupResult`…), never with the raw bodies.
 - **Errors** carry a stable `code`; `features/auth/lib/auth.errors.ts` maps them to Spanish copy.
 - **Sign-up** (`/register`, main domain) creates the account and the organization; the owner must confirm the email (`/verify-email?token=`) before logging in. Invited users join from `/invitations/accept?token=` on the organization's subdomain.
 
