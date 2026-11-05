@@ -19,7 +19,7 @@ export interface TextBoxProps extends Omit<InputHTMLAttributes<HTMLInputElement>
   /** Element at the end of the control (a unit, a button…). */
   trailing?: ReactNode;
   size?: 'sm' | 'md';
-  shape?: 'xl' | 'full';
+  shape?: 'xl' | 'xl2' | 'xl3' | 'xl4' | 'xl5' | 'xl6' | 'full';
   /** Class for the outer wrapper (width, margins). `className` goes to the `<input>`. */
   containerClassName?: string;
 }

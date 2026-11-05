@@ -15,6 +15,11 @@ export const controlStyles = cva(
       },
       shape: {
         xl: 'rounded-xl',
+        xl2: 'rounded-2xl',
+        xl3: 'rounded-3xl',
+        xl4: 'rounded-4xl',
+        xl5: 'rounded-5xl',
+        xl6: 'rounded-6xl',
         full: 'rounded-full',
       },
       invalid: {

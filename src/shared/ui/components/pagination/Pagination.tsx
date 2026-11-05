@@ -74,7 +74,7 @@ export function Pagination({
             disabled={currentPage <= 1}
             onClick={() => onPageChange(currentPage - 1)}
           >
-            <FaAngleLeft/>
+            <FaAngleLeft />
           </Button>
 
           {/* Small screens: a compact label instead of the numbered buttons */}
@@ -109,7 +109,7 @@ export function Pagination({
             disabled={currentPage >= totalPages}
             onClick={() => onPageChange(currentPage + 1)}
           >
-            <FaAngleRight/>
+            <FaAngleRight />
           </Button>
         </nav>
       </div>

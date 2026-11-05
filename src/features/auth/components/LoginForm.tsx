@@ -33,7 +33,7 @@ export function LoginForm({ tenant }: { tenant: string }) {
           <h2>continuar</h2>
         </div>
       }
-      className="px-10 sm:px-10"
+      className="px-10 sm:px-12"
     >
       <form onSubmit={submit} noValidate className="space-y-5">
         {justVerified && <Alert tone="success">Correo confirmado. Ya puedes iniciar sesión.</Alert>}
@@ -46,8 +46,10 @@ export function LoginForm({ tenant }: { tenant: string }) {
             placeholder="Email"
             leadingIcon={FaUserLarge}
             required
+            shape="xl2"
             error={errors.email?.message}
             {...register('email')}
+            className="h-14"
           />
           <TextBox
             type="password"
@@ -56,8 +58,10 @@ export function LoginForm({ tenant }: { tenant: string }) {
             placeholder="Contraseña"
             leadingIcon={RiLockPasswordFill}
             required
+            shape="xl2"
             error={errors.password?.message}
             {...register('password')}
+            className="h-14"
           />
 
           {serverError && <Alert tone="danger">{serverError}</Alert>}
@@ -88,14 +92,19 @@ export function LoginForm({ tenant }: { tenant: string }) {
         </section>
 
         <section className="space-y-2">
-          <Button type="submit" variant="primary" className="w-full p-2.5" isLoading={isSubmitting}>
+          <Button
+            type="submit"
+            variant="primary"
+            className="w-full rounded-2xl p-2.5 py-3.5"
+            isLoading={isSubmitting}
+          >
             Iniciar sesión
           </Button>
           <div className="flex items-center justify-center gap-2 text-muted">
             <div className="h-px w-full bg-canvas"></div>o
             <div className="h-px w-full bg-canvas"></div>
           </div>
-          <Button type="button" variant="outline" className="w-full p-2.5">
+          <Button type="button" variant="outline" className="w-full rounded-2xl p-2.5 py-3.5">
             Acceso con SSO
           </Button>
           <p className="text-center text-sm text-muted">
