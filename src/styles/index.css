@@ -65,11 +65,18 @@
   }
 }
 
-/* Motion tokens (`animate-*` utilities). `prefers-reduced-motion` switches them all off below. */
+/*
+ * Motion tokens (`animate-*` utilities). `prefers-reduced-motion` switches them all off below.
+ *
+ * fade-up and the slides use `backwards`, not `both`: they end on the element's natural state
+ * (opacity 1, no transform), so nothing needs to be held after they finish. Holding it (`forwards`)
+ * keeps the element a stacking context for good, and a dropdown list inside it would be trapped
+ * under the blocks that come after it.
+ */
 @theme {
-  --animate-fade-up: fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-slide-in-right: slide-in-right 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-slide-in-left: slide-in-left 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-up: fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  --animate-slide-in-right: slide-in-right 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  --animate-slide-in-left: slide-in-left 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   --animate-pop-in: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   --animate-float: float 6s ease-in-out infinite;
   --animate-drift: drift 16s ease-in-out infinite alternate;
