@@ -1,6 +1,6 @@
 import { isAxiosError } from 'axios';
 import { getCurrentTenant } from '@/core/tenant/tenant';
-import { logout, refresh } from './auth.api';
+import { getMe, logout, refresh } from './auth.api';
 import type { Session } from './auth.types';
 import { useAuthStore } from './auth.store';
 import { coordinateRefresh } from './refresh.coordinator';
@@ -43,8 +43,27 @@ export function refreshSession(): Promise<boolean> {
   return coordinateRefresh(renewSession);
 }
 
-/** On boot: rebuild the session from the refresh cookie, or become anonymous. */
+/**
+ * Recognizes the session from the access cookie alone (`GET /auth/me`). Resolves `false` when there
+ * is nothing to recognize or the cookie is gone / expired; the caller then renews the session.
+ */
+async function recognizeSession(): Promise<boolean> {
+  if (!getCurrentTenant() || !hasSessionHint()) return false;
+  try {
+    useAuthStore.getState().setSession(await getMe());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * On boot: rebuild the session, or become anonymous. While the access cookie is alive (15 minutes)
+ * `GET /auth/me` is enough: it only reads. Otherwise the refresh cookie renews the session, which
+ * rotates the token and is the heavier call.
+ */
 export async function restoreSession(): Promise<void> {
+  if (await recognizeSession()) return;
   if (!(await refreshSession())) useAuthStore.getState().clearSession();
 }
 

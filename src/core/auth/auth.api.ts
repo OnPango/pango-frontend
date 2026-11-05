@@ -3,12 +3,14 @@ import type {
   AcceptInvitationDto,
   InvitationPreviewDto,
   LoginDto,
+  SessionProfileDto,
   SessionResponseDto,
   SignupDto,
   SignupResponseDto,
 } from './auth.dto';
-import { toInvitationPreview, toSession, toSignupResult } from './auth.mappers';
+import { toInvitationPreview, toSession, toSignupResult, toUser } from './auth.mappers';
 import type { InvitationPreview, Session, SignupResult } from './auth.types';
+import type { User } from './user';
 
 /**
  * Every call to the backend's auth contract (`/auth/*`, `/invitations/*`), in one place. They all go
@@ -70,6 +72,16 @@ export async function resendVerification(email: string, subdomain?: string): Pro
 export async function refresh(): Promise<Session> {
   const { data } = await authHttp.post<SessionResponseDto>('/auth/refresh');
   return toSession(data);
+}
+
+/**
+ * `GET /auth/me`: who the access cookie belongs to. Read-only (unlike refresh it rotates nothing), so
+ * it is how the app recognizes a session on load while the access cookie is still alive. Rejects with
+ * 401 `UNAUTHENTICATED` when the cookie is missing or expired.
+ */
+export async function getMe(): Promise<User> {
+  const { data } = await authHttp.get<SessionProfileDto>('/auth/me');
+  return toUser(data);
 }
 
 /** `POST /auth/logout`: the API revokes the cookie's refresh token and clears the cookie. */

@@ -20,7 +20,7 @@ interface SessionGuardProps {
   loadingFallback: ReactNode;
 }
 
-/** Exchanges the stored refresh token for a session once per app load, while the status is `unknown`. */
+/** Rebuilds the session from the cookies once per app load, while the status is `unknown`. */
 function useSessionStatus() {
   const status = useAuthStore((state) => state.status);
   useEffect(() => {
