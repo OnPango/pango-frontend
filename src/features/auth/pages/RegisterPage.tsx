@@ -1,7 +1,5 @@
 import { useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { redirectToTenant } from '@/core/tenant/tenant';
-import { useCountdown } from '@/shared/hooks/useCountdown';
 import { useShake } from '@/shared/hooks/useShake';
 import { Logo } from '@/shared/ui/Logo';
 import { Alert } from '@/shared/ui/components/Alert';
@@ -10,8 +8,8 @@ import { CompanyStep } from '../components/CompanyStep';
 import { RegisterHero } from '../components/RegisterHero';
 import { RegisterProgress } from '../components/RegisterProgress';
 import { RegisterSuccess } from '../components/RegisterSuccess';
-import { useResendVerification } from '../api/useVerifyEmail';
 import { useRegisterForm } from '../hooks/useRegisterForm';
+import { useRegisterSuccess } from '../hooks/useRegisterSuccess';
 
 /** CU-13 / US-001: register an organization together with its first administrator, in two steps. */
 export default function RegisterPage() {
@@ -34,21 +32,8 @@ export default function RegisterPage() {
   const formRef = useRef<HTMLFormElement>(null);
   useShake(formRef, rejections);
 
-  const resend = useResendVerification();
-  const [resendCooldown, startResendCooldown] = useCountdown(60);
-
-  const goToLogin = () => {
-    if (!result) return;
-    redirectToTenant(result.subdomain, `/login?email=${encodeURIComponent(result.email)}`);
-  };
-
-  const resendEmail = () => {
-    if (!result) return;
-    resend.mutate(
-      { email: result.email, subdomain: result.subdomain },
-      { onSuccess: startResendCooldown },
-    );
-  };
+  const { goToLogin, resendEmail, isResending, resendFailed, resendCooldown } =
+    useRegisterSuccess(result);
 
   const slide = direction === 'forward' ? 'animate-slide-in-right' : 'animate-slide-in-left';
 
@@ -69,9 +54,9 @@ export default function RegisterPage() {
                 result={result}
                 onContinue={goToLogin}
                 onResend={resendEmail}
-                isResending={resend.isPending}
+                isResending={isResending}
                 resendCooldown={resendCooldown}
-                resendFailed={resend.isError}
+                resendFailed={resendFailed}
               />
             )
           ) : (
