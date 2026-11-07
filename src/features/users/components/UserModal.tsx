@@ -1,7 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import { IoClose } from 'react-icons/io5';
 import { getApiErrorMessage } from '@/core/api';
+import { Alert } from '@/shared/ui/components/Alert';
 import { Button } from '@/shared/ui/components/Button';
+import { Select } from '@/shared/ui/components/form/select/Select';
+import { Switch } from '@/shared/ui/components/form/Switch';
+import { TextBox } from '@/shared/ui/components/form/TextBox';
+import { Modal } from '@/shared/ui/components/Modal';
 import type {
   CreateUserInput,
   ManagedArea,
@@ -94,179 +98,96 @@ function UserModalContent({
     }
   };
 
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="user-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-    >
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-fg/40 backdrop-blur-xs transition-opacity"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+  const formId = 'user-form';
 
-      {/* Modal Box */}
-      <div className="relative z-10 w-full max-w-lg rounded-3xl border border-line bg-surface p-6 shadow-2xl transition-all sm:p-8">
-        <div className="flex items-center justify-between border-b border-line pb-4">
-          <div>
-            <h2 id="user-modal-title" className="text-xl font-bold text-fg">
-              {isEditing ? 'Editar Usuario' : 'Nuevo Usuario'}
-            </h2>
-            <p className="text-xs text-muted">
-              {isEditing
-                ? 'Actualiza la información de la persona, rol o área asignada.'
-                : 'Registra una nueva persona en el sistema con su rol y área.'}
-            </p>
-          </div>
-          <button
+  return (
+    <Modal
+      title={isEditing ? 'Editar Usuario' : 'Nuevo Usuario'}
+      description={
+        isEditing
+          ? 'Actualiza la información de la persona, rol o área asignada.'
+          : 'Registra una nueva persona en el sistema con su rol y área.'
+      }
+      onClose={onClose}
+      dismissible={!isSubmitting}
+      footer={
+        <>
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={onClose}
-            className="rounded-full p-2 text-muted hover:bg-fg/5 hover:text-fg focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-hidden"
-            aria-label="Cerrar ventana"
+            disabled={isSubmitting}
           >
-            <IoClose className="size-5" />
-          </button>
+            Cancelar
+          </Button>
+          <Button type="submit" form={formId} variant="primary" size="sm" isLoading={isSubmitting}>
+            {isEditing ? 'Guardar Cambios' : 'Crear Usuario'}
+          </Button>
+        </>
+      }
+    >
+      <form id={formId} onSubmit={handleSubmit} className="space-y-4">
+        {errorMessage && <Alert tone="danger">{errorMessage}</Alert>}
+
+        <TextBox
+          label="Persona / Nombre completo"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Ej. Andrés Morales"
+        />
+
+        <TextBox
+          label="Correo electrónico"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="correo@pango.co"
+        />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Select
+            label="Rol asignado"
+            required
+            value={roleId}
+            onChange={setRoleId}
+            placeholder="Selecciona un rol"
+            options={roles.map((role) => ({ value: role.id, label: role.name }))}
+          />
+          <Select
+            label="Área de trabajo"
+            required
+            value={areaId}
+            onChange={setAreaId}
+            placeholder="Selecciona un área"
+            options={areas.map((area) => ({ value: area.id, label: area.name }))}
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-          {errorMessage && (
-            <div
-              role="alert"
-              className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-2.5 text-xs text-danger"
-            >
-              {errorMessage}
-            </div>
-          )}
+        <TextBox
+          label={isEditing ? 'Nueva contraseña (opcional)' : 'Contraseña temporal'}
+          type="password"
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder={
+            isEditing
+              ? 'Dejar en blanco para no modificar'
+              : 'Dejar en blanco para usar la predeterminada'
+          }
+        />
 
-          <div>
-            <label htmlFor="user-name" className="mb-1.5 block text-xs font-semibold text-fg">
-              Persona / Nombre completo <span className="text-danger">*</span>
-            </label>
-            <input
-              id="user-name"
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ej. Andrés Morales"
-              className="w-full rounded-xl border border-line bg-surface px-3.5 py-2 text-sm text-fg outline-hidden focus:border-accent focus:ring-1 focus:ring-accent"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="user-email" className="mb-1.5 block text-xs font-semibold text-fg">
-              Correo electrónico <span className="text-danger">*</span>
-            </label>
-            <input
-              id="user-email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="correo@pango.co"
-              className="w-full rounded-xl border border-line bg-surface px-3.5 py-2 text-sm text-fg outline-hidden focus:border-accent focus:ring-1 focus:ring-accent"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="user-role" className="mb-1.5 block text-xs font-semibold text-fg">
-                Rol asignado <span className="text-danger">*</span>
-              </label>
-              <select
-                id="user-role"
-                required
-                value={roleId}
-                onChange={(e) => setRoleId(e.target.value)}
-                className="w-full rounded-xl border border-line bg-surface px-3.5 py-2 text-sm text-fg outline-hidden focus:border-accent focus:ring-1 focus:ring-accent"
-              >
-                <option value="" disabled>
-                  Selecciona un rol
-                </option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="user-area" className="mb-1.5 block text-xs font-semibold text-fg">
-                Área de trabajo <span className="text-danger">*</span>
-              </label>
-              <select
-                id="user-area"
-                required
-                value={areaId}
-                onChange={(e) => setAreaId(e.target.value)}
-                className="w-full rounded-xl border border-line bg-surface px-3.5 py-2 text-sm text-fg outline-hidden focus:border-accent focus:ring-1 focus:ring-accent"
-              >
-                <option value="" disabled>
-                  Selecciona un área
-                </option>
-                {areas.map((area) => (
-                  <option key={area.id} value={area.id}>
-                    {area.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="user-password" className="mb-1.5 block text-xs font-semibold text-fg">
-              {isEditing ? 'Nueva contraseña (opcional)' : 'Contraseña temporal'}
-            </label>
-            <input
-              id="user-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={
-                isEditing
-                  ? 'Dejar en blanco para no modificar'
-                  : 'Dejar en blanco para usar la predeterminada'
-              }
-              className="w-full rounded-xl border border-line bg-surface px-3.5 py-2 text-sm text-fg outline-hidden focus:border-accent focus:ring-1 focus:ring-accent"
-            />
-          </div>
-
-          {isEditing && (
-            <div className="flex items-center gap-3 pt-2">
-              <input
-                id="user-active"
-                type="checkbox"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                className="size-4 rounded-md border-line text-primary focus:ring-primary/50"
-              />
-              <label htmlFor="user-active" className="text-sm font-medium text-fg">
-                Usuario activo en el sistema
-              </label>
-            </div>
-          )}
-
-          <div className="flex items-center justify-end gap-3 border-t border-line pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" variant="primary" size="sm" isLoading={isSubmitting}>
-              {isEditing ? 'Guardar Cambios' : 'Crear Usuario'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+        {isEditing && (
+          <Switch
+            label="Usuario activo en el sistema"
+            checked={isActive}
+            onChange={(e) => setIsActive(e.target.checked)}
+          />
+        )}
+      </form>
+    </Modal>
   );
 }
 

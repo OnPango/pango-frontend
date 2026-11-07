@@ -1,13 +1,7 @@
-import { getInitials } from '@/shared/lib/initials';
 import type { User } from '@/core/auth/user';
+import { Avatar } from './Avatar';
 
+/** The signed-in user's avatar in the header. The name is not written next to it, so it is announced. */
 export function AvatarButton({ user }: { user: User }) {
-  return (
-    <span
-      aria-hidden
-      className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-fg"
-    >
-      {getInitials(user?.name ?? '')}
-    </span>
-  );
+  return <Avatar name={user?.name ?? ''} size="sm" />;
 }

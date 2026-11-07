@@ -1,6 +1,7 @@
 import { MdEdit } from 'react-icons/md';
-import { getInitials } from '@/shared/lib/initials';
 import type { Column } from '@/shared/types/dataTable';
+import { Avatar } from '@/shared/ui/components/Avatar';
+import { Badge } from '@/shared/ui/components/Badge';
 import { Button } from '@/shared/ui/components/Button';
 import { Spinner } from '@/shared/ui/components/Spinner';
 import type { ManagedUser } from '../types/users.types';
@@ -36,12 +37,7 @@ export function getUsersTableColumns({
       header: 'Persona',
       cell: (row) => (
         <div className="flex items-center gap-3">
-          <span
-            aria-hidden
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/20 text-xs font-bold text-primary"
-          >
-            {getInitials(row.name)}
-          </span>
+          <Avatar name={row.name} size="md" tone="primary" appearance="soft" decorative />
           <div className="min-w-0">
             <p className="truncate font-semibold text-fg">{row.name}</p>
             <p className="truncate text-xs text-muted">{row.email}</p>
@@ -53,9 +49,9 @@ export function getUsersTableColumns({
       key: 'role',
       header: 'Rol',
       cell: (row) => (
-        <span className="inline-flex items-center rounded-lg border border-line2 bg-canvas px-2.5 py-1 text-xs font-medium text-fg">
+        <Badge appearance="outline" className="rounded-lg font-medium">
           {row.roleName}
-        </span>
+        </Badge>
       ),
     },
     {
@@ -74,15 +70,9 @@ export function getUsersTableColumns({
       key: 'status',
       header: 'Estado',
       cell: (row) => (
-        <span
-          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${
-            row.isActive
-              ? 'border-success/30 bg-success/10 text-success'
-              : 'border-danger/30 bg-danger/10 text-danger'
-          }`}
-        >
+        <Badge tone={row.isActive ? 'success' : 'danger'} dot>
           {row.isActive ? 'Activo' : 'Inactivo'}
-        </span>
+        </Badge>
       ),
     },
     {

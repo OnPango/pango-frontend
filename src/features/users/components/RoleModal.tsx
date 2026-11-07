@@ -1,8 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import { IoClose } from 'react-icons/io5';
 import { getApiErrorMessage } from '@/core/api';
 import type { Permission } from '@/core/auth/user';
+import { Alert } from '@/shared/ui/components/Alert';
 import { Button } from '@/shared/ui/components/Button';
+import { Checkbox } from '@/shared/ui/components/form/Checkbox';
+import { TextBox } from '@/shared/ui/components/form/TextBox';
+import { Modal } from '@/shared/ui/components/Modal';
 import { useCreateRole, useUpdateRole } from '../api/users.queries';
 import {
   PERMISSION_CATALOG,
@@ -92,170 +95,91 @@ function RoleModalContent({ onClose, roleToEdit }: RoleModalContentProps) {
     }
   };
 
+  const formId = 'role-form';
+
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="role-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4"
+    <Modal
+      size="lg"
+      title={isEditing ? 'Editar Rol y Permisos' : 'Crear Nuevo Rol'}
+      description="Define los privilegios de acceso y visibilidad de las funciones del sistema."
+      onClose={onClose}
+      dismissible={!isPending}
+      footer={
+        <>
+          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isPending}>
+            Cancelar
+          </Button>
+          <Button type="submit" form={formId} variant="primary" size="sm" isLoading={isPending}>
+            {isEditing ? 'Guardar Cambios' : 'Crear Rol'}
+          </Button>
+        </>
+      }
     >
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-fg/40 backdrop-blur-xs transition-opacity"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <form id={formId} onSubmit={handleSubmit} className="space-y-5">
+        {errorMessage && <Alert tone="danger">{errorMessage}</Alert>}
 
-      {/* Modal Box */}
-      <div className="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col rounded-3xl border border-line bg-surface p-6 shadow-2xl transition-all sm:p-8">
-        <div className="flex shrink-0 items-center justify-between border-b border-line pb-4">
-          <div>
-            <h2 id="role-modal-title" className="text-xl font-bold text-fg">
-              {isEditing ? 'Editar Rol y Permisos' : 'Crear Nuevo Rol'}
-            </h2>
-            <p className="text-xs text-muted">
-              Define los privilegios de acceso y visibilidad de las funciones del sistema.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full p-2 text-muted hover:bg-fg/5 hover:text-fg focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-hidden"
-            aria-label="Cerrar ventana"
-          >
-            <IoClose className="size-5" />
-          </button>
-        </div>
+        <TextBox
+          label="Nombre del rol"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Ej. Auditor de Calidad"
+        />
 
-        <form onSubmit={handleSubmit} className="mt-4 flex-1 space-y-5 overflow-y-auto pr-1">
-          {errorMessage && (
-            <div
-              role="alert"
-              className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-2.5 text-xs text-danger"
-            >
-              {errorMessage}
-            </div>
-          )}
+        <TextBox
+          label="Descripción"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Breve detalle de las responsabilidades asociadas"
+        />
 
-          <div>
-            <label htmlFor="role-name" className="mb-1.5 block text-xs font-semibold text-fg">
-              Nombre del rol <span className="text-danger">*</span>
-            </label>
-            <input
-              id="role-name"
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ej. Auditor de Calidad"
-              className="w-full rounded-xl border border-line bg-surface px-3.5 py-2 text-sm text-fg outline-hidden focus:border-accent focus:ring-1 focus:ring-accent"
-            />
-          </div>
+        <fieldset className="min-w-0">
+          <legend className="mb-2 text-xs font-semibold text-fg">
+            Permisos del sistema <span className="text-danger">*</span> (
+            {selectedPermissions.length} seleccionados)
+          </legend>
 
-          <div>
-            <label
-              htmlFor="role-description"
-              className="mb-1.5 block text-xs font-semibold text-fg"
-            >
-              Descripción
-            </label>
-            <input
-              id="role-description"
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Breve detalle de las responsabilidades asociadas"
-              className="w-full rounded-xl border border-line bg-surface px-3.5 py-2 text-sm text-fg outline-hidden focus:border-accent focus:ring-1 focus:ring-accent"
-            />
-          </div>
+          <div className="space-y-4">
+            {PERMISSION_CATEGORIES.map((cat) => {
+              const perms = PERMISSIONS_BY_CATEGORY[cat.id];
+              const allSelected = perms.every((key) => selectedPermissions.includes(key));
 
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <label className="block text-xs font-semibold text-fg">
-                Permisos del sistema <span className="text-danger">*</span> (
-                {selectedPermissions.length} seleccionados)
-              </label>
-            </div>
-
-            <div className="space-y-4">
-              {PERMISSION_CATEGORIES.map((cat) => {
-                const perms = PERMISSIONS_BY_CATEGORY[cat.id];
-                const allSelected = perms.every((key) => selectedPermissions.includes(key));
-
-                return (
-                  <div
-                    key={cat.id}
-                    className="rounded-2xl border border-line bg-surface/60 p-4 transition-colors"
-                  >
-                    <div className="mb-3 flex items-center justify-between border-b border-line2 pb-2">
-                      <span className="text-xs font-bold tracking-wider text-primary uppercase">
-                        {cat.label}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => toggleCategory(cat.id)}
-                        className="cursor-pointer text-xs font-semibold text-accent hover:underline"
-                      >
-                        {allSelected ? 'Desmarcar todos' : 'Seleccionar todos'}
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                      {perms.map((key) => {
-                        const perm = PERMISSION_CATALOG[key];
-                        const isChecked = selectedPermissions.includes(key);
-                        return (
-                          <label
-                            key={key}
-                            className={`flex cursor-pointer items-start gap-3 rounded-xl border p-2.5 transition-all ${
-                              isChecked
-                                ? 'border-primary/40 bg-primary/5'
-                                : 'border-line bg-surface hover:border-line2'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => togglePermission(key)}
-                              className="mt-0.5 size-4 rounded-md border-line text-primary focus:ring-primary/50"
-                            />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs leading-tight font-semibold text-fg">
-                                {perm.label}
-                              </p>
-                              {perm.description && (
-                                <p className="mt-0.5 line-clamp-2 text-[11px] text-muted">
-                                  {perm.description}
-                                </p>
-                              )}
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
+              return (
+                <div key={cat.id} className="rounded-2xl border border-line2 p-4">
+                  <div className="mb-3 flex items-center justify-between border-b border-line2 pb-2">
+                    <span className="text-xs font-bold tracking-wider text-primary uppercase">
+                      {cat.label}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleCategory(cat.id)}
+                      className="cursor-pointer text-xs font-semibold text-primary hover:underline"
+                    >
+                      {allSelected ? 'Desmarcar todos' : 'Seleccionar todos'}
+                    </button>
                   </div>
-                );
-              })}
-            </div>
-          </div>
 
-          <div className="flex items-center justify-end gap-3 border-t border-line pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onClose}
-              disabled={isPending}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" variant="primary" size="sm" isLoading={isPending}>
-              {isEditing ? 'Guardar Cambios' : 'Crear Rol'}
-            </Button>
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                    {perms.map((key) => {
+                      const perm = PERMISSION_CATALOG[key];
+                      return (
+                        <Checkbox
+                          key={key}
+                          label={perm.label}
+                          description={perm.description}
+                          checked={selectedPermissions.includes(key)}
+                          onChange={() => togglePermission(key)}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </form>
-      </div>
-    </div>
+        </fieldset>
+      </form>
+    </Modal>
   );
 }
 
