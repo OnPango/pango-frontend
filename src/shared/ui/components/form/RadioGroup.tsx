@@ -47,7 +47,7 @@ export function RadioGroup({
               key={option.value}
               htmlFor={optionId}
               className={cn(
-                'inline-flex items-start gap-3',
+                'relative inline-flex items-start gap-3',
                 disabled || option.disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
               )}
             >

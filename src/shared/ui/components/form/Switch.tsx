@@ -44,7 +44,8 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(function Switch(
     <label
       htmlFor={id}
       className={cn(
-        'flex items-center gap-3',
+        // `relative`: the visually hidden input is absolute and must not escape to a scroll-locked ancestor.
+        'relative flex items-center gap-3',
         labelFirst && 'justify-between',
         disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
         className,
