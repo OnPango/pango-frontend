@@ -11,11 +11,11 @@ import { usePagination } from '@/shared/ui/components/pagination/usePagination';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import {
   useInvitations,
+  useChangeUserRoles,
   useInviteUser,
   useRevokeInvitation,
   useRoleOptions,
   useSetUserActive,
-  useSetUserRoles,
   useUpdateUser,
   useUsers,
   useWarehouses,
@@ -23,6 +23,7 @@ import {
 import { InviteModal } from '../components/InviteModal';
 import { UserModal, type UserChanges } from '../components/UserModal';
 import { UsersTable } from '../components/UsersTable';
+import { roleLabel } from '../content/roleLabels';
 import { usersErrorMessage } from '../content/users.errors';
 import type {
   InviteUserInput,
@@ -54,7 +55,7 @@ export default function UsersPage() {
   const roles = useRoleOptions();
 
   const updateUser = useUpdateUser();
-  const setUserRoles = useSetUserRoles();
+  const changeUserRoles = useChangeUserRoles();
   const setUserActive = useSetUserActive();
   const inviteUser = useInviteUser();
   const revokeInvitation = useRevokeInvitation();
@@ -73,7 +74,7 @@ export default function UsersPage() {
   const roleOptions = useMemo<SelectOption[]>(
     () => [
       { value: 'all', label: 'Todos los roles' },
-      ...roles.map((role) => ({ value: role.id, label: role.name })),
+      ...roles.map((role) => ({ value: role.id, label: roleLabel(role.name) })),
     ],
     [roles],
   );
@@ -151,7 +152,7 @@ export default function UsersPage() {
       await updateUser.mutateAsync({ id: user.id, jobTitle: changes.jobTitle ?? null });
     }
     if (changes.roles) {
-      await setUserRoles.mutateAsync({ id: user.id, roles: changes.roles });
+      await changeUserRoles.mutateAsync({ id: user.id, ...changes.roles });
     }
     setUserToEdit(null);
   };
@@ -297,7 +298,7 @@ export default function UsersPage() {
         roles={roles}
         warehouses={warehouses}
         onSave={handleSave}
-        isSubmitting={updateUser.isPending || setUserRoles.isPending}
+        isSubmitting={updateUser.isPending || changeUserRoles.isPending}
       />
     </div>
   );

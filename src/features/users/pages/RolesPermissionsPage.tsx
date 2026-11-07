@@ -11,7 +11,7 @@ import { PageHeader } from '@/shared/ui/PageHeader';
 import { useRoles, useUpdateRolePermissions } from '../api/users.queries';
 import { MenuPreview } from '../components/MenuPreview';
 import { PermissionGroupCard } from '../components/PermissionGroupCard';
-import { roleLabel } from '../content/fixedRoles';
+import { roleLabel } from '../content/roleLabels';
 import { PERMISSION_CATEGORIES, PERMISSIONS_BY_CATEGORY } from '../content/permissions.catalog';
 import { usersErrorMessage } from '../content/users.errors';
 import { useRolePermissionsEditor } from '../hooks/useRolePermissionsEditor';

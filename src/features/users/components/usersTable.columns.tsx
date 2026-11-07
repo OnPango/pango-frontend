@@ -4,7 +4,7 @@ import { Avatar } from '@/shared/ui/components/Avatar';
 import { Badge } from '@/shared/ui/components/Badge';
 import { Button } from '@/shared/ui/components/Button';
 import { Spinner } from '@/shared/ui/components/Spinner';
-import { roleLabel } from '../content/fixedRoles';
+import { roleLabel } from '../content/roleLabels';
 import type {
   ManagedUser,
   PendingInvitation,

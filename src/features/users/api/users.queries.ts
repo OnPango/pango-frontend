@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FIXED_ROLES } from '../content/fixedRoles';
 import type { ManagedRole, ManagedUser, RoleOption } from '../types/users.types';
 import {
+  changeUserRoles,
   getInvitations,
   getRoles,
   getUsers,
@@ -10,7 +10,6 @@ import {
   inviteUser,
   revokeInvitation,
   setUserActive,
-  setUserRoles,
   updateRolePermissions,
   updateUser,
 } from './users.api';
@@ -46,32 +45,13 @@ export function useWarehouses() {
   return useQuery({ queryKey: usersKeys.warehouses(), queryFn: getWarehouses, staleTime: 300_000 });
 }
 
-/**
- * The roles a user can be given. Without a roles endpoint (see `fixedRoles.ts`) they are the two
- * fixed ones, overridden by whatever real roles show up in the users and invitations already loaded.
- */
+/** The roles a user can be given: the organization's roles, from `GET /roles`. */
 export function useRoleOptions(): RoleOption[] {
-  const { data: users } = useUsers();
-  const { data: invitations } = useInvitations();
-
-  return useMemo(() => {
-    const byName = new Map(FIXED_ROLES.map((role) => [role.name, role]));
-    for (const user of users ?? []) {
-      for (const role of user.roles) {
-        byName.set(role.roleName, {
-          id: role.roleId,
-          name: role.roleName,
-          isSystem: role.isSystem,
-        });
-      }
-    }
-    for (const invitation of invitations ?? []) {
-      const known = byName.get(invitation.roleName);
-      if (invitation.roleName && known)
-        byName.set(invitation.roleName, { ...known, id: invitation.roleId });
-    }
-    return [...byName.values()];
-  }, [users, invitations]);
+  const { data: roles } = useRoles();
+  return useMemo(
+    () => (roles ?? []).map((role) => ({ id: role.id, name: role.name, isSystem: role.isSystem })),
+    [roles],
+  );
 }
 
 /** Puts the user the API answered with in the cached list, then refetches it. */
@@ -90,9 +70,17 @@ export function useUpdateUser() {
   return useMutation({ mutationFn: updateUser, onSuccess: apply });
 }
 
-export function useSetUserRoles() {
+export function useChangeUserRoles() {
   const apply = useApplyUser();
-  return useMutation({ mutationFn: setUserRoles, onSuccess: apply });
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: changeUserRoles,
+    onSuccess: apply,
+    // Roles are changed one call at a time: after a failure some may already apply.
+    onError: () => queryClient.invalidateQueries({ queryKey: usersKeys.lists() }),
+    // The role's assignment count changed too.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: usersKeys.roles() }),
+  });
 }
 
 export function useSetUserActive() {

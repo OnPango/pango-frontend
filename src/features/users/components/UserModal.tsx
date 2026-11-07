@@ -5,11 +5,11 @@ import { Button } from '@/shared/ui/components/Button';
 import { Select } from '@/shared/ui/components/form/select/Select';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { Modal } from '@/shared/ui/components/Modal';
-import { roleLabel } from '../content/fixedRoles';
+import { roleLabel } from '../content/roleLabels';
 import { usersErrorMessage } from '../content/users.errors';
 import type {
+  ChangeUserRolesInput,
   ManagedUser,
-  RoleAssignmentInput,
   RoleOption,
   WarehouseOption,
 } from '../types/users.types';
@@ -17,7 +17,7 @@ import type {
 /** What the modal changed; a field is absent when it was left as it was. */
 export interface UserChanges {
   jobTitle?: string | null;
-  roles?: RoleAssignmentInput[];
+  roles?: Pick<ChangeUserRolesInput, 'add' | 'remove'>;
 }
 
 interface UserModalProps {
@@ -37,6 +37,7 @@ const ALL_WAREHOUSES = 'all';
 interface Row {
   key: number;
   roleId: string;
+  /** A warehouse id, `ALL_WAREHOUSES` (system roles) or '' (not chosen yet). */
   warehouseId: string;
 }
 
@@ -47,9 +48,7 @@ const toRows = (user: ManagedUser): Row[] =>
     warehouseId: role.warehouse?.id ?? ALL_WAREHOUSES,
   }));
 
-const sameAssignments = (a: Row[], b: Row[]) =>
-  a.length === b.length &&
-  a.every((row, i) => row.roleId === b[i]?.roleId && row.warehouseId === b[i]?.warehouseId);
+const assignmentKey = (roleId: string, warehouseId: string) => `${roleId}:${warehouseId}`;
 
 function UserModalContent({
   onClose,
@@ -64,17 +63,22 @@ function UserModalContent({
   const [nextKey, setNextKey] = useState(rows.length);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const warehouseOptions = [
-    { value: ALL_WAREHOUSES, label: 'Todos los almacenes' },
-    ...warehouses.map((warehouse) => ({ value: warehouse.id, label: warehouse.name })),
-  ];
+  const warehouseOptions = warehouses.map((warehouse) => ({
+    value: warehouse.id,
+    label: warehouse.name,
+  }));
+  const isSystemRole = (roleId: string) => roles.find((role) => role.id === roleId)?.isSystem;
   const roleOptions = roles.map((role) => ({ value: role.id, label: roleLabel(role.name) }));
 
   const updateRow = (key: number, patch: Partial<Row>) =>
     setRows((current) => current.map((row) => (row.key === key ? { ...row, ...patch } : row)));
 
+  // A system role (Owner) applies to every warehouse; any other role belongs to one warehouse.
+  const changeRole = (key: number, roleId: string) =>
+    updateRow(key, { roleId, warehouseId: isSystemRole(roleId) ? ALL_WAREHOUSES : '' });
+
   const addRow = () => {
-    setRows((current) => [...current, { key: nextKey, roleId: '', warehouseId: ALL_WAREHOUSES }]);
+    setRows((current) => [...current, { key: nextKey, roleId: '', warehouseId: '' }]);
     setNextKey((key) => key + 1);
   };
 
@@ -86,7 +90,11 @@ function UserModalContent({
       setErrorMessage('Cada asignación necesita un rol. El usuario debe tener al menos una.');
       return;
     }
-    const seen = new Set(rows.map((row) => `${row.roleId}:${row.warehouseId}`));
+    if (rows.some((row) => !row.warehouseId)) {
+      setErrorMessage('Elige el almacén de cada rol (solo el Propietario aplica a todos).');
+      return;
+    }
+    const seen = new Set(rows.map((row) => assignmentKey(row.roleId, row.warehouseId)));
     if (seen.size !== rows.length) {
       setErrorMessage('El mismo rol no puede asignarse dos veces sobre el mismo almacén.');
       return;
@@ -94,12 +102,17 @@ function UserModalContent({
 
     const changes: UserChanges = {};
     if (jobTitle.trim() !== (user.jobTitle ?? '')) changes.jobTitle = jobTitle.trim() || null;
-    if (!sameAssignments(rows, toRows(user))) {
-      changes.roles = rows.map((row) => ({
+    const current = new Set(toRows(user).map((row) => assignmentKey(row.roleId, row.warehouseId)));
+    const add = rows
+      .filter((row) => !current.has(assignmentKey(row.roleId, row.warehouseId)))
+      .map((row) => ({
         roleId: row.roleId,
         warehouseId: row.warehouseId === ALL_WAREHOUSES ? null : row.warehouseId,
       }));
-    }
+    const remove = user.roles
+      .filter((role) => !seen.has(assignmentKey(role.roleId, role.warehouse?.id ?? ALL_WAREHOUSES)))
+      .map((role) => role.assignmentId);
+    if (add.length > 0 || remove.length > 0) changes.roles = { add, remove };
     if (Object.keys(changes).length === 0) {
       onClose();
       return;
@@ -164,7 +177,7 @@ function UserModalContent({
               <Select
                 aria-label={`Rol ${index + 1}`}
                 value={row.roleId}
-                onChange={(roleId) => updateRow(row.key, { roleId })}
+                onChange={(roleId) => changeRole(row.key, roleId)}
                 placeholder="Selecciona un rol"
                 options={roleOptions}
               />
@@ -172,7 +185,13 @@ function UserModalContent({
                 aria-label={`Almacén del rol ${index + 1}`}
                 value={row.warehouseId}
                 onChange={(warehouseId) => updateRow(row.key, { warehouseId })}
-                options={warehouseOptions}
+                placeholder="Selecciona un almacén"
+                options={
+                  row.warehouseId === ALL_WAREHOUSES
+                    ? [{ value: ALL_WAREHOUSES, label: 'Todos los almacenes' }]
+                    : warehouseOptions
+                }
+                disabled={row.warehouseId === ALL_WAREHOUSES}
               />
               <Button
                 type="button"

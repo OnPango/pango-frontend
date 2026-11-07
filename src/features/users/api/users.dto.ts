@@ -5,6 +5,9 @@
  */
 
 export interface UserRoleDto {
+  /** Id of the grant (`DELETE /users/:id/role-assignments/:assignmentId`). */
+  assignmentId: number;
+  /** Role id. */
   id: number;
   name: string;
   isSystem: boolean;
@@ -20,7 +23,7 @@ export interface UserDto {
   jobTitle: string | null;
   department: { id: number; name: string } | null;
   isActive: boolean;
-  isAdmin: boolean;
+  isOwner: boolean;
   roles: UserRoleDto[];
   joinedAt: string | null;
   createdAt: string;
@@ -38,9 +41,10 @@ export interface UpdateUserDto {
   departmentId?: number | null;
 }
 
-/** `PUT /users/:id/roles`: replaces every assignment (at least one). */
-export interface SetUserRolesDto {
-  roles: { roleId: number; warehouseId?: number }[];
+/** `POST /users/:id/role-assignments`: warehouse required for every role except Owner. */
+export interface AddRoleAssignmentDto {
+  roleId: number;
+  warehouseId?: number;
 }
 
 /** `POST /invitations` */

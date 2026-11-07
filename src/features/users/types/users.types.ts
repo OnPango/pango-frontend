@@ -7,6 +7,8 @@ export interface WarehouseRef {
 
 /** A role granted to a user, on one warehouse or on all of them (`warehouse` null). */
 export interface RoleAssignment {
+  /** Id of this grant (removing it is `DELETE /users/:id/role-assignments/:assignmentId`). */
+  assignmentId: string;
   roleId: string;
   roleName: string;
   isSystem: boolean;
@@ -21,8 +23,8 @@ export interface ManagedUser {
   jobTitle: string | null;
   department: { id: string; name: string } | null;
   isActive: boolean;
-  /** Holds a system role (Owner) on every warehouse. */
-  isAdmin: boolean;
+  /** Holds the Owner role: administers every warehouse. */
+  isOwner: boolean;
   roles: RoleAssignment[];
   joinedAt: string | null;
   createdAt: string;
@@ -64,7 +66,7 @@ export type UserListItem =
 export interface InviteUserInput {
   email: string;
   roleId: string;
-  /** Omitted: the role applies to every warehouse. */
+  /** Null only for the Owner role, which applies to every warehouse. */
   warehouseId: string | null;
 }
 
@@ -76,13 +78,17 @@ export interface UpdateUserInput {
 
 export interface RoleAssignmentInput {
   roleId: string;
-  /** Null: every warehouse. */
+  /** Null: every warehouse (only the Owner role). */
   warehouseId: string | null;
 }
 
-export interface SetUserRolesInput {
+/** Grants and removals that turn a user's roles into the wanted ones. */
+export interface ChangeUserRolesInput {
   id: string;
-  roles: RoleAssignmentInput[];
+  /** Applied first, so the user is never left without a role. */
+  add: RoleAssignmentInput[];
+  /** Assignment ids to remove. */
+  remove: string[];
 }
 
 export interface ManagedRole {

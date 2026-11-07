@@ -5,16 +5,16 @@ import type {
   ManagedUser,
   PendingInvitation,
   RoleAssignment,
-  SetUserRolesInput,
+  RoleAssignmentInput,
   UpdateRolePermissionsInput,
   UpdateUserInput,
   WarehouseOption,
 } from '../types/users.types';
 import type {
+  AddRoleAssignmentDto,
   CreateInvitationDto,
   PendingInvitationDto,
   RoleDto,
-  SetUserRolesDto,
   UpdateRoleDto,
   UpdateUserDto,
   UserDto,
@@ -25,6 +25,7 @@ import type {
 // ---- Responses → domain ----
 
 const toRoleAssignment = (dto: UserRoleDto): RoleAssignment => ({
+  assignmentId: String(dto.assignmentId),
   roleId: String(dto.id),
   roleName: dto.name,
   isSystem: dto.isSystem,
@@ -38,7 +39,7 @@ export const toManagedUser = (dto: UserDto): ManagedUser => ({
   jobTitle: dto.jobTitle,
   department: dto.department ? { id: String(dto.department.id), name: dto.department.name } : null,
   isActive: dto.isActive,
-  isAdmin: dto.isAdmin,
+  isOwner: dto.isOwner,
   roles: dto.roles.map(toRoleAssignment),
   joinedAt: dto.joinedAt,
   createdAt: dto.createdAt,
@@ -84,11 +85,9 @@ export const toUpdateUserDto = (input: UpdateUserInput): UpdateUserDto => ({
   jobTitle: input.jobTitle?.trim() || null,
 });
 
-export const toSetUserRolesDto = (input: SetUserRolesInput): SetUserRolesDto => ({
-  roles: input.roles.map((role) => ({
-    roleId: Number(role.roleId),
-    ...(role.warehouseId ? { warehouseId: Number(role.warehouseId) } : {}),
-  })),
+export const toAddRoleAssignmentDto = (input: RoleAssignmentInput): AddRoleAssignmentDto => ({
+  roleId: Number(input.roleId),
+  ...(input.warehouseId ? { warehouseId: Number(input.warehouseId) } : {}),
 });
 
 export const toCreateInvitationDto = (input: InviteUserInput): CreateInvitationDto => ({

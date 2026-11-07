@@ -1,21 +1,21 @@
 import { http } from '@/core/api/http';
 import type {
+  ChangeUserRolesInput,
   InviteUserInput,
   ManagedRole,
   ManagedUser,
   PendingInvitation,
-  SetUserRolesInput,
   UpdateRolePermissionsInput,
   UpdateUserInput,
   WarehouseOption,
 } from '../types/users.types';
 import type { PendingInvitationDto, RoleDto, UserDto, WarehouseDto } from './users.dto';
 import {
+  toAddRoleAssignmentDto,
   toCreateInvitationDto,
   toManagedRole,
   toManagedUser,
   toPendingInvitation,
-  toSetUserRolesDto,
   toUpdateRoleDto,
   toUpdateUserDto,
   toWarehouseOption,
@@ -40,10 +40,26 @@ export async function updateUser(input: UpdateUserInput): Promise<ManagedUser> {
   return toManagedUser(data);
 }
 
-/** `PUT /users/:id/roles`: replaces every role assignment of the user. */
-export async function setUserRoles(input: SetUserRolesInput): Promise<ManagedUser> {
-  const { data } = await http.put<UserDto>(`/users/${input.id}/roles`, toSetUserRolesDto(input));
-  return toManagedUser(data);
+/**
+ * `POST /users/:id/role-assignments` for each new grant, then `DELETE …/:assignmentId` for each
+ * removed one (in that order, so the user always keeps a role). Each call is checked on its own by
+ * the API, so a failure leaves the earlier ones applied: the caller refetches.
+ */
+export async function changeUserRoles(input: ChangeUserRolesInput): Promise<ManagedUser> {
+  let user: UserDto | null = null;
+  for (const grant of input.add) {
+    ({ data: user } = await http.post<UserDto>(
+      `/users/${input.id}/role-assignments`,
+      toAddRoleAssignmentDto(grant),
+    ));
+  }
+  for (const assignmentId of input.remove) {
+    ({ data: user } = await http.delete<UserDto>(
+      `/users/${input.id}/role-assignments/${assignmentId}`,
+    ));
+  }
+  if (!user) user = (await http.get<UserDto>(`/users/${input.id}`)).data;
+  return toManagedUser(user);
 }
 
 /** `POST /users/:id/deactivate` or `/activate` (both idempotent). */

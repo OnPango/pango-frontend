@@ -21,9 +21,10 @@ import { readAccessCookie } from '../session';
 
 /**
  * The users, invitations and warehouses endpoints of pango-core, on top of the mock database. The
- * mock keeps one role per user and no warehouse scoping, so `PUT /users/:id/roles` keeps the first
- * role and warehouses are accepted but not stored. Roles and departments have no list endpoint, like
- * in the real API.
+ * mock keeps one role per user and no warehouse scoping, so `POST /users/:id/role-assignments`
+ * replaces the user's role (the warehouse is accepted but not stored) and removing an assignment
+ * that is no longer the current one changes nothing. Departments have no list endpoint, like in the
+ * real API.
  */
 
 const INVITATION_TTL_MS = 72 * 60 * 60 * 1000;
@@ -37,6 +38,9 @@ const tenantOf = () => requestContext.headers['x-tenant']?.trim().toLowerCase() 
 
 const isAdmin = (user: UserRow) => user.role_id === 'role-admin';
 
+/** Stable id of the user's (single) role assignment. */
+const assignmentIdOf = (user: UserRow) => numericId(`${user.id}:${user.role_id}`);
+
 function toUserDto(user: UserRow) {
   const role = findRoleById(user.role_id);
   const area = findAreaById(user.area_id);
@@ -48,9 +52,10 @@ function toUserDto(user: UserRow) {
     jobTitle: user.job_title ?? null,
     department: area ? { id: numericId(area.id), name: area.name } : null,
     isActive: user.is_active,
-    isAdmin: isAdmin(user),
+    isOwner: isAdmin(user),
     roles: [
       {
+        assignmentId: assignmentIdOf(user),
         id: roleNumericId(user.role_id),
         name: roleApiName(user.role_id, role?.name ?? ''),
         isSystem: isAdmin(user),
@@ -175,35 +180,49 @@ export const usersRoutes: MockRoutes = {
     return { status: 200, data: toUserDto(user) };
   },
 
-  'PUT /users/:id/roles': ({ params, body }) => {
+  'POST /users/:id/role-assignments': ({ params, body }) => {
     const auth = authorize('user.manage');
     if (auth.error) return auth.error;
     const user = findManagedUser(params.id, auth.user.organization_id);
     if (!user) return error(404, 'USER_NOT_FOUND', 'User not found');
 
-    const input = (body ?? {}) as { roles?: { roleId?: number }[] };
-    if (!input.roles?.length) {
-      return error(400, 'VALIDATION', 'roles must contain at least 1 elements');
-    }
-    const role = findRoleByNumericId(Number(input.roles[0]?.roleId));
+    const input = (body ?? {}) as { roleId?: number; warehouseId?: number };
+    const role = findRoleByNumericId(Number(input.roleId));
     if (!role) return error(400, 'ROLE_NOT_FOUND', 'Role not found');
-    if (role.id === 'role-admin' && !isAdmin(auth.user)) {
-      return error(403, 'FORBIDDEN', 'Only administrators can grant a system role');
-    }
-    if (
-      isAdmin(user) &&
-      role.id !== 'role-admin' &&
-      activeAdmins(user.organization_id).length <= 1
-    ) {
+    const system = role.id === 'role-admin';
+    if (system !== (input.warehouseId === undefined)) {
       return error(
-        409,
-        'LAST_ADMIN',
-        'The organization must keep at least one active administrator',
+        400,
+        'ASSIGNMENT_SCOPE_INVALID',
+        'System roles (Owner) apply to every warehouse; every other role needs a warehouse',
       );
+    }
+    if (system && !isAdmin(auth.user)) {
+      return error(403, 'FORBIDDEN', 'Only an Owner grants the Owner role');
+    }
+    if (user.role_id === role.id) {
+      return error(409, 'DUPLICATE_ROLE_ASSIGNMENT', 'The user already has this role');
+    }
+    if (isAdmin(user) && activeAdmins(user.organization_id).length <= 1) {
+      return error(409, 'LAST_OWNER', 'The organization must keep at least one active Owner');
     }
 
     user.role_id = role.id;
     persistUsers();
+    return { status: 201, data: toUserDto(user) };
+  },
+
+  'DELETE /users/:id/role-assignments/:assignmentId': ({ params }) => {
+    const auth = authorize('user.manage');
+    if (auth.error) return auth.error;
+    const user = findManagedUser(params.id, auth.user.organization_id);
+    if (!user) return error(404, 'USER_NOT_FOUND', 'User not found');
+    // The mock holds a single role: only that one can be removed, and it cannot be the last Owner.
+    if (Number(params.assignmentId) === assignmentIdOf(user) && isAdmin(user)) {
+      if (activeAdmins(user.organization_id).length <= 1) {
+        return error(409, 'LAST_OWNER', 'The organization must keep at least one active Owner');
+      }
+    }
     return { status: 200, data: toUserDto(user) };
   },
 
@@ -216,11 +235,7 @@ export const usersRoutes: MockRoutes = {
       return error(409, 'SELF_DEACTIVATION', 'You cannot deactivate your own user');
     }
     if (isAdmin(user) && user.is_active && activeAdmins(user.organization_id).length <= 1) {
-      return error(
-        409,
-        'LAST_ADMIN',
-        'The organization must keep at least one active administrator',
-      );
+      return error(409, 'LAST_OWNER', 'The organization must keep at least one active Owner');
     }
     user.is_active = false;
     persistUsers();

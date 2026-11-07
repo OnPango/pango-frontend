@@ -4,7 +4,7 @@ import { Button } from '@/shared/ui/components/Button';
 import { Select } from '@/shared/ui/components/form/select/Select';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { Modal } from '@/shared/ui/components/Modal';
-import { roleLabel } from '../content/fixedRoles';
+import { roleLabel } from '../content/roleLabels';
 import { usersErrorMessage } from '../content/users.errors';
 import type { InviteUserInput, RoleOption, WarehouseOption } from '../types/users.types';
 
@@ -30,8 +30,9 @@ function InviteModalContent({
   const [email, setEmail] = useState('');
   // No default: privileges (role) must be an explicit choice, never "whatever is first".
   const [roleId, setRoleId] = useState('');
-  const [warehouseId, setWarehouseId] = useState(ALL_WAREHOUSES);
+  const [warehouseId, setWarehouseId] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const isSystemRole = roles.find((role) => role.id === roleId)?.isSystem ?? false;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -40,11 +41,15 @@ function InviteModalContent({
       setErrorMessage('Debes seleccionar un rol para la persona invitada.');
       return;
     }
+    if (!isSystemRole && !warehouseId) {
+      setErrorMessage('Elige el almacén donde aplica el rol (solo el Propietario aplica a todos).');
+      return;
+    }
     try {
       await onInvite({
         email,
         roleId,
-        warehouseId: warehouseId === ALL_WAREHOUSES ? null : warehouseId,
+        warehouseId: isSystemRole ? null : warehouseId,
       });
     } catch (err) {
       setErrorMessage(usersErrorMessage(err, 'No se pudo enviar la invitación.'));
@@ -94,18 +99,25 @@ function InviteModalContent({
             label="Rol"
             required
             value={roleId}
-            onChange={setRoleId}
+            onChange={(id) => {
+              setRoleId(id);
+              setWarehouseId('');
+            }}
             placeholder="Selecciona un rol"
             options={roles.map((role) => ({ value: role.id, label: roleLabel(role.name) }))}
           />
           <Select
             label="Almacén"
-            value={warehouseId}
+            required={!isSystemRole}
+            value={isSystemRole ? ALL_WAREHOUSES : warehouseId}
             onChange={setWarehouseId}
-            options={[
-              { value: ALL_WAREHOUSES, label: 'Todos los almacenes' },
-              ...warehouses.map((warehouse) => ({ value: warehouse.id, label: warehouse.name })),
-            ]}
+            placeholder="Selecciona un almacén"
+            disabled={isSystemRole}
+            options={
+              isSystemRole
+                ? [{ value: ALL_WAREHOUSES, label: 'Todos los almacenes' }]
+                : warehouses.map((warehouse) => ({ value: warehouse.id, label: warehouse.name }))
+            }
           />
         </div>
       </form>
