@@ -70,14 +70,15 @@ export function LoginForm({ tenant }: { tenant: string }) {
               {resend.isSuccess ? (
                 <p className="text-success">Te enviamos un nuevo enlace. Revisa tu correo.</p>
               ) : (
-                <button
-                  type="button"
-                  disabled={resend.isPending}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  isLoading={resend.isPending}
                   onClick={resend.send}
-                  className="cursor-pointer font-semibold text-primary hover:underline disabled:opacity-50"
+                  className="text-primary"
                 >
                   {resend.isPending ? 'Enviando…' : 'Reenviar correo de confirmación'}
-                </button>
+                </Button>
               )}
               {resend.isError && (
                 <p className="mt-1 text-danger">No se pudo reenviar el correo. Intenta de nuevo.</p>

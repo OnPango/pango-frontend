@@ -38,7 +38,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Che
         htmlFor={id}
         className={cn(
           'relative inline-flex items-center gap-2',
-          disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+          disabled ? 'cursor-not-allowed opacity-60' : '',
         )}
       >
         <input

@@ -5,6 +5,7 @@ import { cn } from '@/shared/lib/cn';
 import { bareInputClass, controlStyles } from './control.styles';
 import { Field } from './Field';
 import { useFieldIds } from './useFieldIds';
+import { Button } from '../Button';
 
 export interface TextBoxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string;
@@ -80,16 +81,17 @@ export const TextBox = forwardRef<HTMLInputElement, TextBoxProps>(function TextB
           {...props}
         />
         {isPassword && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={() => setRevealed((v) => !v)}
             disabled={disabled}
             aria-label={revealed ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             aria-pressed={revealed}
-            className="-mr-1 grid size-7 shrink-0 cursor-pointer place-items-center rounded-full text-muted transition hover:text-fg focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-hidden"
+            className="-mr-1 grid size-7 shrink-0 place-items-center rounded-full text-muted transition hover:text-fg focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-hidden"
           >
             {revealed ? <FiEyeOff className="size-4" /> : <FiEye className="size-4" />}
-          </button>
+          </Button>
         )}
         {trailing}
       </div>

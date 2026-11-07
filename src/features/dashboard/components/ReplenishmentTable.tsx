@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { FiAlertCircle, FiBox } from 'react-icons/fi';
+import { cn } from '@/shared/lib/cn';
 import { Badge } from '@/shared/ui/components/Badge';
+import { Button } from '@/shared/ui/components/Button';
 import { DataTable } from '@/shared/ui/components/DataTable';
 import type { Column } from '@/shared/types/dataTable';
 import type { ReplenishmentProduct, StockStatus } from '../types/dashboard.types';
@@ -106,37 +108,48 @@ export function ReplenishmentTable({ products }: ReplenishmentTableProps) {
 
         {/* Status Filter Tabs */}
         <div className="flex flex-wrap items-center gap-1.5 self-start rounded-xl border border-line2/60 bg-surface p-1 text-xs font-medium sm:self-auto">
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setFilter('all')}
-            className={`rounded-lg px-3 py-1.5 transition-colors ${
-              filter === 'all' ? 'bg-primary text-primary-fg shadow-xs' : 'text-muted hover:text-fg'
-            }`}
+            aria-pressed={filter === 'all'}
+            className={cn(
+              'rounded-lg font-medium',
+              filter === 'all'
+                ? 'bg-primary text-primary-fg shadow-xs hover:bg-primary'
+                : 'text-muted hover:bg-transparent hover:text-fg',
+            )}
           >
             Todos ({products.length})
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setFilter('critico')}
-            className={`rounded-lg px-3 py-1.5 transition-colors ${
+            aria-pressed={filter === 'critico'}
+            className={cn(
+              'rounded-lg font-medium',
               filter === 'critico'
-                ? 'bg-danger text-primary-fg shadow-xs'
-                : 'text-muted hover:text-fg'
-            }`}
+                ? 'bg-danger text-primary-fg shadow-xs hover:bg-danger'
+                : 'text-muted hover:bg-transparent hover:text-fg',
+            )}
           >
             Crítico ({criticalCount})
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setFilter('preventivo')}
-            className={`rounded-lg px-3 py-1.5 transition-colors ${
+            aria-pressed={filter === 'preventivo'}
+            className={cn(
+              'rounded-lg font-medium',
               filter === 'preventivo'
-                ? 'bg-warning text-primary-fg shadow-xs'
-                : 'text-muted hover:text-fg'
-            }`}
+                ? 'bg-warning text-primary-fg shadow-xs hover:bg-warning'
+                : 'text-muted hover:bg-transparent hover:text-fg',
+            )}
           >
             Preventivo ({preventiveCount})
-          </button>
+          </Button>
         </div>
       </div>
 

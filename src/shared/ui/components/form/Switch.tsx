@@ -47,7 +47,7 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(function Switch(
         // `relative`: the visually hidden input is absolute and must not escape to a scroll-locked ancestor.
         'relative flex items-center gap-3',
         labelFirst && 'justify-between',
-        disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+        disabled ? 'cursor-not-allowed opacity-60' : '',
         className,
       )}
     >

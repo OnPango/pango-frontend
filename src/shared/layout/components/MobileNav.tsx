@@ -1,5 +1,6 @@
 import { VscChromeClose } from 'react-icons/vsc';
 import { useEffect, useRef } from 'react';
+import { Button } from '@/shared/ui/components/Button';
 import { SidebarContentMobile } from './SidebarContentMobile';
 
 interface MobileNavProps {
@@ -45,14 +46,14 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
         <SidebarContentMobile
           onNavigate={onClose}
           headerAction={
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={onClose}
               aria-label="Cerrar menú"
-              className="rounded-lg p-1.5 text-sidebar-fg/80 transition hover:bg-sidebar-fg/10 hover:text-sidebar-fg focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-hidden"
+              className="rounded-lg p-1.5 text-sidebar-fg/80 hover:bg-sidebar-fg/10 hover:text-sidebar-fg"
             >
               <VscChromeClose aria-hidden className="size-5" />
-            </button>
+            </Button>
           }
         />
       )}

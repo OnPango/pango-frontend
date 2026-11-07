@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { IoClose } from 'react-icons/io5';
 import { cn } from '@/shared/lib/cn';
+import { Button } from './Button';
 
 export interface ModalProps {
   title: string;
@@ -75,15 +76,16 @@ export function Modal({
               </p>
             )}
           </div>
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={onClose}
             disabled={!dismissible}
-            className="-mt-1 -mr-2 cursor-pointer rounded-full p-2 text-muted hover:bg-fg/5 hover:text-fg focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
+            className="-mt-1 -mr-2 rounded-full p-2 text-muted hover:bg-fg/5 hover:text-fg focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Cerrar ventana"
           >
             <IoClose className="size-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 sm:px-8">{children}</div>

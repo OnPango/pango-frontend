@@ -1,5 +1,6 @@
 import { FiPlus, FiPackage, FiShoppingCart, FiArrowRight } from 'react-icons/fi';
 import type { RecentActivity, ActivityType } from '../types/dashboard.types';
+import { Button } from '@/shared/ui/components/Button';
 
 interface RecentActivityCardProps {
   activities: RecentActivity[];
@@ -44,17 +45,13 @@ export function RecentActivityCard({ activities, onViewAll }: RecentActivityCard
       {/* Header */}
       <div className="mb-4 flex items-center justify-between gap-2">
         <h2 className="truncate text-base font-semibold text-fg sm:text-lg">Actividad reciente</h2>
-        <button
-          type="button"
-          onClick={onViewAll}
-          className="group inline-flex shrink-0 items-center gap-1 text-xs font-medium text-muted transition-colors hover:text-fg"
-        >
+        <Button type="button" variant="ghost" onClick={onViewAll}>
           <span>Ver todo</span>
           <FiArrowRight
             className="size-3.5 transition-transform group-hover:translate-x-0.5"
             aria-hidden="true"
           />
-        </button>
+        </Button>
       </div>
 
       {/* Activity Items List */}
