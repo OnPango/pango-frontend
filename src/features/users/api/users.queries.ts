@@ -1,21 +1,41 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FIXED_ROLES } from '../content/fixedRoles';
-import type { ManagedUser, RoleOption } from '../types/users.types';
+import type { ManagedRole, ManagedUser, RoleOption } from '../types/users.types';
 import {
   getInvitations,
+  getRoles,
   getUsers,
   getWarehouses,
   inviteUser,
   revokeInvitation,
   setUserActive,
   setUserRoles,
+  updateRolePermissions,
   updateUser,
 } from './users.api';
 import { usersKeys } from './users.keys';
 
 export function useUsers() {
   return useQuery({ queryKey: usersKeys.lists(), queryFn: getUsers });
+}
+
+export function useRoles() {
+  return useQuery({ queryKey: usersKeys.roles(), queryFn: getRoles });
+}
+
+export function useUpdateRolePermissions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateRolePermissions,
+    onSuccess: (updated) => {
+      queryClient.setQueryData<ManagedRole[]>(usersKeys.roles(), (old = []) =>
+        old.map((role) => (role.id === updated.id ? updated : role)),
+      );
+      // What the role allows changed what its holders can see and do.
+      void queryClient.invalidateQueries({ queryKey: usersKeys.roles() });
+    },
+  });
 }
 
 export function useInvitations() {

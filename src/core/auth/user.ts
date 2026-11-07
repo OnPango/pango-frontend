@@ -11,8 +11,8 @@ export type PermissionScope = 'ORGANIZATION' | 'WAREHOUSE';
  * coming from the API.
  */
 export const PERMISSION_SCOPES = {
-  'user.read': 'ORGANIZATION',
-  'user.manage': 'ORGANIZATION',
+  'user.read': 'WAREHOUSE',
+  'user.manage': 'WAREHOUSE',
   'role.read': 'ORGANIZATION',
   'role.manage': 'ORGANIZATION',
   'department.manage': 'ORGANIZATION',

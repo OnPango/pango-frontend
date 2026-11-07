@@ -1,4 +1,4 @@
-import type { Permission } from '@/core/auth/user';
+import { PERMISSIONS, type Permission } from '@/core/auth/user';
 import {
   areas,
   findAreaById,
@@ -7,10 +7,12 @@ import {
   findUserByEmail,
   findUserById,
   invitations,
+  persistRoles,
   persistUsers,
   roles,
   users,
   type InvitationRow,
+  type RoleRow,
   type UserRow,
 } from '../db';
 import { numericId, roleApiName, roleNumericId } from '../ids';
@@ -58,6 +60,21 @@ function toUserDto(user: UserRow) {
     joinedAt: user.created_at,
     createdAt: user.created_at,
     updatedAt: user.created_at,
+  };
+}
+
+function toRoleDto(role: RoleRow) {
+  const system = role.id === 'role-admin';
+  return {
+    id: roleNumericId(role.id),
+    name: roleApiName(role.id, role.name),
+    description: role.description ?? null,
+    isSystem: system,
+    // The Owner holds every permission, whatever the seed says.
+    permissions: system ? [...PERMISSIONS] : role.permissions,
+    assignmentCount: users.filter((user) => user.role_id === role.id).length,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
   };
 }
 
@@ -218,6 +235,42 @@ export const usersRoutes: MockRoutes = {
     user.is_active = true;
     persistUsers();
     return { status: 200, data: toUserDto(user) };
+  },
+
+  // ---- ROLES ----
+  'GET /roles': () => {
+    const auth = authorize('role.read', 'role.manage');
+    if (auth.error) return auth.error;
+    // System roles first, then by name.
+    const list = [...roles].sort(
+      (a, b) =>
+        Number(b.id === 'role-admin') - Number(a.id === 'role-admin') ||
+        a.name.localeCompare(b.name),
+    );
+    return { status: 200, data: list.map(toRoleDto) };
+  },
+
+  'PATCH /roles/:id': ({ params, body }) => {
+    const auth = authorize('role.manage');
+    if (auth.error) return auth.error;
+    const role = findRoleByNumericId(Number(params.id));
+    if (!role) return error(404, 'ROLE_NOT_FOUND', 'Role not found');
+    if (role.id === 'role-admin') {
+      return error(409, 'ROLE_SYSTEM_LOCKED', 'System roles cannot be changed');
+    }
+    if (role.id === auth.user.role_id) {
+      return error(403, 'ROLE_HELD_BY_YOU', 'You cannot edit a role you hold');
+    }
+
+    const input = (body ?? {}) as { permissions?: string[] };
+    if (input.permissions) {
+      if (input.permissions.some((code) => !(PERMISSIONS as readonly string[]).includes(code))) {
+        return error(400, 'PERMISSION_NOT_FOUND', 'Permission not found');
+      }
+      role.permissions = input.permissions as Permission[];
+      persistRoles();
+    }
+    return { status: 200, data: toRoleDto(role) };
   },
 
   // ---- INVITATIONS ----

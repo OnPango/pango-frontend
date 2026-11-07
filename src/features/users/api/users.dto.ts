@@ -68,3 +68,25 @@ export interface WarehouseDto {
   name: string;
   isActive: boolean;
 }
+
+/** `GET /roles`, and the answer of `PATCH /roles/:id`. */
+export interface RoleDto {
+  id: number;
+  name: string;
+  description: string | null;
+  /** System roles (Owner) cannot change. */
+  isSystem: boolean;
+  /** Permission codes; unknown ones (a newer backend) are discarded by the mapper. */
+  permissions: string[];
+  /** Assignments of the role to users. */
+  assignmentCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `PATCH /roles/:id`: `permissions` replaces every permission of the role. */
+export interface UpdateRoleDto {
+  name?: string;
+  description?: string | null;
+  permissions?: string[];
+}

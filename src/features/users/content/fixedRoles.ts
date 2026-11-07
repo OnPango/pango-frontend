@@ -14,6 +14,7 @@ export const FIXED_ROLES: RoleOption[] = [
 /** Spanish names for the fixed roles, as the screens show them. */
 export const ROLE_LABELS: Record<string, string> = {
   Owner: 'Propietario',
+  Admin: 'Administrador',
   Operator: 'Operador',
 };
 

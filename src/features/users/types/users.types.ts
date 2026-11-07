@@ -1,3 +1,5 @@
+import type { Permission } from '@/core/auth/user';
+
 export interface WarehouseRef {
   id: string;
   name: string;
@@ -81,4 +83,20 @@ export interface RoleAssignmentInput {
 export interface SetUserRolesInput {
   id: string;
   roles: RoleAssignmentInput[];
+}
+
+export interface ManagedRole {
+  id: string;
+  name: string;
+  description: string | null;
+  /** System roles (Owner) hold every permission and cannot change. */
+  isSystem: boolean;
+  permissions: Permission[];
+  /** People holding the role. */
+  assignmentCount: number;
+}
+
+export interface UpdateRolePermissionsInput {
+  id: string;
+  permissions: Permission[];
 }

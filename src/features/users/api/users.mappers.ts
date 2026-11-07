@@ -1,16 +1,21 @@
+import { PERMISSIONS, type Permission } from '@/core/auth/user';
 import type {
   InviteUserInput,
+  ManagedRole,
   ManagedUser,
   PendingInvitation,
   RoleAssignment,
   SetUserRolesInput,
+  UpdateRolePermissionsInput,
   UpdateUserInput,
   WarehouseOption,
 } from '../types/users.types';
 import type {
   CreateInvitationDto,
   PendingInvitationDto,
+  RoleDto,
   SetUserRolesDto,
+  UpdateRoleDto,
   UpdateUserDto,
   UserDto,
   UserRoleDto,
@@ -56,7 +61,24 @@ export const toWarehouseOption = (dto: WarehouseDto): WarehouseOption => ({
   name: dto.name,
 });
 
+const isPermission = (code: string): code is Permission =>
+  (PERMISSIONS as readonly string[]).includes(code);
+
+export const toManagedRole = (dto: RoleDto): ManagedRole => ({
+  id: String(dto.id),
+  name: dto.name,
+  description: dto.description,
+  isSystem: dto.isSystem,
+  // Unknown codes (a newer backend) are discarded instead of breaking the screen.
+  permissions: dto.permissions.filter(isPermission),
+  assignmentCount: dto.assignmentCount,
+});
+
 // ---- Domain → request bodies ----
+
+export const toUpdateRoleDto = (input: UpdateRolePermissionsInput): UpdateRoleDto => ({
+  permissions: input.permissions,
+});
 
 export const toUpdateUserDto = (input: UpdateUserInput): UpdateUserDto => ({
   jobTitle: input.jobTitle?.trim() || null,

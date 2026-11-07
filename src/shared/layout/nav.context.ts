@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
+import type { Permission } from '@/core/auth/user';
 import type { NavItem, NavSection } from './nav';
 
 /**
@@ -10,20 +11,33 @@ import type { NavItem, NavSection } from './nav';
  */
 export const NavContext = createContext<NavSection[]>([]);
 
+const keepVisible = (sections: NavSection[], canOpen: (item: NavItem) => boolean): NavSection[] =>
+  sections
+    .map((section) => ({ ...section, items: section.items.filter(canOpen) }))
+    .filter((section) => section.items.length > 0);
+
 /** The menu limited to what the current user may open; sections left empty are dropped. */
 export function useVisibleNav(): NavSection[] {
   const sections = useContext(NavContext);
   const user = useAuthStore((state) => state.user);
 
   return useMemo(
-    () =>
-      sections
-        .map((section) => ({
-          ...section,
-          items: section.items.filter((item) => hasAnyPermission(user, item.anyOf)),
-        }))
-        .filter((section) => section.items.length > 0),
+    () => keepVisible(sections, (item) => hasAnyPermission(user, item.anyOf)),
     [sections, user],
+  );
+}
+
+/** The menu someone holding exactly `permissions` would see (to preview a role). */
+export function useNavFor(permissions: readonly Permission[]): NavSection[] {
+  const sections = useContext(NavContext);
+
+  return useMemo(
+    () =>
+      keepVisible(
+        sections,
+        (item) => item.anyOf.length === 0 || item.anyOf.some((p) => permissions.includes(p)),
+      ),
+    [sections, permissions],
   );
 }
 

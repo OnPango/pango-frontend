@@ -1,18 +1,22 @@
 import { http } from '@/core/api/http';
 import type {
   InviteUserInput,
+  ManagedRole,
   ManagedUser,
   PendingInvitation,
   SetUserRolesInput,
+  UpdateRolePermissionsInput,
   UpdateUserInput,
   WarehouseOption,
 } from '../types/users.types';
-import type { PendingInvitationDto, UserDto, WarehouseDto } from './users.dto';
+import type { PendingInvitationDto, RoleDto, UserDto, WarehouseDto } from './users.dto';
 import {
   toCreateInvitationDto,
+  toManagedRole,
   toManagedUser,
   toPendingInvitation,
   toSetUserRolesDto,
+  toUpdateRoleDto,
   toUpdateUserDto,
   toWarehouseOption,
 } from './users.mappers';
@@ -75,4 +79,20 @@ export async function revokeInvitation(id: string): Promise<void> {
 export async function getWarehouses(): Promise<WarehouseOption[]> {
   const { data } = await http.get<WarehouseDto[]>('/warehouses');
   return data.filter((warehouse) => warehouse.isActive).map(toWarehouseOption);
+}
+
+// ---- Roles ----
+
+/** `GET /roles`: system roles first, then by name. */
+export async function getRoles(): Promise<ManagedRole[]> {
+  const { data } = await http.get<RoleDto[]>('/roles');
+  return data.map(toManagedRole);
+}
+
+/** `PATCH /roles/:id`: replaces every permission of the role; it applies to its holders on their next request. */
+export async function updateRolePermissions(
+  input: UpdateRolePermissionsInput,
+): Promise<ManagedRole> {
+  const { data } = await http.patch<RoleDto>(`/roles/${input.id}`, toUpdateRoleDto(input));
+  return toManagedRole(data);
 }
