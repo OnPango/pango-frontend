@@ -175,6 +175,9 @@ function UserModalContent({
               className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_1fr_auto]"
             >
               <Select
+                searchable
+                searchPlaceholder="Buscar…"
+                emptyMessage="Sin resultados"
                 aria-label={`Rol ${index + 1}`}
                 value={row.roleId}
                 onChange={(roleId) => changeRole(row.key, roleId)}
@@ -182,6 +185,9 @@ function UserModalContent({
                 options={roleOptions}
               />
               <Select
+                searchable
+                searchPlaceholder="Buscar…"
+                emptyMessage="Sin resultados"
                 aria-label={`Almacén del rol ${index + 1}`}
                 value={row.warehouseId}
                 onChange={(warehouseId) => updateRow(row.key, { warehouseId })}

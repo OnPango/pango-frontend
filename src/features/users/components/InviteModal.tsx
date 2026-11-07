@@ -96,6 +96,9 @@ function InviteModalContent({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Select
+            searchable
+            searchPlaceholder="Buscar…"
+            emptyMessage="Sin resultados"
             label="Rol"
             required
             value={roleId}
@@ -107,6 +110,9 @@ function InviteModalContent({
             options={roles.map((role) => ({ value: role.id, label: roleLabel(role.name) }))}
           />
           <Select
+            searchable
+            searchPlaceholder="Buscar…"
+            emptyMessage="Sin resultados"
             label="Almacén"
             required={!isSystemRole}
             value={isSystemRole ? ALL_WAREHOUSES : warehouseId}
