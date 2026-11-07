@@ -19,8 +19,7 @@ export const controlStyles = cva(
       },
       invalid: {
         true: 'border-danger focus-within:border-danger focus-within:ring-danger/25',
-        false:
-          'border-line2 focus-within:border-primary focus-within:ring-primary/25',
+        false: 'border-line2 focus-within:border-primary focus-within:ring-primary/25',
       },
       disabled: {
         true: 'cursor-not-allowed bg-fg/5 opacity-60 hover:border-line2',
