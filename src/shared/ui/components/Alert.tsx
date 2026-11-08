@@ -45,12 +45,12 @@ export function Alert({ tone = 'info', title, children, onDismiss, className }: 
       </div>
       {onDismiss && (
         <Button
-          type="button"
+          variant="ghost"
           onClick={onDismiss}
           aria-label="Cerrar aviso"
-          className="-m-1 grid size-6 shrink-0 place-items-center rounded-full hover:bg-fg/10 focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-hidden"
+          className="-my-1 -mr-1 size-7 shrink-0 rounded-full p-0 text-current focus-visible:outline-hidden"
         >
-          <FiX className="size-4" />
+          <FiX aria-hidden className="size-4" />
         </Button>
       )}
     </div>
