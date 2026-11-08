@@ -43,6 +43,26 @@ export async function getProducts(filters: ProductFilters): Promise<ProductPage>
   return { items: data.items.map(toProduct), total: data.total };
 }
 
+/** The most `GET /products` gives per page. */
+const MAX_PAGE_SIZE = 100;
+
+/**
+ * The whole catalog, active and archived, so the list can search and filter it in the browser
+ * (by family too, which the API search does not cover). The first page says how many follow;
+ * those are asked for together.
+ */
+export async function getAllProducts(): Promise<Product[]> {
+  const query = { search: '', categoryId: null, status: 'all', pageSize: MAX_PAGE_SIZE } as const;
+  const first = await getProducts({ ...query, page: 1 });
+  const pages = Math.ceil(first.total / MAX_PAGE_SIZE);
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, pages - 1) }, (_, index) =>
+      getProducts({ ...query, page: index + 2 }),
+    ),
+  );
+  return [first, ...rest].flatMap((page) => page.items);
+}
+
 /** `POST /products`: the product starts with no stock; stock arrives with an inbound movement. */
 export async function createProduct(input: CreateProductInput): Promise<Product> {
   const { data } = await http.post<ProductDto>('/products', toCreateProductDto(input));

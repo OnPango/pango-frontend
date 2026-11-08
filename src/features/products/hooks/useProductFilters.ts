@@ -7,7 +7,8 @@ export const ALL_CATEGORIES = 'all';
 /** Page sizes the table offers; the URL can only pick one of these. */
 export const PAGE_SIZES = [10, 25, 50] as const;
 
-const SEARCH_DELAY_MS = 350;
+/** The list filters on every keystroke; the URL only takes the search once typing pauses. */
+const URL_SEARCH_DELAY_MS = 400;
 
 const VALID_STATUSES: readonly ProductStatusFilter[] = ['active', 'inactive', 'all'];
 
@@ -25,7 +26,7 @@ type Param = keyof typeof DEFAULTS;
 const parseStatus = (raw: string | null): ProductStatusFilter =>
   VALID_STATUSES.includes(raw as ProductStatusFilter) ? (raw as ProductStatusFilter) : 'active';
 
-/** Family ids are numeric; anything else would make the API answer 400. */
+/** Family ids are numeric. */
 const parseCategory = (raw: string | null) => (raw && /^\d+$/.test(raw) ? raw : ALL_CATEGORIES);
 
 const parsePage = (raw: string | null) => {
@@ -40,8 +41,8 @@ const parsePageSize = (raw: string | null) => {
 
 /**
  * Search, family, status and page of the products list, kept in the URL so a reload or a shared
- * link shows the same view. The search box answers each keystroke; the URL (and the request)
- * follows once typing stops.
+ * link shows the same view. The list follows the search box on every keystroke; the URL catches
+ * up once typing pauses.
  */
 export function useProductFilters() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -78,17 +79,25 @@ export function useProductFilters() {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
 
+  const commit = useCallback(
+    (value: string) => {
+      clearTimeout(timer.current);
+      const committed = value.trim();
+      setInput((prev) => ({ ...prev, url: committed }));
+      if (committed !== urlSearch) setParams({ search: committed, page: 1 });
+    },
+    [urlSearch, setParams],
+  );
+
   const setSearch = useCallback(
     (value: string) => {
       setInput({ value, url: urlSearch });
+      // A new search starts on the first page, not on the one the previous search was showing.
+      if (page > 1) setParams({ page: 1 });
       clearTimeout(timer.current);
-      timer.current = setTimeout(() => {
-        const committed = value.trim();
-        setInput((prev) => ({ ...prev, url: committed }));
-        if (committed !== urlSearch) setParams({ search: committed, page: 1 });
-      }, SEARCH_DELAY_MS);
+      timer.current = setTimeout(() => commit(value), URL_SEARCH_DELAY_MS);
     },
-    [urlSearch, setParams],
+    [urlSearch, page, setParams, commit],
   );
 
   const setCategoryId = useCallback(
@@ -107,13 +116,13 @@ export function useProductFilters() {
 
   const filters: ProductFilters = useMemo(
     () => ({
-      search: urlSearch,
+      search,
       categoryId: category === ALL_CATEGORIES ? null : category,
       status,
       page,
       pageSize,
     }),
-    [urlSearch, category, status, page, pageSize],
+    [search, category, status, page, pageSize],
   );
 
   return {
@@ -128,6 +137,6 @@ export function useProductFilters() {
     pageSize,
     setPageSize,
     filters,
-    isFiltered: urlSearch !== '' || category !== ALL_CATEGORIES,
+    isFiltered: search.trim() !== '' || category !== ALL_CATEGORIES,
   };
 }

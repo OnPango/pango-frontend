@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import { FiPlus, FiSearch } from 'react-icons/fi';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
@@ -7,11 +7,12 @@ import { Select } from '@/shared/ui/components/form/select/Select';
 import type { SelectOption } from '@/shared/ui/components/form/select/select.types';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { PageHeader } from '@/shared/ui/PageHeader';
-import { useCategories, useProducts, useUnitsOfMeasure } from '../api/products.queries';
+import { useCatalog, useCategories, useUnitsOfMeasure } from '../api/products.queries';
 import { ProductFormModal } from '../components/ProductFormModal';
 import { ProductsTable } from '../components/ProductsTable';
 import { toCategorySelectOptions } from '../content/catalog.labels';
 import { productsErrorMessage } from '../content/products.errors';
+import { filterProducts } from '../content/productSearch';
 import { ALL_CATEGORIES, useProductFilters } from '../hooks/useProductFilters';
 import type { Product, ProductStatusFilter } from '../types/products.types';
 
@@ -45,8 +46,19 @@ export default function ProductPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const { data, isLoading, isFetching, error } = useProducts(filters);
+  const { data: catalog, isLoading, isFetching, error } = useCatalog();
   const { data: categories = [] } = useCategories();
+
+  // Filtering runs on every keystroke; deferring it keeps typing smooth on a large catalog.
+  const deferredFilters = useDeferredValue(filters);
+  const matches = useMemo(
+    () => filterProducts(catalog ?? [], categories, deferredFilters),
+    [catalog, categories, deferredFilters],
+  );
+  // A page past the end (fewer matches, or an old link) shows the last one instead of nothing.
+  const lastPage = Math.max(1, Math.ceil(matches.length / pageSize));
+  const currentPage = Math.min(page, lastPage);
+  const pageItems = matches.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const { data: units = [] } = useUnitsOfMeasure();
 
   const categoryOptions = useMemo(
@@ -104,7 +116,7 @@ export default function ProductPage() {
           aria-label="Buscar producto"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nombre o código…"
+          placeholder="Buscar por código, nombre o familia…"
           leadingIcon={FiSearch}
           containerClassName="flex-1"
         />
@@ -130,7 +142,7 @@ export default function ProductPage() {
       </section>
 
       <ProductsTable
-        products={data?.items ?? []}
+        products={pageItems}
         isLoading={isLoading}
         error={
           error ? productsErrorMessage(error, 'No se pudieron cargar los productos.') : undefined
@@ -142,9 +154,9 @@ export default function ProductPage() {
               ? 'No hay productos archivados.'
               : 'Aún no hay productos. Registra el primero con «Nuevo producto».'
         }
-        page={page}
+        page={currentPage}
         pageSize={pageSize}
-        totalItems={data?.total ?? 0}
+        totalItems={matches.length}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
         onEdit={canManage ? handleEdit : undefined}

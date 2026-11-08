@@ -1,23 +1,19 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ProductCategory, ProductFilters, UpdateProductInput } from '../types/products.types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ProductCategory, UpdateProductInput } from '../types/products.types';
 import {
   createCategory,
   createProduct,
+  getAllProducts,
   getCategories,
   getProduct,
-  getProducts,
   getUnitsOfMeasure,
   updateProduct,
 } from './products.api';
 import { productsKeys } from './products.keys';
 
-/** One page of the catalog. The previous page stays on screen while the next one loads. */
-export function useProducts(filters: ProductFilters) {
-  return useQuery({
-    queryKey: productsKeys.list(filters),
-    queryFn: () => getProducts(filters),
-    placeholderData: keepPreviousData,
-  });
+/** Every product of the organization; the page filters it (see `content/productSearch.ts`). */
+export function useCatalog() {
+  return useQuery({ queryKey: productsKeys.catalog(), queryFn: getAllProducts });
 }
 
 /** One product with its lock state. Null: nothing to load. */
