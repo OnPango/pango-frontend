@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { IoClose } from 'react-icons/io5';
 import { Button } from './Button';
+import { useDialogExit } from './useDialogExit';
 
 export interface DrawerProps {
   title: string;
@@ -17,10 +18,18 @@ export interface DrawerProps {
  * `Modal` (focus trap, Esc, inert background, focus restoration). Mount it only while it is open.
  * At phone width it takes the whole screen.
  */
+/** Slides in from the right edge and back out on close. */
+const EXIT = {
+  enter: 'animate-drawer-in',
+  exit: 'animate-drawer-out',
+  backdrop: 'backdrop-blur-xl animate-backdrop-out',
+};
+
 export function Drawer({ title, description, onClose, children, footer }: DrawerProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const descriptionId = useId();
+  useDialogExit(ref, EXIT);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -45,7 +54,7 @@ export function Drawer({ title, description, onClose, children, footer }: Drawer
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="my-0 mr-0 ml-auto h-dvh max-h-dvh w-full max-w-md overflow-hidden border-l border-line2 bg-surface p-0 text-fg shadow-2xl backdrop:backdrop-blur-xl"
+      className="my-0 mr-0 ml-auto h-dvh max-h-dvh w-full max-w-md animate-drawer-in overflow-hidden border-l border-line2 bg-surface p-0 text-fg shadow-2xl backdrop:animate-backdrop-in backdrop:backdrop-blur-xl"
     >
       <div className="flex h-full flex-col">
         <div className="flex items-start justify-between gap-4 border-b border-line2 px-6 pt-5 pb-4">

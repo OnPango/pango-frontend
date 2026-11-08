@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { IoClose } from 'react-icons/io5';
 import { cn } from '@/shared/lib/cn';
 import { Button } from './Button';
+import { useDialogExit } from './useDialogExit';
 
 export interface ModalProps {
   title: string;
@@ -17,6 +18,13 @@ export interface ModalProps {
 }
 
 const WIDTHS = { sm: 'max-w-md', md: 'max-w-lg', lg: 'max-w-2xl' } as const;
+
+/** Rises and fades in; the copy left on close sinks and fades out over the same shade. */
+const EXIT = {
+  enter: 'animate-dialog-in',
+  exit: 'animate-dialog-out',
+  backdrop: 'backdrop-blur-lg animate-backdrop-out',
+};
 
 /**
  * Dialog built on the native `<dialog>`: focus trap, Esc handling, inert background and focus
@@ -35,6 +43,7 @@ export function Modal({
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const descriptionId = useId();
+  useDialogExit(ref, EXIT);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -60,7 +69,7 @@ export function Modal({
         if (e.target === e.currentTarget && dismissible) onClose();
       }}
       className={cn(
-        'm-auto w-[calc(100%-2rem)] overflow-hidden rounded-3xl border border-line2 bg-surface p-0 text-fg shadow-2xl backdrop:backdrop-blur-lg',
+        'm-auto w-[calc(100%-2rem)] animate-dialog-in overflow-hidden rounded-3xl border border-line2 bg-surface p-0 text-fg shadow-2xl backdrop:animate-backdrop-in backdrop:backdrop-blur-lg',
         WIDTHS[size],
       )}
     >
