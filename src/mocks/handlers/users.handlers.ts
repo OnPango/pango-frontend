@@ -5,7 +5,6 @@ import {
   findOrganizationById,
   findRoleById,
   findUserByEmail,
-  findUserById,
   invitations,
   persistRoles,
   persistUsers,
@@ -16,8 +15,8 @@ import {
   type UserRow,
 } from '../db';
 import { numericId, roleApiName, roleNumericId } from '../ids';
-import { requestContext, type MockRoutes } from '../server';
-import { readAccessCookie } from '../session';
+import { authorize, error } from '../guard';
+import { type MockRoutes } from '../server';
 
 /**
  * The users, invitations and warehouses endpoints of pango-core, on top of the mock database. The
@@ -28,13 +27,6 @@ import { readAccessCookie } from '../session';
  */
 
 const INVITATION_TTL_MS = 72 * 60 * 60 * 1000;
-
-const error = (status: number, code: string, message: string) => ({
-  status,
-  data: { statusCode: status, code, message },
-});
-
-const tenantOf = () => requestContext.headers['x-tenant']?.trim().toLowerCase() || null;
 
 const isAdmin = (user: UserRow) => user.role_id === 'role-admin';
 
@@ -84,23 +76,6 @@ function toRoleDto(role: RoleRow) {
 }
 
 const findRoleByNumericId = (id: number) => roles.find((role) => roleNumericId(role.id) === id);
-
-/** Session + permission check, like the backend's guard: 401 without a valid session, 403 without one of `anyOf`. */
-function authorize(...anyOf: Permission[]) {
-  const session = readAccessCookie(tenantOf());
-  if (!session) {
-    return { error: error(401, 'UNAUTHENTICATED', 'Missing, invalid or expired access token') };
-  }
-  const user = findUserById(session.sub);
-  if (!user || !user.is_active) {
-    return { error: error(401, 'UNAUTHENTICATED', 'User not found or inactive') };
-  }
-  const role = findRoleById(user.role_id);
-  if (!role || !anyOf.some((permission) => role.permissions.includes(permission))) {
-    return { error: error(403, 'FORBIDDEN', 'You do not have permission for this operation') };
-  }
-  return { user, role };
-}
 
 /** The user of the caller's organization with this API id, or undefined (other organizations do not exist for the caller). */
 function findManagedUser(id: string, organizationId: string) {
