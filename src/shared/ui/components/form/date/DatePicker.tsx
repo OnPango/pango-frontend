@@ -25,6 +25,7 @@ export interface DatePickerProps {
   hint?: string;
   error?: string;
   required?: boolean;
+  optional?: boolean;
   disabled?: boolean;
   size?: 'sm' | 'md';
   className?: string;
@@ -46,6 +47,7 @@ export function DatePicker({
   hint,
   error,
   required,
+  optional,
   disabled = false,
   size = 'md',
   className,
@@ -155,6 +157,7 @@ export function DatePicker({
       hint={hint}
       error={error}
       required={required}
+      optional={optional}
       className={className}
     >
       <div ref={rootRef} className="relative">

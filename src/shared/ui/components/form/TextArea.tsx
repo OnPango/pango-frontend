@@ -7,6 +7,8 @@ import { useFieldIds } from './useFieldIds';
 export interface TextAreaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   hint?: string;
+  /** Shows "(opcional)" after the label. */
+  optional?: boolean;
   error?: string;
   containerClassName?: string;
 }
@@ -16,6 +18,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function 
   {
     label,
     hint,
+    optional,
     error,
     containerClassName,
     className,
@@ -38,6 +41,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function 
       hint={hint}
       error={error}
       required={required}
+      optional={optional}
       className={containerClassName}
     >
       <div className={cn(controlStyles({ invalid: !!error, disabled: !!disabled }), 'items-start')}>

@@ -1,144 +1,194 @@
-import { useState } from 'react';
-import { BsShieldCheck } from 'react-icons/bs';
-import { FiPlus } from 'react-icons/fi';
-import { MdEdit } from 'react-icons/md';
-import { getApiErrorMessage } from '@/core/api';
-import { Badge } from '@/shared/ui/components/Badge';
+import { useMemo, useState } from 'react';
+import { FiInfo } from 'react-icons/fi';
+import { useAuthStore } from '@/core/auth/auth.store';
+import { hasAnyPermission } from '@/core/auth/permissions';
+import { useNavFor } from '@/shared/layout/nav.context';
+import { Alert } from '@/shared/ui/components/Alert';
 import { Button } from '@/shared/ui/components/Button';
+import { Select } from '@/shared/ui/components/form/select/Select';
+import { Spinner } from '@/shared/ui/components/Spinner';
 import { PageHeader } from '@/shared/ui/PageHeader';
-import { useRoles } from '../api/users.queries';
-import { RoleModal } from '../components/RoleModal';
-import { PERMISSION_CATALOG } from '../content/permissions.catalog';
-import type { ManagedRole } from '../types/users.types';
+import { useRoles, useUpdateRolePermissions } from '../api/users.queries';
+import { MenuPreview } from '../components/MenuPreview';
+import { PermissionGroupCard } from '../components/PermissionGroupCard';
+import { roleLabel } from '../content/roleLabels';
+import { PERMISSION_CATEGORIES, PERMISSIONS_BY_CATEGORY } from '../content/permissions.catalog';
+import { usersErrorMessage } from '../content/users.errors';
+import { useRolePermissionsEditor } from '../hooks/useRolePermissionsEditor';
 
 export default function RolesPermissionsPage() {
-  const { data: roles = [], isLoading, error: queryError } = useRoles();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [roleToEdit, setRoleToEdit] = useState<ManagedRole | null>(null);
+  const currentUser = useAuthStore((state) => state.user);
+  const canManage = hasAnyPermission(currentUser, ['role.manage']);
 
-  const handleOpenCreate = () => {
-    setRoleToEdit(null);
-    setIsModalOpen(true);
+  const { data: roles = [], isLoading, error: queryError } = useRoles();
+  const updateRole = useUpdateRolePermissions();
+  const editor = useRolePermissionsEditor(roles);
+  const { role, permissions } = editor;
+  const menu = useNavFor(permissions);
+
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const roleOptions = useMemo(
+    () =>
+      roles.map((r) => ({
+        value: r.id,
+        label: roleLabel(r.name),
+        description: `${r.assignmentCount} ${r.assignmentCount === 1 ? 'asignación' : 'asignaciones'}${
+          r.isSystem ? ' · Sistema' : ''
+        }`,
+      })),
+    [roles],
+  );
+
+  const locked = !role || role.isSystem || !canManage;
+
+  const handleToggle = (...args: Parameters<typeof editor.toggle>) => {
+    setSaved(false);
+    setSaveError(null);
+    editor.toggle(...args);
   };
 
-  const handleOpenEdit = (role: ManagedRole) => {
-    setRoleToEdit(role);
-    setIsModalOpen(true);
+  // Saves every role with unsaved changes, one by one; it stops at the first failure.
+  const handleSave = async () => {
+    setSaveError(null);
+    setIsSaving(true);
+    try {
+      for (const dirty of editor.dirtyRoles) {
+        const permissionsToSave = editor.draftOf(dirty.id);
+        if (!permissionsToSave) continue;
+        await updateRole.mutateAsync({ id: dirty.id, permissions: permissionsToSave });
+        editor.clearDrafts([dirty.id]);
+      }
+      setSaved(true);
+    } catch (err) {
+      setSaveError(usersErrorMessage(err, 'No se pudieron guardar los permisos.'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDiscard = () => {
+    editor.clearDrafts();
+    setSaveError(null);
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <PageHeader
         title="Roles y Permisos"
-        subtitle="Define y asigna permisos granulares a los diferentes perfiles del sistema."
-        onAction={handleOpenCreate}
-        icon={FiPlus}
-        actionText="Nuevo Rol"
+        subtitle="Decide qué puede hacer cada rol. El menú de cada persona cambia según lo que le permitas."
       />
 
       {queryError && (
-        <div
-          role="alert"
-          className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
-        >
-          {getApiErrorMessage(queryError, 'No se pudieron cargar los roles.')}
-        </div>
+        <Alert tone="danger">
+          {usersErrorMessage(queryError, 'No se pudieron cargar los roles.')}
+        </Alert>
       )}
 
-      {isLoading ? (
-        <div className="flex h-64 items-center justify-center text-sm text-muted">
-          Cargando roles y permisos…
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {roles.map((role) => {
-            const isAdminRole = role.id === 'role-admin';
+      {isLoading && (
+        <p role="status" className="flex items-center gap-3 text-sm text-muted">
+          <Spinner /> Cargando roles y permisos…
+        </p>
+      )}
 
-            return (
-              <div
-                key={role.id}
-                className="flex flex-col justify-between rounded-3xl border border-line bg-surface p-6 shadow-xs transition-all hover:border-line2"
+      {role && (
+        <>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="text-sm font-medium text-muted">Editando</span>
+            <details className="group relative">
+              <summary
+                aria-label="¿Por qué algunos permisos se activan juntos?"
+                className="grid size-6 cursor-pointer list-none place-items-center rounded-full bg-primary/10 text-primary marker:hidden [&::-webkit-details-marker]:hidden"
               >
-                <div>
-                  <div className="flex items-start justify-between gap-4 border-b border-line2 pb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="grid size-10 place-items-center rounded-2xl bg-primary/10 text-primary">
-                        <BsShieldCheck className="size-5" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-bold text-fg">{role.name}</h3>
-                          {isAdminRole && (
-                            <Badge tone="primary" size="sm" className="tracking-wide uppercase">
-                              Sistema
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="mt-0.5 text-xs text-muted">
-                          {role.description || 'Sin descripción'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleOpenEdit(role)}
-                      className="p-2 text-muted hover:text-fg"
-                      aria-label={`Editar rol ${role.name}`}
-                      title="Editar rol y permisos"
-                    >
-                      <MdEdit className="size-4" />
-                    </Button>
-                  </div>
-
-                  <div className="py-4">
-                    <div className="mb-3 flex items-center justify-between text-xs">
-                      <span className="font-semibold text-fg">
-                        Permisos asignados ({role.permissions.length})
-                      </span>
-                      <span className="text-muted">
-                        {role.usersCount} {role.usersCount === 1 ? 'usuario' : 'usuarios'}
-                      </span>
-                    </div>
-
-                    <div className="flex max-h-48 flex-wrap gap-1.5 overflow-y-auto pr-1">
-                      {role.permissions.map((permKey) => (
-                        <span
-                          key={permKey}
-                          className="inline-flex items-center rounded-lg border border-line2 bg-canvas px-2.5 py-1 text-[11px] font-medium text-fg"
-                        >
-                          {PERMISSION_CATALOG[permKey]?.label ?? permKey}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-line2 pt-3 text-xs text-muted">
-                  <span>Identificador: {role.id}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEdit(role)}
-                    className="cursor-pointer font-medium text-primary hover:underline"
-                  >
-                    Modificar permisos →
-                  </button>
-                </div>
+                <FiInfo aria-hidden className="size-3.5" />
+              </summary>
+              <div className="absolute top-8 -left-2 z-20 w-64 rounded-xl bg-fg p-3 text-xs leading-relaxed text-canvas shadow-lg">
+                <b className="text-primary">Permisos relacionados</b>
+                <br />
+                Para atender una alerta hay que poder verla. Por eso Pango activa el permiso de ver
+                cuando activas el de gestionar.
               </div>
-            );
-          })}
-        </div>
+            </details>
+
+            <Select
+              aria-label="Rol que estás editando"
+              value={role.id}
+              onChange={editor.select}
+              options={roleOptions}
+              searchable
+              searchPlaceholder="Buscar rol…"
+              emptyMessage="Ningún rol coincide"
+              className="w-full sm:w-72"
+            />
+
+            {role.isSystem && (
+              <span className="text-sm text-muted">
+                El Propietario siempre tiene todo, para no dejar la organización sin gestor.
+              </span>
+            )}
+            {!role.isSystem && !canManage && (
+              <span className="text-sm text-muted">
+                Solo lectura: no tienes permiso para editar roles.
+              </span>
+            )}
+          </div>
+
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <div className="space-y-4">
+              {PERMISSION_CATEGORIES.map((category) => (
+                <PermissionGroupCard
+                  key={category.id}
+                  title={category.label}
+                  permissions={PERMISSIONS_BY_CATEGORY[category.id]}
+                  granted={role.isSystem ? PERMISSIONS_BY_CATEGORY[category.id] : permissions}
+                  disabled={locked}
+                  onToggle={handleToggle}
+                />
+              ))}
+            </div>
+
+            <MenuPreview roleName={roleLabel(role.name)} sections={menu} />
+          </div>
+        </>
       )}
 
-      {/* Role Create / Edit Modal */}
-      <RoleModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        roleToEdit={roleToEdit}
-      />
+      {saveError && <Alert tone="danger">{saveError}</Alert>}
+      {saved && editor.dirtyRoles.length === 0 && (
+        <Alert tone="success" onDismiss={() => setSaved(false)}>
+          Permisos guardados. Se aplican a las personas con este rol en su siguiente acción.
+        </Alert>
+      )}
+
+      {editor.dirtyRoles.length > 0 && (
+        <div
+          role="status"
+          className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-fg px-4 py-3 text-canvas shadow-lg"
+        >
+          <span className="text-sm">Tienes cambios sin guardar.</span>
+          <span className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleDiscard}
+              disabled={isSaving}
+            >
+              Descartar
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => void handleSave()}
+              isLoading={isSaving}
+            >
+              Guardar permisos
+            </Button>
+          </span>
+        </div>
+      )}
     </div>
   );
 }

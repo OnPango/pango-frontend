@@ -21,16 +21,18 @@ Pango web application (SPA), a multi-organization SaaS platform for intelligent 
 
 ## 1. Project status
 
-| Area                                                                     | Status                           |
-| ------------------------------------------------------------------------ | -------------------------------- |
-| Skeleton (Vite + React + TS), feature-based structure, CI                | ✅ Done                          |
-| Light / dark / system theme with Tailwind v4                             | ✅ Done                          |
-| Session (store + JWT on requests), permission-based route guards, layout | ⏳ Pending                       |
-| Module screens                                                           | ⏳ Placeholders                  |
-| Base components (table, modal, status badges, form fields)               | ⏳ Pending                       |
-| Login with the pangolin illustration and "under construction" screen     | ⏳ Pending                       |
-| ESLint + Prettier, tests (Vitest + Testing Library)                      | ⏳ Pending                       |
-| API contract and final permission catalog                                | ⏳ To be agreed with the backend |
+| Area                                                                                 | Status                               |
+| ------------------------------------------------------------------------------------ | ------------------------------------ |
+| Skeleton (Vite + React + TS), feature-based structure, CI                            | ✅ Done                              |
+| Light / dark / system theme with Tailwind v4                                         | ✅ Done                              |
+| Session (HttpOnly cookies + refresh rotation), permission-based route guards, layout | ✅ Done                              |
+| Module screens                                                                       | ⏳ Placeholders                      |
+| Owner sign-up, login, email confirmation, invitations (US-001 / CU-13)               | ✅ Against `pango-core` and the mock |
+| User management (CU-02): list, job title, roles, (de)activate, invitations           | ✅ Against `pango-core` and the mock |
+| Base components (table, modal, status badges, form fields)                           | ⏳ Pending                           |
+| Login with the pangolin illustration and "under construction" screen                 | ⏳ Pending                           |
+| ESLint + Prettier, tests (Vitest + Testing Library)                                  | ⏳ Pending                           |
+| API contract and final permission catalog                                            | ⏳ To be agreed with the backend     |
 
 ## 2. Scope
 
@@ -58,7 +60,7 @@ The frontend is the presentation layer for the use cases in the SRS. It consumes
 ### Out of scope
 
 - Business logic, forecast computation, reorder point and alert generation (backend / FastAPI service).
-- Multi-tenant isolation: enforced by the backend; the frontend only sends the JWT.
+- Multi-tenant isolation: enforced by the backend; the frontend only tells the API which organization a request targets (`X-Tenant`, taken from the subdomain) and sends the access token.
 - Physical RFID reading: the reader is an external device integrated by the backend (RFID Adapter). The frontend only presents the result.
 - Pricing, billing and last-mile logistics.
 - Native mobile app. The web app must be responsive.
@@ -75,7 +77,7 @@ The frontend is the presentation layer for the use cases in the SRS. It consumes
 | React Router          | 7                                       | Routing (`createBrowserRouter`, `lazy` routes) |
 | TanStack Query        | 5                                       | Server state: caching, retries, invalidation   |
 | Zustand               | 5.0.15                                  | Client state (session, theme)                  |
-| React Hook Form + Zod | 7 / 3                                   | Forms and validation                           |
+| React Hook Form + Zod | 7 / 4 (`@hookform/resolvers` 7)         | Forms and validation                           |
 | Axios                 | 1                                       | HTTP client with interceptors                  |
 
 Requirements: Node.js 20+ and pnpm. Modern browsers (Chrome 111+, Safari 16.4+, Firefox 128+), due to Tailwind v4.
@@ -96,7 +98,7 @@ Browser ──► Frontend (SPA) ──► BFF / API Gateway (NestJS) ──► 
 | Form state          | React Hook Form + Zod | create-product form                               |
 | Local UI state      | `useState`            | open modal, active tab                            |
 
-**Requests.** All requests go through `core/api/client.ts`, which adds `Authorization: Bearer <token>` and logs the user out on a 401. The organization (tenant) is resolved by the backend from the JWT; the frontend does not send it.
+**Requests.** Every request goes through an Axios client built by `core/api/client.ts`, which adds `X-Tenant` (the organization, read from the hostname). Every client sends the session cookies (`withCredentials`). `http` (`core/api/http.ts`) is for signed-in calls: on a 401 it renews the session once and repeats the request. It gets the renewal through `configureHttpAuth`, which `core/auth` fills in at startup (`bindHttpToSession`), so `core/api` never imports `core/auth`. `authHttp` is for the `/auth/*` and `/invitations/*` endpoints (see _Authentication and organizations_).
 
 **Permissions.** The SRS states that profiles and permissions are configurable by each organization's administrator, so the frontend **does not hardcode roles**: the session carries a list of permissions (`resource.action`, e.g. `stock_request.approve`) and the UI decides based on it (`hasAnyPermission`, `RequirePermission`). Hiding an element is a UX concern only; real authorization is enforced by the backend.
 
@@ -115,23 +117,33 @@ pango-frontend/
 │     └─ commit-convention.yml   # Conventional Commits check on PRs
 ├─ public/                       # static assets (favicon, pangolin illustrations)
 ├─ src/
-│  ├─ main.tsx                   # entry point; initializes the theme
+│  ├─ main.tsx                   # entry point; initializes the theme, binds the HTTP client to the session
 │  ├─ app/                       # app composition
 │  │  ├─ App.tsx                 # providers (QueryClient, Router)
-│  │  └─ router.tsx              # route table and guards
+│  │  ├─ router.tsx              # route table and guards
+│  │  ├─ routes.tsx              # the screens: path, menu entry, permissions, page
+│  │  └─ SessionCheck.tsx        # screen shown while the session is restored
 │  ├─ core/                      # cross-cutting infrastructure, no business UI
-│  │  ├─ api/client.ts           # Axios instance + interceptors
-│  │  ├─ auth/                   # auth.store.ts · permissions.ts · guards.tsx
+│  │  ├─ api/                    # client.ts (Axios factory) · http.ts (401 renewal) · authHttp.ts · errors.ts
+│  │  ├─ auth/                   # session and auth contract
+│  │  │                          #   auth.api/dto/mappers/types: every /auth and /invitations call
+│  │  │                          #   session.api · refresh.coordinator · session.hint: local session
+│  │  │                          #   auth.store · user · permissions · guards · http.binding
+│  │  ├─ config/env.ts           # VITE_* variables
+│  │  ├─ tenant/tenant.ts        # organization from the hostname, workspace URLs, slugify
 │  │  └─ theme/theme.store.ts    # light/dark/system mode
 │  ├─ shared/                    # reusable, no business logic
 │  │  ├─ ui/                     # base components (PageHeader, ThemeToggle, …)
 │  │  ├─ layout/                 # AppLayout, nav.ts
-│  │  ├─ hooks/                  # generic hooks (useDebounce, …)
+│  │  ├─ hooks/                  # generic hooks (useDebouncedValue, useShake, …)
 │  │  └─ lib/                    # pure utilities (formatDate, formatQuantity, …)
 │  ├─ features/                  # one directory per domain module
 │  │  └─ <feature>/
 │  │     ├─ api/                 # <feature>.api.ts · <feature>.keys.ts · <feature>.mappers.ts · query hooks
 │  │     ├─ components/          # feature-specific components
+│  │     ├─ content/             # static catalogs and copy (select options, permission catalog…)
+│  │     ├─ hooks/               # feature logic that composes forms/queries (useLoginForm, useRegisterForm…)
+│  │     ├─ lib/                 # pure business rules of the feature (no React, no I/O)
 │  │     ├─ pages/               # <Name>Page.tsx (one per route)
 │  │     └─ types/               # <feature>.types.ts · <feature>.schema.ts (Zod)
 │  └─ styles/
@@ -163,7 +175,7 @@ URLs are in English and kebab-case (`/roles-permissions`).
 - **Routes.** [`src/app/routes.tsx`](src/app/routes.tsx) is the single place that declares the screens: path, menu label and icon, menu section, required permissions (`anyOf`, empty = any signed-in user) and page. The router, the sidebar menu and the header title are all derived from it. A new screen is one entry there (plus its `pages/<Name>Page.tsx`).
 - **Permissions.** Codes are `resource.action` and mirror the backend's `permissions` table, including its scope (`ORGANIZATION` or `WAREHOUSE`). The list lives in `PERMISSION_SCOPES` in [`src/core/auth/user.ts`](src/core/auth/user.ts); their Spanish names and descriptions, used by the roles screen, in [`permissions.catalog.ts`](src/features/users/content/permissions.catalog.ts). A permission added to the first without the second does not compile.
 - **Roles are configurable.** Each organization defines its own roles (the backend seeds a default set), so the UI must never branch on a role name, only on permissions.
-- `/login` is public and `/` needs only a session; everything else is guarded with `RequirePermission`, which shows the 403 page when the permission is missing.
+- `/login`, `/register`, `/verify-email` and `/invitations/accept` are public (the last two are opened from emails); `/` needs only a session; everything else is guarded with `RequirePermission`, which shows the 403 page when the permission is missing.
 
 ## 7. Naming conventions
 
@@ -240,7 +252,7 @@ Rules marked 🔒 are enforced by ESLint (`eslint.config.js`) and fail CI; the r
 - **Scrollbars**: styled once, globally, in `styles/index.css` (thin line, no arrows, same in Chromium/WebKit and Firefox). Do not restyle them per component.
 - **Errors**: screens handle three explicit states — loading, error and empty — in addition to the data state.
 - 🔒 **Accessibility**: real interactive elements (`button`, `a`) and `aria-label` on icon-only controls (`jsx-a11y` rules); visible focus and legible contrast in both themes are review items.
-- **Security**: store no sensitive data besides the session token; never rely on the UI for authorization.
+- **Security**: both tokens are HttpOnly cookies that JS never touches; never rely on the UI for authorization.
 - **Performance**: pages are lazy-loaded; long lists are paginated server-side.
 
 ### Testing
@@ -281,9 +293,25 @@ npm run dev        # http://localhost:5173 — proxies /api → http://localhost
 | `pnpm test` / `npm run test:watch`         | Vitest (single run / watch mode)                |
 | `pnpm run test:coverage`                   | Vitest with a V8 coverage report in `coverage/` |
 
-| Variable       | Description                       | Default |
-| -------------- | --------------------------------- | ------- |
-| `VITE_API_URL` | Base URL of the BFF / API Gateway | `/api`  |
+| Variable               | Description                                                                                                                                                                            | Default     |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `VITE_API_BASE_URL`    | Base URL of `pango-core` (no trailing slash). In development `/api`: Vite proxies it to `VITE_DEV_API_TARGET` (default `http://localhost:3000`) so the session cookies are same-origin | `/api`      |
+| `VITE_APP_BASE_DOMAIN` | Domain organizations hang from: `<subdomain>.<domain>`. Must equal `APP_BASE_DOMAIN` in core                                                                                           | `localhost` |
+| `VITE_DEV_TENANT`      | Pins the organization instead of reading it from the hostname (single-host dev, mock)                                                                                                  | _(empty)_   |
+| `VITE_USE_MOCK`        | `true` = in-browser mock backend instead of `pango-core`                                                                                                                               | `false`     |
+
+### Authentication and organizations
+
+The contract is `docs/auth.md` in `pango-core`. In short:
+
+- **Organization-first.** Every organization lives on its own subdomain (`mi-empresa.onpango.com`) and a session belongs to exactly one. The frontend reads the organization from the hostname (`core/tenant/tenant.ts`) and sends it as `X-Tenant`. On the main domain `/login` first asks for the workspace address and redirects there.
+- **Tokens.** Both tokens are **HttpOnly cookies** set by the API, one pair per organization: `pango_access_<subdomain>` (15 min, path `/`) and `pango_refresh_<subdomain>` (30 days, path `/auth`), `SameSite=Lax`. JavaScript never sees them and no response body carries a token, so nothing token-like is in memory or storage; the browser attaches them to every request made `withCredentials`. When the access cookie expires the browser stops sending it, the API answers 401 and the `http` client calls `POST /auth/refresh` (no body) and repeats the request once. On boot the session is first recognized with `GET /auth/me` (read-only, while the access cookie is alive) and only renewed with refresh if that fails. Refresh tokens rotate and reusing one ends every session, so concurrent refreshes share one request and tabs serialize through the Web Locks API. Because JS cannot tell whether the cookie exists, `localStorage` keeps a non-secret hint (`pango.session_until`: when the session ends) so first-time visitors do not trigger a pointless refresh. Cookies are sent automatically, so CSRF is the API's job (`SameSite=Lax` plus an `Origin` check on unsafe methods); a script injected into the page (XSS) cannot read the tokens but can still make requests as the user, so keep the CSP strict and never render untrusted HTML.
+- **Two clients.** `authHttp` (login, signup, refresh, logout, verify email, invitations: never refreshes on a 401) and `http` (everything else: renews the session and retries once on a 401). Both send credentials. All the auth calls live in `core/auth/auth.api.ts` and answer with domain types (`Session`, `SignupResult`…), never with the raw bodies.
+- **Errors** carry a stable `code`; `features/auth/lib/auth.errors.ts` maps them to Spanish copy.
+- **User management** (`features/users`, `/users`) follows `pango-core`'s model: people join through **invitations** (`POST /invitations`, resend = invite again, revoke = `DELETE`), not by being created, and a pending invitation is a row of the users table with the status _Invitado_; a user's name and email belong to their account and are not edited; roles are assignments `(role, warehouse)` (the Owner role applies to every warehouse), granted with `POST /users/:id/role-assignments` and removed with `DELETE …/:assignmentId`, and the API lets you grant only roles below your own on that warehouse; (de)activation is `POST /users/:id/(de)activate`. The role list comes from `GET /roles`, and `/roles-permissions` edits each role's permissions (`PATCH /roles/:id`); creating or deleting roles is not in the UI yet. There is no departments endpoint, so the department is read-only.
+- **Sign-up** (`/register`, main domain) creates the account and the organization; the owner must confirm the email (`/verify-email?token=`) before logging in. Invited users join from `/invitations/accept?token=` on the organization's subdomain.
+
+With `VITE_USE_MOCK=true` set `VITE_DEV_TENANT=pango`. Seed login: `carlosarango1107@outlook.com` / `Pango123*`; invitation link: `/invitations/accept?token=invite-demo`. The mock imitates the refresh cookie with a private cookie jar and "sends" confirmation emails to the browser console. The mock keeps a single role per user and ignores warehouse scoping.
 
 ## 11. Workflow (Git and CI)
 

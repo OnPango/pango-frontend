@@ -10,6 +10,8 @@ export interface FieldProps {
   hint?: string;
   error?: string;
   required?: boolean;
+  /** Shows "(opcional)" after the label. */
+  optional?: boolean;
   className?: string;
   children: ReactNode;
 }
@@ -23,6 +25,7 @@ export function Field({
   hint,
   error,
   required,
+  optional,
   className,
   children,
 }: FieldProps) {
@@ -36,6 +39,7 @@ export function Field({
               *
             </span>
           )}
+          {optional && <span className="ml-1 font-normal text-muted">(opcional)</span>}
         </label>
       )}
       {children}

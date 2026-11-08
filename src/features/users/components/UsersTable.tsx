@@ -1,9 +1,9 @@
 import { DataTable } from '@/shared/ui/components/DataTable';
-import type { ManagedUser } from '../types/users.types';
-import { getUsersTableColumns } from './usersTable.columns';
+import type { UserListItem } from '../types/users.types';
+import { getUsersTableColumns, type UsersTableActions } from './usersTable.columns';
 
-export interface UsersTableProps {
-  users: ManagedUser[];
+export interface UsersTableProps extends UsersTableActions {
+  items: UserListItem[];
   isLoading?: boolean;
   error?: string;
   emptyMessage?: string;
@@ -12,13 +12,10 @@ export interface UsersTableProps {
   totalItems: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onEdit: (user: ManagedUser) => void;
-  onToggleStatus: (user: ManagedUser) => void;
-  togglingUserId?: string | null;
 }
 
 export function UsersTable({
-  users,
+  items,
   isLoading = false,
   error,
   emptyMessage = 'No hay usuarios para mostrar.',
@@ -27,25 +24,17 @@ export function UsersTable({
   totalItems,
   onPageChange,
   onPageSizeChange,
-  onEdit,
-  onToggleStatus,
-  togglingUserId = null,
+  ...actions
 }: UsersTableProps) {
-  const columns = getUsersTableColumns({
-    onEdit,
-    onToggleStatus,
-    togglingUserId,
-  });
-
   return (
-    <DataTable<ManagedUser>
-      caption="Lista de usuarios registrados"
+    <DataTable<UserListItem>
+      caption="Usuarios e invitaciones de la organización"
       isLoading={isLoading}
       error={error}
       emptyMessage={emptyMessage}
-      getRowKey={(row) => row.id}
-      columns={columns}
-      rows={users}
+      getRowKey={(item) => item.id}
+      columns={getUsersTableColumns(actions)}
+      rows={items}
       pagination={{
         page,
         pageSize,

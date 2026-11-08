@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { User as SessionUser } from './user';
 
 /**
- * - `unknown`: app just loaded, the session cookie has not been checked yet (`GET /auth/me`).
+ * - `unknown`: app just loaded, the session cookie has not been exchanged yet.
  * - `authenticated` / `anonymous`: result of that check, of a login or of a logout.
  */
 export type AuthStatus = 'unknown' | 'authenticated' | 'anonymous';
@@ -17,8 +17,8 @@ interface AuthState {
 }
 
 /**
- * Not persisted on purpose: the session lives in an httpOnly cookie that JS cannot read,
- * so the backend (`GET /auth/me`) is the only source of truth after a reload.
+ * Not persisted on purpose: after a reload the session is rebuilt from the refresh cookie
+ * (`restoreSession`), so a stale copy of the user can never outlive the server's view of it.
  */
 export const useAuthStore = create<AuthState>()((set) => ({
   user: null,

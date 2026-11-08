@@ -2,6 +2,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import type { ReactNode } from 'react';
 import { FiAlertCircle, FiAlertTriangle, FiCheckCircle, FiInfo, FiX } from 'react-icons/fi';
 import { cn } from '@/shared/lib/cn';
+import { Button } from './Button';
 
 const alertStyles = cva('flex items-start gap-3 rounded-xl border px-4 py-3 text-sm', {
   variants: {
@@ -43,14 +44,14 @@ export function Alert({ tone = 'info', title, children, onDismiss, className }: 
         <div className={cn(title && 'mt-0.5', 'text-fg/90')}>{children}</div>
       </div>
       {onDismiss && (
-        <button
+        <Button
           type="button"
           onClick={onDismiss}
           aria-label="Cerrar aviso"
-          className="-m-1 grid size-6 shrink-0 cursor-pointer place-items-center rounded-full hover:bg-fg/10 focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-hidden"
+          className="-m-1 grid size-6 shrink-0 place-items-center rounded-full hover:bg-fg/10 focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-hidden"
         >
           <FiX className="size-4" />
-        </button>
+        </Button>
       )}
     </div>
   );

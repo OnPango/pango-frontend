@@ -1,36 +1,54 @@
-import axios from 'axios';
-import { env } from '@/core/config/env';
-import { useAuthStore } from '@/core/auth/auth.store';
+import { isAxiosError, type AxiosRequestConfig } from 'axios';
+import { createApiClient } from './client';
 
-export const http = axios.create({
-  baseURL: env.apiBaseUrl,
-  timeout: 15000,
-  // The session token is an httpOnly cookie set by the backend: the browser attaches it,
-  // JS never reads it. Cross-origin, the backend must answer with
-  // `Access-Control-Allow-Credentials: true` and an explicit `Access-Control-Allow-Origin`.
-  withCredentials: true,
-  // CSRF (double-submit cookie): if the backend sets a readable `XSRF-TOKEN` cookie,
-  // Axios echoes it in this header on every request.
-  xsrfCookieName: 'XSRF-TOKEN',
-  xsrfHeaderName: 'X-XSRF-TOKEN',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+/** Marks a request that was already retried after refreshing the session. */
+interface RetriableConfig extends AxiosRequestConfig {
+  _retried?: boolean;
+}
+
+/**
+ * What the client needs to know about the session. It is injected (`configureHttpAuth`) instead of
+ * imported, so this module knows nothing about how the session is stored or renewed: `core/auth`
+ * depends on `core/api`, never the other way around.
+ */
+export interface HttpAuthHooks {
+  /** Renews the session. Resolves `true` when it was renewed and the request can be repeated. */
+  refresh: () => Promise<boolean>;
+  /** The session could not be renewed: it is over. */
+  onSessionExpired: () => void;
+}
+
+let authHooks: HttpAuthHooks | null = null;
+
+/** Connects `http` to the session. Call it once at startup, before the first request. */
+export function configureHttpAuth(hooks: HttpAuthHooks): void {
+  authHooks = hooks;
+}
+
+/**
+ * Client for everything that needs a signed-in user. Authentication is the access cookie, which the
+ * browser attaches by itself. When the API answers 401 (the 15-minute access cookie expired and the
+ * browser stopped sending it) it renews the session once and repeats the request; if that fails the
+ * session is reported as over and the guards send the user to /login. Without `configureHttpAuth`
+ * it behaves like a plain client.
+ */
+export const http = createApiClient();
 
 http.interceptors.response.use(
   (response) => response,
-  (error) => {
-    // Expired or invalid cookie: drop the local session; the guards redirect to /login.
-    if (axios.isAxiosError(error) && error.response?.status === 401) {
-      useAuthStore.getState().clearSession();
+  async (error: unknown) => {
+    if (!authHooks || !isAxiosError(error) || error.response?.status !== 401 || !error.config) {
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
+    const config = error.config as RetriableConfig;
+    if (config._retried) return Promise.reject(error);
+
+    const renewed = await authHooks.refresh();
+    if (!renewed) {
+      authHooks.onSessionExpired();
+      return Promise.reject(error);
+    }
+    config._retried = true;
+    return http.request(config);
   },
 );
-
-export type ApiResponse<T> = {
-  data: T;
-  message?: string;
-  success?: boolean;
-};

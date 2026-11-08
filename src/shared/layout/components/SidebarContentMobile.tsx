@@ -4,6 +4,7 @@ import { useAuthStore } from '@/core/auth/auth.store';
 import { useLogout } from '@/core/auth/useLogout';
 import { cn } from '@/shared/lib/cn';
 import { useVisibleNav } from '../nav.context';
+import { Button } from '@/shared/ui/components/Button';
 import { Logo } from '@/shared/ui/Logo';
 
 interface SidebarContentMobileProps {
@@ -84,14 +85,15 @@ export function SidebarContentMobile({ onNavigate, headerAction }: SidebarConten
 
       <div className="shrink-0 space-y-3 px-6 pt-3 pb-6">
         {user?.name && <p className="truncate text-center text-sm text-muted">{user.name}</p>}
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="lg"
           onClick={logout}
-          disabled={isLoggingOut}
-          className="w-full rounded-2xl border border-line bg-surface/60 px-4 py-3 text-base font-medium text-fg transition-colors hover:bg-fg/5 focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-hidden"
+          isLoading={isLoggingOut}
+          className="w-full rounded-2xl bg-surface/60 font-medium"
         >
           Cerrar sesión
-        </button>
+        </Button>
       </div>
     </div>
   );

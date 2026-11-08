@@ -3,6 +3,7 @@ import { cn } from '@/shared/lib/cn';
 import { getPageItems, getPageRange } from '@/shared/ui/components/pagination/pagination.utils';
 import { Button } from '@/shared/ui/components/Button';
 import { Select } from '@/shared/ui/components/form/select/Select';
+import { FaAngleLeft, FaAngleRight } from 'react-icons/fa';
 
 export interface PaginationProps {
   /** Current page, 1-based. */
@@ -66,14 +67,14 @@ export function Pagination({
           </div>
         )}
 
-        <nav aria-label="Paginación" className="flex items-center gap-1">
+        <nav aria-label="Paginación" className="flex items-center gap-2">
           <Button
             variant="outline"
-            size="sm"
+            size="md"
             disabled={currentPage <= 1}
             onClick={() => onPageChange(currentPage - 1)}
           >
-            Anterior
+            <FaAngleLeft />
           </Button>
 
           {/* Small screens: a compact label instead of the numbered buttons */}
@@ -86,7 +87,7 @@ export function Pagination({
                   <Button
                     variant={item === currentPage ? 'primary' : 'ghost'}
                     size="sm"
-                    className="min-w-9"
+                    className=""
                     aria-label={`Página ${item}`}
                     aria-current={item === currentPage ? 'page' : undefined}
                     onClick={() => onPageChange(item)}
@@ -104,11 +105,11 @@ export function Pagination({
 
           <Button
             variant="outline"
-            size="sm"
+            size="md"
             disabled={currentPage >= totalPages}
             onClick={() => onPageChange(currentPage + 1)}
           >
-            Siguiente
+            <FaAngleRight />
           </Button>
         </nav>
       </div>

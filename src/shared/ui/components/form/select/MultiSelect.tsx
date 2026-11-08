@@ -7,6 +7,7 @@ export interface MultiSelectProps extends Pick<
   | 'hint'
   | 'error'
   | 'required'
+  | 'optional'
   | 'disabled'
   | 'size'
   | 'className'

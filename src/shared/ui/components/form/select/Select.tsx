@@ -7,6 +7,7 @@ export interface SelectProps extends Pick<
   | 'hint'
   | 'error'
   | 'required'
+  | 'optional'
   | 'disabled'
   | 'size'
   | 'className'

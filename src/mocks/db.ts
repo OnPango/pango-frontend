@@ -14,6 +14,23 @@ export interface RoleRow {
   permissions: Permission[];
 }
 
+export interface OrganizationRow {
+  id: string;
+  /** Legal name. */
+  name: string;
+  /** Subdomain (`<slug>.onpango.com`), unique. */
+  slug: string;
+  /** Unique across the platform when present. */
+  tax_id: string | null;
+  business_sector?: string;
+  team_size?: string;
+  product_count?: string;
+  country?: string;
+  city?: string;
+  contact_phone: string | null;
+  created_at: string;
+}
+
 export interface AreaRow {
   id: string;
   name: string;
@@ -27,7 +44,10 @@ export interface UserRow {
   password: string;
   role_id: string;
   area_id: string;
+  job_title?: string | null;
   organization_id: string;
+  /** Owners must confirm their email before logging in; seed users and invitees are verified. */
+  email_verified?: boolean;
   is_active: boolean;
   last_login_at: string | null;
   created_at: string;
@@ -37,9 +57,10 @@ export const MOCK_PASSWORD = 'Pango123*';
 
 // Bump the version when the shape or the permission codes of the seed data change: data saved by
 // an older version would otherwise be loaded as is (e.g. roles holding permissions that no longer exist).
-const USERS_STORAGE_KEY = 'pango_mock_db_users_v2';
+const USERS_STORAGE_KEY = 'pango_mock_db_users_v3';
 const ROLES_STORAGE_KEY = 'pango_mock_db_roles_v2';
 const AREAS_STORAGE_KEY = 'pango_mock_db_areas_v2';
+const ORGANIZATIONS_STORAGE_KEY = 'pango_mock_db_organizations_v3';
 
 function loadFromStorage<T>(key: string, fallback: T[]): T[] {
   if (typeof window === 'undefined' || !window.localStorage) return [...fallback];
@@ -61,6 +82,22 @@ function saveToStorage<T>(key: string, data: T[]): void {
     console.warn('[mock-db] Error guardando en localStorage:', err);
   }
 }
+
+const INITIAL_ORGANIZATIONS: OrganizationRow[] = [
+  {
+    id: 'org-pango',
+    name: 'Pango',
+    slug: 'pango',
+    tax_id: '900123456-7',
+    business_sector: 'TECHNOLOGY',
+    team_size: 'SIZE_6_20',
+    product_count: 'COUNT_101_500',
+    country: 'CO',
+    city: 'Barranquilla',
+    contact_phone: '+57 300 000 0000',
+    created_at: '2026-09-01T08:00:00Z',
+  },
+];
 
 const INITIAL_AREAS: AreaRow[] = [
   { id: 'area-admin', name: 'Administración' },
@@ -173,6 +210,10 @@ const INITIAL_USERS: UserRow[] = [
   },
 ];
 
+export const organizations: OrganizationRow[] = loadFromStorage(
+  ORGANIZATIONS_STORAGE_KEY,
+  INITIAL_ORGANIZATIONS,
+);
 export const areas: AreaRow[] = loadFromStorage(AREAS_STORAGE_KEY, INITIAL_AREAS);
 export const roles: RoleRow[] = loadFromStorage(ROLES_STORAGE_KEY, INITIAL_ROLES);
 export const users: UserRow[] = loadFromStorage(USERS_STORAGE_KEY, INITIAL_USERS);
@@ -185,6 +226,10 @@ export function persistRoles(): void {
   saveToStorage(ROLES_STORAGE_KEY, roles);
 }
 
+export function persistOrganizations(): void {
+  saveToStorage(ORGANIZATIONS_STORAGE_KEY, organizations);
+}
+
 export function persistAreas(): void {
   saveToStorage(AREAS_STORAGE_KEY, areas);
 }
@@ -194,6 +239,7 @@ export function resetMockDatabase(): void {
     localStorage.removeItem(USERS_STORAGE_KEY);
     localStorage.removeItem(ROLES_STORAGE_KEY);
     localStorage.removeItem(AREAS_STORAGE_KEY);
+    localStorage.removeItem(ORGANIZATIONS_STORAGE_KEY);
   }
   users.length = 0;
   users.push(...INITIAL_USERS);
@@ -201,6 +247,8 @@ export function resetMockDatabase(): void {
   roles.push(...INITIAL_ROLES);
   areas.length = 0;
   areas.push(...INITIAL_AREAS);
+  organizations.length = 0;
+  organizations.push(...INITIAL_ORGANIZATIONS);
 }
 
 export const findUserByEmail = (email: string) =>
@@ -210,4 +258,62 @@ export const findUserById = (id: string) => users.find((user) => user.id === id)
 
 export const findRoleById = (id: string) => roles.find((role) => role.id === id);
 
+/** Tax ids are compared ignoring case, dots, dashes and spaces: "900.123.456-7" is "9001234567". */
+const normalizeTaxId = (taxId: string) => taxId.replace(/[^a-z0-9]/gi, '').toLowerCase();
+
+export const findOrganizationByTaxId = (taxId: string) =>
+  organizations.find((org) => !!org.tax_id && normalizeTaxId(org.tax_id) === normalizeTaxId(taxId));
+
+export const findOrganizationBySlug = (slug: string) =>
+  organizations.find((org) => org.slug === slug);
+
+export const findOrganizationById = (id: string) => organizations.find((org) => org.id === id);
+
 export const findAreaById = (id: string) => areas.find((area) => area.id === id);
+
+/** An invitation sent by an administrator. In memory only: reloading the page restores the seed. */
+export interface InvitationRow {
+  token: string;
+  email: string;
+  organization_id: string;
+  role_id: string;
+  area_id: string;
+  invited_by: string;
+  expires_at: string;
+  used: boolean;
+}
+
+export const invitations: InvitationRow[] = [
+  {
+    token: 'invite-demo',
+    email: 'nuevo@pango.co',
+    organization_id: 'org-pango',
+    role_id: 'role-requester',
+    area_id: 'area-consultant',
+    invited_by: 'Carlos Arango',
+    expires_at: '2099-01-01T00:00:00Z',
+    used: false,
+  },
+];
+
+const VERIFICATION_STORAGE_KEY = 'pango_mock_verification_tokens_v1';
+
+/** Pending email confirmations: token → email. Persisted so a reload does not lose the link. */
+export function loadVerificationTokens(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(VERIFICATION_STORAGE_KEY) ?? '{}') as Record<
+      string,
+      string
+    >;
+  } catch {
+    return {};
+  }
+}
+
+export function saveVerificationTokens(tokens: Record<string, string>): void {
+  try {
+    localStorage.setItem(VERIFICATION_STORAGE_KEY, JSON.stringify(tokens));
+  } catch {
+    // Storage unavailable: the link only works until the page closes.
+  }
+}

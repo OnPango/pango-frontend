@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/index.css';
+import { bindHttpToSession } from './core/auth/http.binding.ts';
 import { env } from './core/config/env.ts';
 import { initTheme } from './core/theme/theme.store.ts';
 import { App } from './app/App.tsx';
@@ -13,6 +14,7 @@ async function enableMockingIfNeeded() {
 }
 
 initTheme();
+bindHttpToSession();
 
 void enableMockingIfNeeded().then(() => {
   createRoot(document.getElementById('root')!).render(

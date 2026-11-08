@@ -2,6 +2,7 @@ import { IoLogOut } from 'react-icons/io5';
 import { NavLink } from 'react-router-dom';
 import { useLogout } from '@/core/auth/useLogout';
 import { cn } from '@/shared/lib/cn';
+import { Button } from '@/shared/ui/components/Button';
 import { useVisibleNav } from '../nav.context';
 
 interface SidebarContentProps {
@@ -12,7 +13,7 @@ interface SidebarContentProps {
 }
 
 const footerButton =
-  'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-fg/80 transition hover:bg-sidebar-fg/10 hover:text-sidebar-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/60';
+  'w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm font-normal text-sidebar-fg/80 hover:bg-sidebar-fg/10 hover:text-sidebar-fg';
 
 export function SidebarContent({ isCollapsed, onNavigate }: SidebarContentProps) {
   const { logout, isLoggingOut } = useLogout();
@@ -73,8 +74,8 @@ export function SidebarContent({ isCollapsed, onNavigate }: SidebarContentProps)
       </nav>
 
       <div className="shrink-0 space-y-1 border-t border-sidebar-fg/10 p-3">
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           onClick={logout}
           disabled={isLoggingOut}
           title={isCollapsed ? 'Cerrar sesión' : undefined}
@@ -82,7 +83,7 @@ export function SidebarContent({ isCollapsed, onNavigate }: SidebarContentProps)
         >
           <IoLogOut aria-hidden className="size-5 shrink-0" />
           <span className={cn(hiddenWhenCollapsed)}>Cerrar sesión</span>
-        </button>
+        </Button>
       </div>
     </div>
   );

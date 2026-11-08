@@ -8,7 +8,12 @@ import {
 export interface MockRequest {
   method: string;
   path: string;
+  /** Path parameters (`:id`). */
   params: Record<string, string>;
+  /** Query string (`?token=…`). */
+  query: Record<string, string>;
+  /** Request headers, names lowercased. */
+  headers: Record<string, string>;
   body: unknown;
 }
 
@@ -18,6 +23,20 @@ export interface MockResponse {
 }
 
 export type MockHandler = (request: MockRequest) => MockResponse;
+
+/**
+ * Headers of the request being answered. Handlers are synchronous, so the adapter publishes them
+ * here for helpers (like the permission check) that are not handed the request.
+ */
+export const requestContext: { headers: Record<string, string> } = { headers: {} };
+
+function readHeaders(config: InternalAxiosRequestConfig): Record<string, string> {
+  const headers: Record<string, string> = {};
+  for (const [name, value] of Object.entries(config.headers.toJSON())) {
+    if (typeof value === 'string') headers[name.toLowerCase()] = value;
+  }
+  return headers;
+}
 
 /** Route table keyed by `"<METHOD> <path>"`, e.g. `"POST /auth/login"` or `"PUT /users/:id"`. */
 export type MockRoutes = Record<string, MockHandler>;
@@ -108,11 +127,21 @@ export function createMockAdapter(routes: MockRoutes): AxiosAdapter {
 
     await sleep(randomLatency());
 
+    const headers = readHeaders(config);
+    requestContext.headers = headers;
+
     const result: MockResponse = matched
       ? matched.handler({
           method,
           path,
           params: matched.params,
+          query: Object.fromEntries(
+            Object.entries((config.params ?? {}) as Record<string, unknown>).map(([k, v]) => [
+              k,
+              String(v),
+            ]),
+          ),
+          headers,
           body: parseBody(config.data),
         })
       : { status: 404, data: { message: `Mock: ${method} ${path} no está implementado.` } };

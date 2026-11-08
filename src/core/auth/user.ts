@@ -11,8 +11,8 @@ export type PermissionScope = 'ORGANIZATION' | 'WAREHOUSE';
  * coming from the API.
  */
 export const PERMISSION_SCOPES = {
-  'user.read': 'ORGANIZATION',
-  'user.manage': 'ORGANIZATION',
+  'user.read': 'WAREHOUSE',
+  'user.manage': 'WAREHOUSE',
   'role.read': 'ORGANIZATION',
   'role.manage': 'ORGANIZATION',
   'department.manage': 'ORGANIZATION',
@@ -47,12 +47,27 @@ export type Permission = keyof typeof PERMISSION_SCOPES;
 
 export const PERMISSIONS = Object.keys(PERMISSION_SCOPES) as Permission[];
 
+/** A role granted to the user, on one warehouse or on all of them (`warehouse` null). */
+export type RoleGrant = {
+  id: string;
+  name: string;
+  isSystem: boolean;
+  warehouse: { id: string; name: string } | null;
+  permissions: Permission[];
+};
+
+/** The signed-in person inside the organization the session belongs to. */
 export type User = {
+  /** Id of the user inside the organization (not the account id). */
   id: string;
   name: string;
   email: string;
-  roleName: string;
-  areaId: string;
-  organizationId: string;
+  jobTitle: string | null;
+  organization: { id: string; subdomain: string; legalName: string };
+  roles: RoleGrant[];
+  /**
+   * Union of the permissions of every role, whatever its warehouse. Only for showing or hiding UI:
+   * the backend decides, per warehouse, what is actually allowed.
+   */
   permissions: Permission[];
 };
