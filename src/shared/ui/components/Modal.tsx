@@ -60,7 +60,7 @@ export function Modal({
         if (e.target === e.currentTarget && dismissible) onClose();
       }}
       className={cn(
-        'm-auto w-[calc(100%-2rem)] overflow-hidden rounded-3xl border border-line2 bg-surface p-0 text-fg shadow-2xl backdrop:bg-fg/40 backdrop:backdrop-blur-xs',
+        'm-auto w-[calc(100%-2rem)] overflow-hidden rounded-3xl border border-line2 bg-surface p-0 text-fg shadow-2xl backdrop:backdrop-blur-lg',
         WIDTHS[size],
       )}
     >

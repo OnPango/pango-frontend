@@ -2,7 +2,6 @@ import { PERMISSIONS, type Permission } from '@/core/auth/user';
 import {
   areas,
   findAreaById,
-  findOrganizationById,
   findRoleById,
   findUserByEmail,
   invitations,
@@ -330,19 +329,5 @@ export const usersRoutes: MockRoutes = {
     if (index === -1) return error(404, 'INVITATION_NOT_FOUND', 'Invitation not found');
     invitations.splice(index, 1);
     return { status: 204 };
-  },
-
-  // ---- WAREHOUSES ----
-  'GET /warehouses': () => {
-    const auth = authorize('warehouse.read', 'warehouse.manage', 'user.manage');
-    if (auth.error) return auth.error;
-    const organization = findOrganizationById(auth.user.organization_id);
-    return {
-      status: 200,
-      data: [
-        { id: 1, name: `${organization?.name ?? 'Principal'} · Central`, isActive: true },
-        { id: 2, name: `${organization?.name ?? 'Principal'} · Norte`, isActive: true },
-      ],
-    };
   },
 };
