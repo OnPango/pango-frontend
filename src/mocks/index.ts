@@ -1,6 +1,7 @@
 import { authHttp } from '@/core/api/authHttp';
 import { http } from '@/core/api/http';
 import { authRoutes } from './handlers/auth.handlers';
+import { catalogRoutes } from './handlers/catalog.handlers';
 import { usersRoutes } from './handlers/users.handlers';
 import { createMockAdapter } from './server';
 
@@ -15,6 +16,7 @@ export function enableMocking(): void {
   const adapter = createMockAdapter({
     ...authRoutes,
     ...usersRoutes,
+    ...catalogRoutes,
   });
   http.defaults.adapter = adapter;
   authHttp.defaults.adapter = adapter;
