@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Controller } from 'react-hook-form';
+import { FiLock } from 'react-icons/fi';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Button } from '@/shared/ui/components/Button';
 import { FormSelect } from '@/shared/ui/components/form/FormSelect';
@@ -7,6 +8,7 @@ import { RadioGroup } from '@/shared/ui/components/form/RadioGroup';
 import { TextArea } from '@/shared/ui/components/form/TextArea';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { Modal } from '@/shared/ui/components/Modal';
+import { useProduct } from '../api/products.queries';
 import { toCategorySelectOptions, unitLabel } from '../content/catalog.labels';
 import { useProductForm } from '../hooks/useProductForm';
 import { useVolumeCalculation } from '../hooks/useVolumeCalculation';
@@ -14,10 +16,12 @@ import type { ProductFormValues } from '../types/product.schema';
 import type { Product, ProductCategory, UnitOfMeasure } from '../types/products.types';
 import { NewCategoryInline } from './NewCategoryInline';
 
-interface NewProductModalProps {
+interface ProductFormModalProps {
   isOpen: boolean;
+  /** The product to edit. Without it, the form registers a new one. */
+  product?: Product | null;
   onClose: () => void;
-  onCreated: (product: Product) => void;
+  onSaved: (product: Product) => void;
   categories: ProductCategory[];
   units: UnitOfMeasure[];
   /** With `category.manage` the form can create a family on the spot. */
@@ -48,28 +52,56 @@ const MEASURES: { name: keyof ProductFormValues; label: string; unit: string }[]
 
 const FORM_ID = 'product-form';
 
-function NewProductModalContent({
+/**
+ * Whether the code and the tracking of the product being edited can still change: they lock once
+ * it has movements, and only `GET /products/:id` says so. Until it answers, they stay locked.
+ */
+function useLock(product: Product | undefined) {
+  const detail = useProduct(product?.id ?? null);
+  if (!product) return { locked: false, hasMovements: false, reason: null };
+  if (detail.data) {
+    return {
+      locked: detail.data.hasMovements,
+      hasMovements: detail.data.hasMovements,
+      reason: detail.data.hasMovements
+        ? 'Ya no se puede cambiar: el producto tiene movimientos.'
+        : null,
+    };
+  }
+  return {
+    locked: true,
+    hasMovements: false,
+    reason: detail.isError
+      ? 'No se pudo comprobar si el producto tiene movimientos; por ahora no se puede cambiar.'
+      : 'Comprobando si el producto tiene movimientos…',
+  };
+}
+
+function ProductFormContent({
+  product,
   onClose,
-  onCreated,
+  onSaved,
   categories,
   units,
   canCreateCategory,
-}: Omit<NewProductModalProps, 'isOpen'>) {
-  const { form, submit, isSubmitting, serverError } = useProductForm(onCreated);
+}: Omit<ProductFormModalProps, 'isOpen' | 'product'> & { product?: Product }) {
+  const isEdit = product !== undefined;
+  const { form, submit, isSubmitting, serverError } = useProductForm({ product, onSaved });
   const {
     register,
     control,
     setValue,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = form;
+  const lock = useLock(product);
 
   const { suggestedVolume, onVolumeChange, applySuggestedVolume, canApplySuggested } =
     useVolumeCalculation(form);
 
   // A product needs an active family; inactive ones only keep the products they already had.
   const categoryOptions = useMemo(
-    () => toCategorySelectOptions(categories, { onlyActive: true }),
-    [categories],
+    () => toCategorySelectOptions(categories, { onlyActive: true, keepId: product?.category.id }),
+    [categories, product?.category.id],
   );
 
   const unitOptions = units.map((unit) => ({
@@ -80,8 +112,12 @@ function NewProductModalContent({
 
   return (
     <Modal
-      title="Nuevo producto"
-      description="Completa lo básico. Lo demás lo puedes ajustar después."
+      title={isEdit ? 'Editar producto' : 'Nuevo producto'}
+      description={
+        isEdit
+          ? `${product.name} · ${product.sku}`
+          : 'Completa lo básico. Lo demás lo puedes ajustar después.'
+      }
       size="lg"
       onClose={onClose}
       dismissible={!isSubmitting}
@@ -90,8 +126,15 @@ function NewProductModalContent({
           <Button variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
             Cancelar
           </Button>
-          <Button type="submit" form={FORM_ID} variant="primary" size="sm" isLoading={isSubmitting}>
-            Guardar producto
+          <Button
+            type="submit"
+            form={FORM_ID}
+            variant="primary"
+            size="sm"
+            isLoading={isSubmitting}
+            disabled={isEdit && !isDirty}
+          >
+            {isEdit ? 'Guardar cambios' : 'Guardar producto'}
           </Button>
         </>
       }
@@ -116,7 +159,14 @@ function NewProductModalContent({
             required
             maxLength={40}
             placeholder="Ej. TOR-001"
-            hint="Único en la organización. Puedes cambiarlo hasta que el producto tenga movimientos."
+            readOnly={lock.locked}
+            trailing={
+              lock.locked ? <FiLock aria-hidden className="size-4 text-muted" /> : undefined
+            }
+            hint={
+              lock.reason ??
+              'Único en la organización. Puedes cambiarlo hasta que el producto tenga movimientos.'
+            }
             error={errors.sku?.message}
             {...register('sku')}
           />
@@ -138,7 +188,7 @@ function NewProductModalContent({
               {canCreateCategory && (
                 <NewCategoryInline
                   onCreated={(category) =>
-                    setValue('categoryId', category.id, { shouldValidate: true })
+                    setValue('categoryId', category.id, { shouldValidate: true, shouldDirty: true })
                   }
                 />
               )}
@@ -149,7 +199,11 @@ function NewProductModalContent({
               label="Unidad de medida"
               required
               placeholder="Elige una unidad"
-              hint="En ella se cuentan la existencia, los movimientos y las solicitudes."
+              hint={
+                lock.hasMovements
+                  ? 'Tiene movimientos: cambiarla no convierte las cantidades ya registradas.'
+                  : 'En ella se cuentan la existencia, los movimientos y las solicitudes.'
+              }
               options={unitOptions}
               searchable
               searchPlaceholder="Buscar unidad…"
@@ -179,12 +233,20 @@ function NewProductModalContent({
                 options={TRACKING_OPTIONS}
                 value={field.value}
                 onChange={field.onChange}
+                disabled={lock.locked}
               />
             )}
           />
-          <p className="text-xs text-muted">
-            El seguimiento no se puede cambiar cuando el producto ya tiene movimientos.
-          </p>
+          {errors.tracking?.message ? (
+            <p role="alert" className="text-xs text-danger">
+              {errors.tracking.message}
+            </p>
+          ) : (
+            <p className="text-xs text-muted">
+              {lock.reason ??
+                'El seguimiento no se puede cambiar cuando el producto ya tiene movimientos.'}
+            </p>
+          )}
         </section>
 
         <section aria-labelledby="product-measures" className="space-y-3">
@@ -208,7 +270,7 @@ function NewProductModalContent({
                     error={errors[measure.name]?.message}
                     {...registerProps}
                     onChange={(e) => {
-                      registerProps.onChange(e);
+                      void registerProps.onChange(e);
                       if (isVolume) onVolumeChange(e.target.value);
                     }}
                   />
@@ -228,16 +290,21 @@ function NewProductModalContent({
           </div>
         </section>
 
-        <p className="rounded-xl bg-primary/5 px-4 py-3 text-xs text-muted">
-          El producto empieza sin existencia. La existencia inicial se carga con una entrada de
-          inventario.
-        </p>
+        {!isEdit && (
+          <p className="rounded-xl bg-primary/5 px-4 py-3 text-xs text-muted">
+            El producto empieza sin existencia. La existencia inicial se carga con una entrada de
+            inventario.
+          </p>
+        )}
       </form>
     </Modal>
   );
 }
 
-export function NewProductModal({ isOpen, ...props }: NewProductModalProps) {
+/** "Nuevo producto" and "Editar producto": the same form, filled with `product` when editing. */
+export function ProductFormModal({ isOpen, product, ...props }: ProductFormModalProps) {
   if (!isOpen) return null;
-  return <NewProductModalContent {...props} />;
+  return (
+    <ProductFormContent key={product?.id ?? 'new'} product={product ?? undefined} {...props} />
+  );
 }

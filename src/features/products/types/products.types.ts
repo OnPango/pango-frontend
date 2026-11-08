@@ -35,6 +35,14 @@ export interface Product {
   createdAt: string;
 }
 
+/** `GET /products/:id`: the product plus what decides which fields can still change. */
+export interface ProductDetail extends Product {
+  /** Once true, the code and the tracking can no longer change. */
+  hasMovements: boolean;
+  /** On-hand quantity across every warehouse, in the product's unit. */
+  totalOnHand: number;
+}
+
 export type ProductStatusFilter = 'active' | 'inactive' | 'all';
 
 export interface ProductFilters {
@@ -67,6 +75,9 @@ export interface CreateProductInput {
   volumeL: number | null;
   tracksLots: boolean;
 }
+
+/** `PATCH /products/:id`: only the fields that changed; `null` clears a measure. */
+export type UpdateProductInput = Partial<CreateProductInput>;
 
 export interface CreateCategoryInput {
   name: string;

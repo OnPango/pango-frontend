@@ -4,18 +4,28 @@ import type {
   CreateProductInput,
   Product,
   ProductCategory,
+  ProductDetail,
   ProductFilters,
   ProductPage,
   UnitOfMeasure,
+  UpdateProductInput,
 } from '../types/products.types';
-import type { CategoryDto, ProductDto, ProductPageDto, UnitOfMeasureDto } from './products.dto';
+import type {
+  CategoryDto,
+  ProductDetailDto,
+  ProductDto,
+  ProductPageDto,
+  UnitOfMeasureDto,
+} from './products.dto';
 import {
   toCreateCategoryDto,
   toCreateProductDto,
   toListProductsQuery,
   toProduct,
   toProductCategory,
+  toProductDetail,
   toUnitOfMeasure,
+  toUpdateProductDto,
 } from './products.mappers';
 
 /**
@@ -36,6 +46,18 @@ export async function getProducts(filters: ProductFilters): Promise<ProductPage>
 /** `POST /products`: the product starts with no stock; stock arrives with an inbound movement. */
 export async function createProduct(input: CreateProductInput): Promise<Product> {
   const { data } = await http.post<ProductDto>('/products', toCreateProductDto(input));
+  return toProduct(data);
+}
+
+/** `GET /products/:id`: includes whether the code and the tracking are locked. */
+export async function getProduct(id: string): Promise<ProductDetail> {
+  const { data } = await http.get<ProductDetailDto>(`/products/${id}`);
+  return toProductDetail(data);
+}
+
+/** `PATCH /products/:id`: sends only the changed fields. */
+export async function updateProduct(id: string, input: UpdateProductInput): Promise<Product> {
+  const { data } = await http.patch<ProductDto>(`/products/${id}`, toUpdateProductDto(input));
   return toProduct(data);
 }
 

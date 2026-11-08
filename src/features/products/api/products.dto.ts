@@ -42,6 +42,23 @@ export interface ProductDto {
   updatedAt: string;
 }
 
+/** Per enabled warehouse in `GET /products/:id`. */
+export interface WarehouseStockDto {
+  warehouse: { id: number; name: string };
+  onHand: number;
+  safetyStock: number;
+  reorderPoint: number;
+  valueSource: 'MANUAL' | 'CALCULATED';
+}
+
+/** `GET /products/:id` */
+export interface ProductDetailDto extends ProductDto {
+  totalOnHand: number;
+  warehouses: WarehouseStockDto[];
+  /** true: the code and lot tracking can no longer change. */
+  hasMovements: boolean;
+}
+
 /** `GET /products` */
 export interface ProductPageDto {
   items: ProductDto[];
@@ -75,6 +92,9 @@ export interface CreateProductDto {
   volumeL?: number | null;
   tracksLots?: boolean;
 }
+
+/** `PATCH /products/:id`: any field of the create body, plus `isActive`. */
+export type UpdateProductDto = Partial<CreateProductDto> & { isActive?: boolean };
 
 /** `POST /categories` */
 export interface CreateCategoryDto {

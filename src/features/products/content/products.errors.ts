@@ -3,6 +3,10 @@ import { getApiErrorCode, getApiErrorMessage } from '@/core/api/errors';
 /** Spanish text for the stable error codes of the catalog endpoints. */
 const MESSAGES: Record<string, string> = {
   SKU_TAKEN: 'Ya existe un producto con ese código.',
+  SKU_LOCKED: 'El código ya no se puede cambiar: el producto tiene movimientos.',
+  TRACKS_LOTS_LOCKED:
+    'El seguimiento ya no se puede cambiar: el producto tiene movimientos o lotes.',
+  PRODUCT_NOT_FOUND: 'El producto ya no existe.',
   CATEGORY_INVALID: 'La familia elegida no existe o está inactiva.',
   STOCK_UNIT_INVALID: 'La unidad de medida elegida no existe.',
   CATEGORY_NAME_TAKEN: 'Ya existe una familia con ese nombre.',

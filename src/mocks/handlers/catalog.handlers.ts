@@ -114,6 +114,15 @@ const products: ProductRow[] = [
   product(9, 'PRD-090', 'Pintura antigua', 1, { stockUnitId: 4, isActive: false }),
 ];
 
+/**
+ * On-hand stock of the seed products that already have movements: their code and tracking are
+ * locked. Movements are not simulated here, so nothing else changes these numbers.
+ */
+const STOCK_FROM_MOVEMENTS = new Map<number, number>([
+  [1, 1200],
+  [3, 85],
+]);
+
 const nextId = (rows: { id: number }[]) => rows.reduce((max, row) => Math.max(max, row.id), 0) + 1;
 
 const findUnit = (id: number) => units.find((unit) => unit.id === id);
@@ -173,13 +182,24 @@ function toProductDto(row: ProductRow) {
   };
 }
 
+const findProduct = (organizationId: string, id: string) =>
+  products.find((row) => row.organizationId === organizationId && row.id === Number(id));
+
+const toProductDetailDto = (row: ProductRow) => ({
+  ...toProductDto(row),
+  totalOnHand: STOCK_FROM_MOVEMENTS.get(row.id) ?? 0,
+  warehouses: [],
+  hasMovements: STOCK_FROM_MOVEMENTS.has(row.id),
+});
+
 const MEASURES = ['lengthCm', 'widthCm', 'heightCm', 'weightKg', 'volumeL'] as const;
 
 /** The checks class-validator makes on `CreateProductDto`, with its message style. */
-function validateProduct(body: Record<string, unknown>): string[] {
+function validateProduct(body: Record<string, unknown>, partial = false): string[] {
   const problems: string[] = [];
   const text = (field: string, max: number) => {
     const value = body[field];
+    if (partial && value === undefined) return;
     if (typeof value !== 'string' || value.trim() === '')
       problems.push(`${field} should not be empty`);
     else if (value.trim().length > max)
@@ -188,6 +208,7 @@ function validateProduct(body: Record<string, unknown>): string[] {
   text('sku', 40);
   text('name', 150);
   for (const field of ['categoryId', 'stockUnitId']) {
+    if (partial && body[field] === undefined) continue;
     if (!Number.isInteger(body[field]) || (body[field] as number) < 1) {
       problems.push(`${field} must be an integer number`);
     }
@@ -332,5 +353,69 @@ export const catalogRoutes: MockRoutes = {
     };
     products.push(row);
     return { status: 201, data: toProductDto(row) };
+  },
+
+  'GET /products/:id': ({ params }) => {
+    const auth = authorize('catalog.read');
+    if (auth.error) return auth.error;
+    const row = findProduct(auth.user.organization_id, params.id);
+    if (!row) return error(404, 'PRODUCT_NOT_FOUND', 'Product not found');
+    return { status: 200, data: toProductDetailDto(row) };
+  },
+
+  'PATCH /products/:id': ({ params, body }) => {
+    const auth = authorize('product.manage');
+    if (auth.error) return auth.error;
+    const organizationId = auth.user.organization_id;
+    const row = findProduct(organizationId, params.id);
+    if (!row) return error(404, 'PRODUCT_NOT_FOUND', 'Product not found');
+    const input = (body ?? {}) as Record<string, unknown>;
+    const problems = validateProduct(input, true);
+    if (problems.length > 0) return error(400, 'VALIDATION', problems.join(', '));
+    const locked = STOCK_FROM_MOVEMENTS.has(row.id);
+
+    const sku = typeof input.sku === 'string' ? input.sku.trim() : undefined;
+    if (sku !== undefined && sku !== row.sku) {
+      if (locked)
+        return error(409, 'SKU_LOCKED', 'The code of a product with movements cannot be changed');
+      const taken = products.some(
+        (other) =>
+          other.organizationId === organizationId &&
+          other.id !== row.id &&
+          other.sku.toLowerCase() === sku.toLowerCase(),
+      );
+      if (taken) return error(409, 'SKU_TAKEN', 'Another product already uses this code');
+    }
+    if (typeof input.tracksLots === 'boolean' && input.tracksLots !== row.tracksLots && locked) {
+      return error(
+        409,
+        'TRACKS_LOTS_LOCKED',
+        'Lot tracking cannot be changed once the product has movements or lots',
+      );
+    }
+    if (input.categoryId !== undefined && input.categoryId !== row.categoryId) {
+      if (!findCategory(organizationId, input.categoryId as number)?.isActive) {
+        return error(400, 'CATEGORY_INVALID', 'Category not found or inactive');
+      }
+    }
+    if (input.stockUnitId !== undefined && !findUnit(input.stockUnitId as number)) {
+      return error(400, 'STOCK_UNIT_INVALID', 'Unit of measure not found');
+    }
+
+    if (sku !== undefined) row.sku = sku;
+    if (typeof input.name === 'string') row.name = input.name.trim();
+    if (input.description !== undefined) {
+      row.description =
+        typeof input.description === 'string' ? input.description.trim() || null : null;
+    }
+    if (input.categoryId !== undefined) row.categoryId = input.categoryId as number;
+    if (input.stockUnitId !== undefined) row.stockUnitId = input.stockUnitId as number;
+    for (const field of MEASURES) {
+      if (input[field] !== undefined) row[field] = input[field] as number | null;
+    }
+    if (typeof input.tracksLots === 'boolean') row.tracksLots = input.tracksLots;
+    if (typeof input.isActive === 'boolean') row.isActive = input.isActive;
+    row.updatedAt = new Date().toISOString();
+    return { status: 200, data: toProductDto(row) };
   },
 };

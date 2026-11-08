@@ -3,9 +3,11 @@ import type {
   CreateProductInput,
   Product,
   ProductCategory,
+  ProductDetail,
   ProductFilters,
   ProductStatusFilter,
   UnitOfMeasure,
+  UpdateProductInput,
 } from '../types/products.types';
 import type {
   CatalogStatusFilterDto,
@@ -13,8 +15,10 @@ import type {
   CreateCategoryDto,
   CreateProductDto,
   ListProductsQueryDto,
+  ProductDetailDto,
   ProductDto,
   UnitOfMeasureDto,
+  UpdateProductDto,
 } from './products.dto';
 
 // ---- Responses → domain ----
@@ -50,6 +54,12 @@ export const toProduct = (dto: ProductDto): Product => ({
   createdAt: dto.createdAt,
 });
 
+export const toProductDetail = (dto: ProductDetailDto): ProductDetail => ({
+  ...toProduct(dto),
+  hasMovements: dto.hasMovements,
+  totalOnHand: dto.totalOnHand,
+});
+
 // ---- Domain → requests ----
 
 const STATUS_DTO: Record<ProductStatusFilter, CatalogStatusFilterDto> = {
@@ -83,3 +93,18 @@ export const toCreateProductDto = (input: CreateProductInput): CreateProductDto 
 export const toCreateCategoryDto = (input: CreateCategoryInput): CreateCategoryDto => ({
   name: input.name.trim(),
 });
+
+/** Only the fields present in `input`, so the API leaves the others untouched. */
+export function toUpdateProductDto(input: UpdateProductInput): UpdateProductDto {
+  const dto: UpdateProductDto = {};
+  if (input.sku !== undefined) dto.sku = input.sku.trim();
+  if (input.name !== undefined) dto.name = input.name.trim();
+  if (input.description !== undefined) dto.description = input.description?.trim() || null;
+  if (input.categoryId !== undefined) dto.categoryId = Number(input.categoryId);
+  if (input.stockUnitId !== undefined) dto.stockUnitId = Number(input.stockUnitId);
+  for (const field of ['lengthCm', 'widthCm', 'heightCm', 'weightKg', 'volumeL'] as const) {
+    if (input[field] !== undefined) dto[field] = input[field];
+  }
+  if (input.tracksLots !== undefined) dto.tracksLots = input.tracksLots;
+  return dto;
+}

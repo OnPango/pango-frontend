@@ -66,9 +66,10 @@ export function NewCategoryInline({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-line2 bg-canvas p-3 sm:flex-row sm:items-start">
+    <div className="flex flex-col gap-3 rounded-xl border border-line2 bg-canvas p-3">
       <TextBox
-        aria-label="Nombre de la nueva familia"
+        label="Nombre de la nueva familia"
+        hint="Se crea como familia principal y queda elegida para este producto."
         placeholder="Ej. Ferretería"
         value={name}
         maxLength={80}
@@ -83,14 +84,13 @@ export function NewCategoryInline({
         }}
         error={error ?? undefined}
         size="sm"
-        containerClassName="flex-1"
       />
-      <div className="flex gap-2">
-        <Button variant="primary" size="sm" onClick={create} isLoading={createCategory.isPending}>
-          Crear
-        </Button>
+      <div className="flex justify-end gap-2">
         <Button variant="ghost" size="sm" onClick={close} disabled={createCategory.isPending}>
           Cancelar
+        </Button>
+        <Button variant="primary" size="sm" onClick={create} isLoading={createCategory.isPending}>
+          Crear familia
         </Button>
       </div>
     </div>

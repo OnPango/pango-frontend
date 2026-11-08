@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useWatch, type UseFormReturn } from 'react-hook-form';
 import { MAX_VOLUME_L, toMeasure, type ProductFormValues } from '../types/product.schema';
 
@@ -25,7 +25,8 @@ export function calculateVolumeL(
 /**
  * Fills the volume from the three sides while the user has not typed one. Typing a volume keeps
  * it; clearing the field hands it back to the sides, which refill it on their next change (or
- * right away with `applySuggestedVolume`).
+ * right away with `applySuggestedVolume`). Opening a saved product changes nothing: a stored
+ * volume that differs from the sides counts as typed by hand.
  */
 export function useVolumeCalculation(form: UseFormReturn<ProductFormValues>) {
   const { control, getValues, setValue } = form;
@@ -34,12 +35,23 @@ export function useVolumeCalculation(form: UseFormReturn<ProductFormValues>) {
   const heightCm = useWatch({ control, name: 'heightCm' });
   const volumeL = useWatch({ control, name: 'volumeL' });
 
-  const editedByHand = useRef(false);
-
   const suggestedVolume = calculateVolumeL(lengthCm, widthCm, heightCm);
 
+  const [initial] = useState(() => {
+    const volume = getValues('volumeL');
+    return {
+      suggestion: suggestedVolume,
+      byHand: volume.trim() !== '' && toMeasure(volume) !== toMeasure(suggestedVolume ?? ''),
+    };
+  });
+  const editedByHand = useRef(initial.byHand);
+  const lastSuggestion = useRef(initial.suggestion);
+
   // While automatic, the volume follows the sides, and is emptied when they no longer give one.
+  // Only a change of the sides moves it, never the first render.
   useEffect(() => {
+    if (lastSuggestion.current === suggestedVolume) return;
+    lastSuggestion.current = suggestedVolume;
     if (editedByHand.current) return;
     const next = suggestedVolume ?? '';
     if (getValues('volumeL') !== next) {

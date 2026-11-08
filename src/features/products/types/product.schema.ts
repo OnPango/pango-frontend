@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Product } from './products.types';
 
 /** Optional non-negative number typed by hand: a comma works as decimal separator. */
 const measure = (decimals: number, max: number) =>
@@ -54,3 +55,21 @@ export const EMPTY_PRODUCT_FORM: ProductFormValues = {
 /** A validated measure as the API wants it: a number, or null when left empty. */
 export const toMeasure = (value: string): number | null =>
   value.trim() === '' ? null : Number(value.trim().replace(',', '.'));
+
+/** A saved product as the form shows it, to edit it. */
+export function toProductFormValues(product: Product): ProductFormValues {
+  const text = (value: number | null) => (value === null ? '' : String(value));
+  return {
+    name: product.name,
+    sku: product.sku,
+    categoryId: product.category.id,
+    stockUnitId: product.stockUnit.id,
+    description: product.description ?? '',
+    tracking: product.tracksLots ? 'lot' : 'quantity',
+    lengthCm: text(product.lengthCm),
+    widthCm: text(product.widthCm),
+    heightCm: text(product.heightCm),
+    weightKg: text(product.weightKg),
+    volumeL: text(product.volumeL),
+  };
+}

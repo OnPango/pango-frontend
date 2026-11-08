@@ -41,6 +41,8 @@ export interface CategorySelectOptionConfig {
   allOption?: { value: string; label: string };
   /** Only include active categories (e.g. for creating products). Default: false. */
   onlyActive?: boolean;
+  /** Kept even if inactive: the family a product being edited already has. */
+  keepId?: string;
 }
 
 /** Formats categories as select options sorted alphabetically, displaying hierarchical paths. */
@@ -50,7 +52,7 @@ export function toCategorySelectOptions(
 ): SelectOption[] {
   const paths = categoryPaths(categories);
   const filtered = config.onlyActive
-    ? categories.filter((category) => category.isActive)
+    ? categories.filter((category) => category.isActive || category.id === config.keepId)
     : categories;
 
   const options: SelectOption[] = filtered

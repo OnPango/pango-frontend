@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FiPlus, FiSearch } from 'react-icons/fi';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
@@ -8,7 +8,7 @@ import type { SelectOption } from '@/shared/ui/components/form/select/select.typ
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { useCategories, useProducts, useUnitsOfMeasure } from '../api/products.queries';
-import { NewProductModal } from '../components/NewProductModal';
+import { ProductFormModal } from '../components/ProductFormModal';
 import { ProductsTable } from '../components/ProductsTable';
 import { toCategorySelectOptions } from '../content/catalog.labels';
 import { productsErrorMessage } from '../content/products.errors';
@@ -42,6 +42,7 @@ export default function ProductPage() {
   } = useProductFilters();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<Product | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const { data, isLoading, isFetching, error } = useProducts(filters);
@@ -56,10 +57,20 @@ export default function ProductPage() {
     [categories],
   );
 
-  const handleCreated = (product: Product) => {
+  const handleSaved = (product: Product) => {
+    setNotice(
+      editing
+        ? `Cambios guardados en «${product.name}».`
+        : `Producto «${product.name}» registrado.`,
+    );
     setIsCreateOpen(false);
-    setNotice(`Producto «${product.name}» registrado.`);
+    setEditing(null);
   };
+
+  const handleEdit = useCallback((product: Product) => {
+    setNotice(null);
+    setEditing(product);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -136,6 +147,7 @@ export default function ProductPage() {
         totalItems={data?.total ?? 0}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
+        onEdit={canManage ? handleEdit : undefined}
       />
       {isFetching && !isLoading && (
         <p role="status" className="sr-only">
@@ -143,10 +155,14 @@ export default function ProductPage() {
         </p>
       )}
 
-      <NewProductModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onCreated={handleCreated}
+      <ProductFormModal
+        isOpen={isCreateOpen || editing !== null}
+        product={editing}
+        onClose={() => {
+          setIsCreateOpen(false);
+          setEditing(null);
+        }}
+        onSaved={handleSaved}
         categories={categories}
         units={units}
         canCreateCategory={canManageCategories}
