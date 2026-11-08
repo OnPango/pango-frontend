@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Controller } from 'react-hook-form';
 import { FiLock } from 'react-icons/fi';
+import { unitLabel } from '@/shared/lib/units';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Button } from '@/shared/ui/components/Button';
 import { FormSelect } from '@/shared/ui/components/form/FormSelect';
@@ -9,7 +10,7 @@ import { TextArea } from '@/shared/ui/components/form/TextArea';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { Modal } from '@/shared/ui/components/Modal';
 import { useProduct } from '../api/products.queries';
-import { toCategorySelectOptions, unitLabel } from '../content/catalog.labels';
+import { toCategorySelectOptions } from '../content/catalog.labels';
 import { useProductForm } from '../hooks/useProductForm';
 import { useVolumeCalculation } from '../hooks/useVolumeCalculation';
 import type { ProductFormValues } from '../types/product.schema';

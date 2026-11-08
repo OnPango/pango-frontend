@@ -8,9 +8,10 @@ import type { SelectOption } from '@/shared/ui/components/form/select/select.typ
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { useCatalog, useCategories, useUnitsOfMeasure } from '../api/products.queries';
+import { ProductDetailPanel } from '../components/ProductDetailPanel';
 import { ProductFormModal } from '../components/ProductFormModal';
 import { ProductsTable } from '../components/ProductsTable';
-import { toCategorySelectOptions } from '../content/catalog.labels';
+import { categoryPaths, toCategorySelectOptions } from '../content/catalog.labels';
 import { productsErrorMessage } from '../content/products.errors';
 import { filterProducts } from '../content/productSearch';
 import { ALL_CATEGORIES, useProductFilters } from '../hooks/useProductFilters';
@@ -26,6 +27,7 @@ export default function ProductPage() {
   const currentUser = useAuthStore((state) => state.user);
   const canManage = hasAnyPermission(currentUser, ['product.manage']);
   const canManageCategories = hasAnyPermission(currentUser, ['category.manage']);
+  const canReadStock = hasAnyPermission(currentUser, ['stock.read']);
 
   const {
     search,
@@ -44,6 +46,8 @@ export default function ProductPage() {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+  // The panel keeps an id, not a copy: after an edit it shows the product as the list has it now.
+  const [openId, setOpenId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const { data: catalog, isLoading, isFetching, error } = useCatalog();
@@ -78,6 +82,10 @@ export default function ProductPage() {
     setIsCreateOpen(false);
     setEditing(null);
   };
+
+  const handleOpen = useCallback((product: Product) => setOpenId(product.id), []);
+  const opened = catalog?.find((product) => product.id === openId) ?? null;
+  const paths = useMemo(() => categoryPaths(categories), [categories]);
 
   const handleEdit = useCallback((product: Product) => {
     setNotice(null);
@@ -159,12 +167,24 @@ export default function ProductPage() {
         totalItems={matches.length}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
+        onOpen={handleOpen}
         onEdit={canManage ? handleEdit : undefined}
       />
       {isFetching && !isLoading && (
         <p role="status" className="sr-only">
           Actualizando productos…
         </p>
+      )}
+
+      {opened && (
+        <ProductDetailPanel
+          product={opened}
+          familyPath={paths.get(opened.category.id) ?? opened.category.name}
+          canManage={canManage}
+          canSeeStockPerWarehouse={canReadStock}
+          onClose={() => setOpenId(null)}
+          onEdit={handleEdit}
+        />
       )}
 
       <ProductFormModal
