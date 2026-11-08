@@ -6,7 +6,7 @@ export const loginSchema = z.object({
     .string()
     .trim()
     .min(1, 'Escribe tu correo.')
-    .pipe(z.email('Ingresa un correo electrónico válido.')),
+    .email('Ingresa un correo electrónico válido.'),
   password: z.string().min(1, 'Escribe tu contraseña.'),
 });
 

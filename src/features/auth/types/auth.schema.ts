@@ -9,9 +9,8 @@ export const accountStepSchema = z.object({
     .string()
     .trim()
     .min(1, 'Escribe tu correo de trabajo.')
-    .pipe(
-      z.email('Ingresa un correo electrónico válido.').max(150, 'El correo es demasiado largo.'),
-    ),
+    .email('Ingresa un correo electrónico válido.')
+    .max(150, 'El correo es demasiado largo.'),
   password: z
     .string()
     .min(1, 'Crea una contraseña.')
