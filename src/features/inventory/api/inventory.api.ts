@@ -72,9 +72,18 @@ export async function getMovementTypes(warehouseId: string): Promise<MovementTyp
   return data.map(toMovementType);
 }
 
+/**
+ * A movement locks the product's rows and re-evaluates alerts in one transaction: it can take a
+ * while. A timeout that fires while the API is still working would report an error for a movement
+ * that does get registered, and a retry would register it twice, so it waits longer than reads.
+ */
+const MOVEMENT_TIMEOUT_MS = 60_000;
+
 /** `POST /movements`: confirmed at once; the stock changes in the same operation. */
 export async function registerMovement(input: RegisterMovementInput): Promise<RegisteredMovement> {
-  const { data } = await http.post<MovementDto>('/movements', toCreateMovementDto(input));
+  const { data } = await http.post<MovementDto>('/movements', toCreateMovementDto(input), {
+    timeout: MOVEMENT_TIMEOUT_MS,
+  });
   return toRegisteredMovement(data);
 }
 

@@ -179,18 +179,25 @@ export default function InventoryPage() {
     );
   };
 
-  // CU-05 step 7: confirm and show the new stock of the product in that warehouse.
+  // CU-05 step 7: confirm and show the new stock of the product in that warehouse. The
+  // confirmation shows at once; the new stock is added when it arrives (the API can be slow).
   const handleSaved = async (movement: RegisteredMovement) => {
     setDraft(null);
     if (view === 'product') setProductId(movement.productId);
     else setWarehouseId(movement.warehouse.id);
-    const fresh = await queryClient.query(productStockQuery(movement.productId));
-    const here = fresh.warehouses.find((row) => row.warehouse.id === movement.warehouse.id);
-    setNotice(
-      `${KIND_LABELS[movement.kind].noun} ${movement.number} registrada. ` +
-        `Existencia de «${fresh.product.name}» en ${movement.warehouse.name}: ` +
-        `${formatQuantity(here?.onHand ?? 0, fresh.product.unit)}.`,
-    );
+    const confirmed = `${KIND_LABELS[movement.kind].noun} ${movement.number} registrada.`;
+    setNotice(confirmed);
+    try {
+      const fresh = await queryClient.query(productStockQuery(movement.productId));
+      const here = fresh.warehouses.find((row) => row.warehouse.id === movement.warehouse.id);
+      const withStock =
+        `${confirmed} Existencia de «${fresh.product.name}» en ${movement.warehouse.name}: ` +
+        `${formatQuantity(here?.onHand ?? 0, fresh.product.unit)}.`;
+      // Only if nothing else replaced the notice meanwhile.
+      setNotice((current) => (current === confirmed ? withStock : current));
+    } catch {
+      // The movement is registered; the stock shows up in the list when it loads.
+    }
   };
 
   const warehouseEmptyMessage =

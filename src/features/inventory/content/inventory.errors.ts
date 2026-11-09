@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios';
 import { getApiErrorCode, getApiErrorMessage } from '@/core/api/errors';
 
 /** Spanish text for the stable error codes of the stock and movement endpoints. */
@@ -26,6 +27,10 @@ const REPLENISHMENT_RULES: [RegExp, string][] = [
 
 /** Message for a failed stock, movement or replenishment request: the known code's text, else the API's. */
 export function inventoryErrorMessage(error: unknown, fallback: string): string {
+  // No answer in time: a write may still have gone through on the server.
+  if (isAxiosError(error) && error.code === 'ECONNABORTED' && error.config?.method !== 'get') {
+    return 'El servidor tardó demasiado en responder y puede que la operación sí se haya guardado. Revisa la existencia antes de intentarlo de nuevo.';
+  }
   const code = getApiErrorCode(error);
   if (code === 'REPLENISHMENT_INVALID') {
     const apiMessage = getApiErrorMessage(error, '');

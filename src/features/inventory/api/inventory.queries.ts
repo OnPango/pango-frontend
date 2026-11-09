@@ -6,7 +6,11 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
-import type { SetReplenishmentInput, WarehouseStockRow } from '../types/inventory.types';
+import type {
+  ProductStock,
+  SetReplenishmentInput,
+  WarehouseStockRow,
+} from '../types/inventory.types';
 import {
   getActiveProducts,
   getAllProducts,
@@ -113,8 +117,9 @@ export function useRegisterMovement() {
     mutationFn: registerMovement,
     // Both views of the stock changed: the product's and the warehouse's. Other screens (the
     // product detail) refetch on their own next time they open: their keys live in their feature.
-    onSuccess: (movement) =>
-      Promise.all([
+    // Not awaited: the form closes as soon as the API confirms; the lists catch up behind it.
+    onSuccess: (movement) => {
+      void Promise.all([
         queryClient.invalidateQueries({ queryKey: inventoryKeys.stock(movement.productId) }),
         queryClient.invalidateQueries({
           queryKey: inventoryKeys.warehouseStock(movement.warehouse.id),
@@ -122,7 +127,8 @@ export function useRegisterMovement() {
         queryClient.invalidateQueries({
           queryKey: inventoryKeys.replenishment(movement.productId, movement.warehouse.id),
         }),
-      ]),
+      ]);
+    },
   });
 }
 
@@ -140,8 +146,33 @@ export function useSetReplenishment(productId: string, warehouseId: string) {
     mutationFn: (input: SetReplenishmentInput) => setReplenishment(productId, warehouseId, input),
     onSuccess: (saved) => {
       queryClient.setQueryData(inventoryKeys.replenishment(productId, warehouseId), saved);
-      // The rows show the values and their origin.
-      return Promise.all([
+      // The rows show the saved values at once, alert and values together; the refetch confirms.
+      const values = {
+        safetyStock: saved.safetyStock,
+        reorderPoint: saved.reorderPoint,
+        source: saved.source,
+      };
+      queryClient.setQueryData<ProductStock>(
+        inventoryKeys.stock(productId),
+        (old) =>
+          old && {
+            ...old,
+            warehouses: old.warehouses.map((row) =>
+              row.warehouse.id === warehouseId ? { ...row, ...values } : row,
+            ),
+          },
+      );
+      queryClient.setQueryData<WarehouseStockRow[]>(
+        inventoryKeys.warehouseStock(warehouseId),
+        (old) =>
+          old?.map((row) =>
+            row.product.id === productId
+              ? { ...row, reorderPoint: saved.reorderPoint, source: saved.source }
+              : row,
+          ),
+      );
+      // The rows show the values and their origin. Not awaited, like movements.
+      void Promise.all([
         queryClient.invalidateQueries({ queryKey: inventoryKeys.stock(productId) }),
         queryClient.invalidateQueries({ queryKey: inventoryKeys.warehouseStock(warehouseId) }),
       ]);
