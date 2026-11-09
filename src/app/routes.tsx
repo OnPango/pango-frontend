@@ -4,7 +4,7 @@ import { FaBoxArchive } from 'react-icons/fa6';
 import { FiUpload } from 'react-icons/fi';
 import { BsShieldFillCheck } from 'react-icons/bs';
 import { GoGraph, GoHomeFill } from 'react-icons/go';
-import { HiBellAlert, HiUsers } from 'react-icons/hi2';
+import { HiBellAlert, HiUserGroup, HiUsers } from 'react-icons/hi2';
 import { HiOutlineSwitchHorizontal } from 'react-icons/hi';
 import { RiGitPullRequestFill } from 'react-icons/ri';
 import { RxActivityLog } from 'react-icons/rx';
@@ -109,6 +109,14 @@ export const APP_ROUTES: AppRoute[] = [
     section: 'admin',
     anyOf: ['user.read', 'user.manage'],
     Page: lazy(() => import('@/features/users/pages/UsersPage')),
+  },
+  {
+    path: '/areas',
+    label: 'Áreas',
+    icon: HiUserGroup,
+    section: 'admin',
+    anyOf: ['department.manage'],
+    Page: lazy(() => import('@/features/areas/pages/AreasPage')),
   },
   {
     path: '/roles-permissions',
