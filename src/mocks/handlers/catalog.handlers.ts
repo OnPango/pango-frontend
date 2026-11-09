@@ -1,5 +1,5 @@
 import { authorize, error } from '../guard';
-import { hasMovements, stockByWarehouse } from '../stock';
+import { enabledWarehouses, hasMovements, replenishmentOf, stockByWarehouse } from '../stock';
 import { findWarehouseRow } from './warehouses.handlers';
 import type { MockRoutes } from '../server';
 
@@ -185,13 +185,18 @@ const findProduct = (organizationId: string, id: string) =>
   products.find((row) => row.organizationId === organizationId && row.id === Number(id));
 
 function toProductDetailDto(row: ProductRow) {
-  const warehouses = [...stockByWarehouse(row.organizationId, row.id)].map(([id, onHand]) => ({
-    warehouse: { id, name: findWarehouseRow(row.organizationId, id)?.name ?? '' },
-    onHand,
-    safetyStock: 0,
-    reorderPoint: 0,
-    valueSource: 'MANUAL' as const,
-  }));
+  const org = row.organizationId;
+  const stock = stockByWarehouse(org, row.id);
+  const warehouses = enabledWarehouses(org, row.id).map((id) => {
+    const { safetyStock, reorderPoint, valueSource } = replenishmentOf(org, row.id, id);
+    return {
+      warehouse: { id, name: findWarehouseRow(org, id)?.name ?? '' },
+      onHand: stock.get(id) ?? 0,
+      safetyStock,
+      reorderPoint,
+      valueSource,
+    };
+  });
   return {
     ...toProductDto(row),
     totalOnHand: Number(warehouses.reduce((sum, w) => sum + w.onHand, 0).toFixed(4)),

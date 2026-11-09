@@ -1,5 +1,5 @@
 import { authorize, error } from '../guard';
-import { applyStock, lotExists, onHand } from '../stock';
+import { applyStock, evaluateAlert, lotExists, onHand } from '../stock';
 import type { MockRoutes } from '../server';
 import { findProductRow, findUnitRow } from './catalog.handlers';
 import { findWarehouseRow } from './warehouses.handlers';
@@ -140,6 +140,8 @@ export const movementsRoutes: MockRoutes = {
     }
 
     plan.forEach((p) => applyStock(org, p.productId, warehouse.id, p.lot, p.delta));
+    // Each movement re-evaluates the alerts of its products in the warehouse (CU-12a).
+    new Set(plan.map((p) => p.productId)).forEach((id) => evaluateAlert(org, id, warehouse.id));
     lastId += 1;
     const location = { id: warehouse.defaultLocationId, code: 'DEFAULT' };
     return {
