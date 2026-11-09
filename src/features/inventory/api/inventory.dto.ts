@@ -26,9 +26,37 @@ export interface ProductPageDto {
 }
 
 /** `GET /products/:id`. */
+export type ValueSourceDto = 'MANUAL' | 'CALCULATED';
+
 export interface ProductDetailDto extends ProductDto {
   totalOnHand: number;
-  warehouses: { warehouse: { id: number; name: string }; onHand: number }[];
+  warehouses: {
+    warehouse: { id: number; name: string };
+    onHand: number;
+    safetyStock: number;
+    reorderPoint: number;
+    valueSource: ValueSourceDto;
+  }[];
+}
+
+/** `GET` / `PUT /products/:productId/warehouses/:warehouseId/replenishment`. */
+export interface ReplenishmentDto {
+  onHand: number;
+  reserved: number;
+  available: number;
+  safetyStock: number;
+  reorderPoint: number;
+  minStock: number | null;
+  maxStock: number | null;
+  valueSource: ValueSourceDto;
+  openAlert: { id: number; severity: number; createdAt: string } | null;
+}
+
+export interface SetReplenishmentDto {
+  safetyStock: number;
+  reorderPoint: number;
+  minStock: number | null;
+  maxStock: number | null;
 }
 
 /** `GET /warehouses`. */

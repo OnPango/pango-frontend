@@ -3,6 +3,7 @@ import type {
   ProductStock,
   RegisteredMovement,
   RegisterMovementInput,
+  Replenishment,
   StockProduct,
   WarehouseOption,
 } from '../types/inventory.types';
@@ -13,6 +14,8 @@ import type {
   MovementTypeDto,
   ProductDetailDto,
   ProductDto,
+  ReplenishmentDto,
+  ValueSourceDto,
   WarehouseDto,
 } from './inventory.dto';
 
@@ -39,7 +42,29 @@ export const toProductStock = (dto: ProductDetailDto): ProductStock => ({
   warehouses: dto.warehouses.map((row) => ({
     warehouse: { id: String(row.warehouse.id), name: row.warehouse.name },
     onHand: row.onHand,
+    safetyStock: row.safetyStock,
+    reorderPoint: row.reorderPoint,
+    source: toSource(row.valueSource),
   })),
+});
+
+const toSource = (dto: ValueSourceDto) => (dto === 'CALCULATED' ? 'calculated' : 'manual');
+
+export const toReplenishment = (dto: ReplenishmentDto): Replenishment => ({
+  onHand: dto.onHand,
+  reserved: dto.reserved,
+  available: dto.available,
+  safetyStock: dto.safetyStock,
+  reorderPoint: dto.reorderPoint,
+  minStock: dto.minStock,
+  maxStock: dto.maxStock,
+  source: toSource(dto.valueSource),
+  openAlert: dto.openAlert
+    ? {
+        severity: Math.min(3, Math.max(1, dto.openAlert.severity)) as 1 | 2 | 3,
+        createdAt: dto.openAlert.createdAt,
+      }
+    : null,
 });
 
 export const toWarehouseOption = (dto: WarehouseDto): WarehouseOption => ({

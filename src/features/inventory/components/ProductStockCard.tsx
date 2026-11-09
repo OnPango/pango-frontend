@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
-import { FiLayers } from 'react-icons/fi';
+import { FiAlertTriangle, FiLayers } from 'react-icons/fi';
 import { formatQuantity, unitLabel } from '@/shared/lib/units';
 import type { Column } from '@/shared/types/dataTable';
 import { Badge } from '@/shared/ui/components/Badge';
 import { Button } from '@/shared/ui/components/Button';
 import { DataTable } from '@/shared/ui/components/DataTable';
-import type { MovementKind, ProductStock } from '../types/inventory.types';
+import { useReplenishments } from '../api/inventory.queries';
+import { ALERT_LABELS, SOURCE_LABELS } from '../content/replenishment.labels';
+import type { MovementKind, ProductStock, Replenishment } from '../types/inventory.types';
 import { RowMovementActions } from './RowMovementActions';
 
 type Row = ProductStock['warehouses'][number];
@@ -15,13 +17,28 @@ export function ProductStockCard({
   stock,
   onOpenWarehouse,
   onRegister,
+  onReplenish,
 }: {
   stock: ProductStock;
   onOpenWarehouse: (warehouseId: string) => void;
-  /** Without `movement.create` there are no row actions. */
+  /** Without `movement.create` there are no movement actions. */
   onRegister?: (kind: MovementKind, warehouseId: string) => void;
+  /** With `replenishment.manage`: edit the warehouse's safety stock and reorder point. */
+  onReplenish?: (warehouseId: string) => void;
 }) {
   const { product } = stock;
+  // The open alert of each row (it compares the reorder point with available stock).
+  const replenishments = useReplenishments(
+    product.id,
+    stock.warehouses.map((row) => row.warehouse.id),
+  );
+  const alerts = useMemo(() => {
+    const byWarehouse = new Map<string, Replenishment['openAlert']>();
+    stock.warehouses.forEach((row, index) => {
+      byWarehouse.set(row.warehouse.id, replenishments[index]?.data?.openAlert ?? null);
+    });
+    return byWarehouse;
+  }, [stock.warehouses, replenishments]);
 
   const columns = useMemo<Column<Row>[]>(() => {
     const base: Column<Row>[] = [
@@ -44,16 +61,55 @@ export function ProductStockCard({
         key: 'onHand',
         header: 'Existencia',
         className: 'text-right',
+        cell: (row) => {
+          const alert = alerts.get(row.warehouse.id);
+          return (
+            <div className="flex flex-col items-end gap-1">
+              <span
+                className={`text-sm tabular-nums ${row.onHand === 0 ? 'text-muted' : 'font-semibold text-fg'}`}
+              >
+                {formatQuantity(row.onHand, product.unit)}
+              </span>
+              {alert && (
+                <Badge
+                  icon={FiAlertTriangle}
+                  tone={alert.severity === 1 ? 'warning' : 'danger'}
+                  size="sm"
+                >
+                  {ALERT_LABELS[alert.severity]}
+                </Badge>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        key: 'safetyStock',
+        header: 'Stock de seguridad',
+        className: 'text-right',
         cell: (row) => (
-          <span
-            className={`text-sm tabular-nums ${row.onHand === 0 ? 'text-muted' : 'font-semibold text-fg'}`}
-          >
-            {formatQuantity(row.onHand, product.unit)}
+          <span className="text-sm text-fg/90 tabular-nums">
+            {formatQuantity(row.safetyStock, product.unit)}
           </span>
         ),
       },
+      {
+        key: 'reorderPoint',
+        header: 'Punto de reorden',
+        className: 'text-right',
+        cell: (row) => (
+          <div className="flex flex-col items-end">
+            <span className="text-sm text-fg/90 tabular-nums">
+              {row.reorderPoint === 0
+                ? 'Sin definir'
+                : formatQuantity(row.reorderPoint, product.unit)}
+            </span>
+            <span className="text-[11px] text-muted">{SOURCE_LABELS[row.source].label}</span>
+          </div>
+        ),
+      },
     ];
-    if (!onRegister) return base;
+    if (!onRegister && !onReplenish) return base;
     return [
       ...base,
       {
@@ -65,12 +121,13 @@ export function ProductStockCard({
             subject={`${product.name} en ${row.warehouse.name}`}
             canAdd={product.isActive}
             canRemove={product.isActive && row.onHand > 0}
-            onRegister={(kind) => onRegister(kind, row.warehouse.id)}
+            onRegister={onRegister ? (kind) => onRegister(kind, row.warehouse.id) : undefined}
+            onReplenish={onReplenish ? () => onReplenish(row.warehouse.id) : undefined}
           />
         ),
       },
     ];
-  }, [onOpenWarehouse, onRegister, product]);
+  }, [onOpenWarehouse, onRegister, onReplenish, product, alerts]);
 
   return (
     <section

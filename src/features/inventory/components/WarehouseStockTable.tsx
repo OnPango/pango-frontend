@@ -7,6 +7,7 @@ import { Badge } from '@/shared/ui/components/Badge';
 import { Button } from '@/shared/ui/components/Button';
 import { DataTable } from '@/shared/ui/components/DataTable';
 import { usePagination } from '@/shared/ui/components/pagination/usePagination';
+import { SOURCE_LABELS } from '../content/replenishment.labels';
 import type { MovementKind, WarehouseStockRow } from '../types/inventory.types';
 import { RowMovementActions } from './RowMovementActions';
 
@@ -19,6 +20,7 @@ export function WarehouseStockTable({
   emptyMessage,
   onOpenProduct,
   onRegister,
+  onReplenish,
 }: {
   rows: WarehouseStockRow[];
   warehouseName: string;
@@ -26,8 +28,10 @@ export function WarehouseStockTable({
   error?: string;
   emptyMessage: string;
   onOpenProduct: (productId: string) => void;
-  /** Without `movement.create` there are no row actions. */
+  /** Without `movement.create` there are no movement actions. */
   onRegister?: (kind: MovementKind, row: WarehouseStockRow) => void;
+  /** With `replenishment.manage`: edit the row's safety stock and reorder point. */
+  onReplenish?: (row: WarehouseStockRow) => void;
 }) {
   const { page, pageSize, totalItems, pageItems, setPage, setPageSize } = usePagination(rows, 25);
 
@@ -85,8 +89,21 @@ export function WarehouseStockTable({
           </span>
         ),
       },
+      {
+        key: 'reorderPoint',
+        header: 'Punto de reorden',
+        className: 'text-right',
+        cell: ({ product, reorderPoint, source }) => (
+          <div className="flex flex-col items-end">
+            <span className="text-sm text-fg/90 tabular-nums">
+              {reorderPoint === 0 ? 'Sin definir' : formatQuantity(reorderPoint, product.unit)}
+            </span>
+            <span className="text-[11px] text-muted">{SOURCE_LABELS[source].label}</span>
+          </div>
+        ),
+      },
     ];
-    if (!onRegister) return base;
+    if (!onRegister && !onReplenish) return base;
     return [
       ...base,
       {
@@ -94,11 +111,17 @@ export function WarehouseStockTable({
         header: <span className="sr-only">Acciones</span>,
         className: 'text-right',
         cell: (row) => (
-          <RowActions row={row} warehouseName={warehouseName} onRegister={onRegister} />
+          <RowMovementActions
+            subject={`${row.product.name} en ${warehouseName}`}
+            canAdd={row.product.isActive}
+            canRemove={row.onHand > 0 && row.product.isActive}
+            onRegister={onRegister ? (kind) => onRegister(kind, row) : undefined}
+            onReplenish={onReplenish ? () => onReplenish(row) : undefined}
+          />
         ),
       },
     ];
-  }, [onOpenProduct, onRegister, warehouseName]);
+  }, [onOpenProduct, onRegister, onReplenish, warehouseName]);
 
   return (
     <DataTable<WarehouseStockRow>
@@ -117,25 +140,6 @@ export function WarehouseStockTable({
         pageSizeOptions: [10, 25, 50],
         onPageSizeChange: setPageSize,
       }}
-    />
-  );
-}
-
-function RowActions({
-  row,
-  warehouseName,
-  onRegister,
-}: {
-  row: WarehouseStockRow;
-  warehouseName: string;
-  onRegister: (kind: MovementKind, row: WarehouseStockRow) => void;
-}) {
-  return (
-    <RowMovementActions
-      subject={`${row.product.name} en ${warehouseName}`}
-      canRemove={row.onHand > 0 && row.product.isActive}
-      canAdd={row.product.isActive}
-      onRegister={(kind) => onRegister(kind, row)}
     />
   );
 }

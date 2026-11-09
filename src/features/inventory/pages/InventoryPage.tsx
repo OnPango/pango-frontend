@@ -21,12 +21,19 @@ import {
   useWarehouseStock,
 } from '../api/inventory.queries';
 import { MovementModal } from '../components/MovementModal';
+import { ReplenishmentModal, type ReplenishmentTarget } from '../components/ReplenishmentModal';
 import { ProductStockCard } from '../components/ProductStockCard';
 import { WarehouseStockTable } from '../components/WarehouseStockTable';
 import { inventoryErrorMessage } from '../content/inventory.errors';
 import { KIND_LABELS } from '../content/movement.labels';
+import { ALERT_LABELS } from '../content/replenishment.labels';
 import { useInventoryView, type InventoryView } from '../hooks/useInventoryView';
-import type { MovementKind, RegisteredMovement, WarehouseStockRow } from '../types/inventory.types';
+import type {
+  MovementKind,
+  RegisteredMovement,
+  Replenishment,
+  WarehouseStockRow,
+} from '../types/inventory.types';
 
 const VIEWS = [
   { value: 'warehouse' as const, label: 'Por almacén', icon: MdWarehouse },
@@ -53,6 +60,7 @@ function EmptyPrompt({ children }: { children: string }) {
 export default function InventoryPage() {
   const currentUser = useAuthStore((state) => state.user);
   const canRegister = hasAnyPermission(currentUser, ['movement.create']);
+  const canReplenish = hasAnyPermission(currentUser, ['replenishment.manage']);
   const queryClient = useQueryClient();
 
   const warehouses = useStockWarehouses();
@@ -74,6 +82,7 @@ export default function InventoryPage() {
   const [search, setSearch] = useState('');
   const [showZero, setShowZero] = useState(false);
   const [draft, setDraft] = useState<MovementDraft | null>(null);
+  const [replenishing, setReplenishing] = useState<ReplenishmentTarget | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const warehouseName = warehouses.data?.find((warehouse) => warehouse.id === warehouseId)?.name;
@@ -122,6 +131,53 @@ export default function InventoryPage() {
       register({ kind, productId, warehouseId: rowWarehouseId }),
     [productId],
   );
+
+  const replenishFromWarehouseRow = useCallback(
+    (row: WarehouseStockRow) => {
+      if (!warehouseId) return;
+      setNotice(null);
+      setReplenishing({
+        productId: row.product.id,
+        productName: row.product.name,
+        unit: row.product.unit,
+        warehouseId,
+        warehouseName: warehouseName ?? '',
+      });
+    },
+    [warehouseId, warehouseName],
+  );
+  const stockData = productStock.data;
+  const replenishFromProductRow = useCallback(
+    (rowWarehouseId: string) => {
+      if (!stockData) return;
+      setNotice(null);
+      setReplenishing({
+        productId: stockData.product.id,
+        productName: stockData.product.name,
+        unit: stockData.product.unit,
+        warehouseId: rowWarehouseId,
+        warehouseName:
+          stockData.warehouses.find((row) => row.warehouse.id === rowWarehouseId)?.warehouse.name ??
+          '',
+      });
+    },
+    [stockData],
+  );
+
+  // US-016, third criterion: the next alerts use the new values; say what that means right now.
+  const handleReplenished = (target: ReplenishmentTarget, saved: Replenishment) => {
+    setReplenishing(null);
+    const amount = (value: number) => formatQuantity(value, target.unit);
+    const outcome =
+      saved.reorderPoint === 0
+        ? 'Sin punto de reorden: no habrá alertas.'
+        : saved.openAlert
+          ? `Disponible ${amount(saved.available)} ≤ punto de reorden ${amount(saved.reorderPoint)}: alerta abierta (${ALERT_LABELS[saved.openAlert.severity].toLowerCase()}).`
+          : `Disponible ${amount(saved.available)} > punto de reorden ${amount(saved.reorderPoint)}: sin alerta.`;
+    setNotice(
+      `Reposición de «${target.productName}» en ${target.warehouseName} guardada. ${outcome}`,
+    );
+  };
 
   // CU-05 step 7: confirm and show the new stock of the product in that warehouse.
   const handleSaved = async (movement: RegisteredMovement) => {
@@ -260,6 +316,7 @@ export default function InventoryPage() {
                 emptyMessage={warehouseEmptyMessage}
                 onOpenProduct={showProduct}
                 onRegister={canRegister ? registerFromWarehouseRow : undefined}
+                onReplenish={canReplenish ? replenishFromWarehouseRow : undefined}
               />
             </>
           )}
@@ -292,10 +349,17 @@ export default function InventoryPage() {
               stock={productStock.data}
               onOpenWarehouse={showWarehouse}
               onRegister={canRegister ? registerFromProductRow : undefined}
+              onReplenish={canReplenish ? replenishFromProductRow : undefined}
             />
           ) : null}
         </section>
       )}
+
+      <ReplenishmentModal
+        target={replenishing}
+        onClose={() => setReplenishing(null)}
+        onSaved={handleReplenished}
+      />
 
       <MovementModal
         kind={draft?.kind ?? null}

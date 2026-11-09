@@ -4,6 +4,8 @@ import type {
   ProductStock,
   RegisteredMovement,
   RegisterMovementInput,
+  Replenishment,
+  SetReplenishmentInput,
   StockProduct,
   WarehouseOption,
 } from '../types/inventory.types';
@@ -12,6 +14,7 @@ import type {
   MovementTypeDto,
   ProductDetailDto,
   ProductPageDto,
+  ReplenishmentDto,
   WarehouseDto,
 } from './inventory.dto';
 import {
@@ -19,6 +22,7 @@ import {
   toMovementType,
   toProductStock,
   toRegisteredMovement,
+  toReplenishment,
   toStockProduct,
   toWarehouseOption,
 } from './inventory.mappers';
@@ -72,4 +76,32 @@ export async function getMovementTypes(warehouseId: string): Promise<MovementTyp
 export async function registerMovement(input: RegisterMovementInput): Promise<RegisteredMovement> {
   const { data } = await http.post<MovementDto>('/movements', toCreateMovementDto(input));
   return toRegisteredMovement(data);
+}
+
+const replenishmentPath = (productId: string, warehouseId: string) =>
+  `/products/${productId}/warehouses/${warehouseId}/replenishment`;
+
+/** US-016: the values, the stock they compare to and the open alert. Defaults if never set. */
+export async function getReplenishment(
+  productId: string,
+  warehouseId: string,
+): Promise<Replenishment> {
+  const { data } = await http.get<ReplenishmentDto>(replenishmentPath(productId, warehouseId));
+  return toReplenishment(data);
+}
+
+/**
+ * Saves the values as manual and re-evaluates the alert. Min and max stock are part of the body:
+ * leaving them out clears them, so callers send the current ones back.
+ */
+export async function setReplenishment(
+  productId: string,
+  warehouseId: string,
+  input: SetReplenishmentInput,
+): Promise<Replenishment> {
+  const { data } = await http.put<ReplenishmentDto>(
+    replenishmentPath(productId, warehouseId),
+    input,
+  );
+  return toReplenishment(data);
 }

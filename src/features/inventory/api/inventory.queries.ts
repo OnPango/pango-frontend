@@ -1,18 +1,21 @@
 import {
   queryOptions,
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
-import type { WarehouseStockRow } from '../types/inventory.types';
+import type { SetReplenishmentInput, WarehouseStockRow } from '../types/inventory.types';
 import {
   getActiveProducts,
   getAllProducts,
   getMovementTypes,
   getProductStock,
+  getReplenishment,
   getWarehouses,
   registerMovement,
+  setReplenishment,
 } from './inventory.api';
 import { inventoryKeys } from './inventory.keys';
 
@@ -67,7 +70,16 @@ async function loadWarehouseStock(
   );
   return stocks.flatMap((stock) => {
     const row = stock.warehouses.find((entry) => entry.warehouse.id === warehouseId);
-    return row ? [{ product: stock.product, onHand: row.onHand }] : [];
+    return row
+      ? [
+          {
+            product: stock.product,
+            onHand: row.onHand,
+            reorderPoint: row.reorderPoint,
+            source: row.source,
+          },
+        ]
+      : [];
   });
 }
 
@@ -107,6 +119,42 @@ export function useRegisterMovement() {
         queryClient.invalidateQueries({
           queryKey: inventoryKeys.warehouseStock(movement.warehouse.id),
         }),
+        queryClient.invalidateQueries({
+          queryKey: inventoryKeys.replenishment(movement.productId, movement.warehouse.id),
+        }),
       ]),
+  });
+}
+
+/** A product's replenishment values in a warehouse, with available stock and the open alert. */
+export function useReplenishment(productId: string, warehouseId: string) {
+  return useQuery({
+    queryKey: inventoryKeys.replenishment(productId, warehouseId),
+    queryFn: () => getReplenishment(productId, warehouseId),
+  });
+}
+
+export function useSetReplenishment(productId: string, warehouseId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SetReplenishmentInput) => setReplenishment(productId, warehouseId, input),
+    onSuccess: (saved) => {
+      queryClient.setQueryData(inventoryKeys.replenishment(productId, warehouseId), saved);
+      // The rows show the values and their origin.
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: inventoryKeys.stock(productId) }),
+        queryClient.invalidateQueries({ queryKey: inventoryKeys.warehouseStock(warehouseId) }),
+      ]);
+    },
+  });
+}
+
+/** The replenishment values (with the open alert) of a product in several warehouses. */
+export function useReplenishments(productId: string, warehouseIds: string[]) {
+  return useQueries({
+    queries: warehouseIds.map((warehouseId) => ({
+      queryKey: inventoryKeys.replenishment(productId, warehouseId),
+      queryFn: () => getReplenishment(productId, warehouseId),
+    })),
   });
 }

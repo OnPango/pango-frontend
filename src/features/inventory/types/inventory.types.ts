@@ -13,18 +13,53 @@ export interface StockProduct {
   isActive: boolean;
 }
 
+/** Set by hand (US-016) or computed by the forecast (US-040). */
+export type ValueSource = 'manual' | 'calculated';
+
 /** US-015: a product's stock, in total and per warehouse where it is enabled. */
 export interface ProductStock {
   product: StockProduct;
   /** Inbound minus outbound, across every warehouse. */
   totalOnHand: number;
-  warehouses: { warehouse: { id: string; name: string }; onHand: number }[];
+  warehouses: {
+    warehouse: { id: string; name: string };
+    onHand: number;
+    safetyStock: number;
+    /** 0: none, no alerts. */
+    reorderPoint: number;
+    source: ValueSource;
+  }[];
+}
+
+/** US-016: a product's replenishment values in one warehouse, with the stock they compare to. */
+export interface Replenishment {
+  onHand: number;
+  /** Held by stock requests in progress. */
+  reserved: number;
+  /** On hand minus reserved: what the reorder point is compared against. */
+  available: number;
+  safetyStock: number;
+  reorderPoint: number;
+  minStock: number | null;
+  maxStock: number | null;
+  source: ValueSource;
+  /** 1 at or below the reorder point, 2 at or below the safety stock, 3 nothing available. */
+  openAlert: { severity: 1 | 2 | 3; createdAt: string } | null;
+}
+
+export interface SetReplenishmentInput {
+  safetyStock: number;
+  reorderPoint: number;
+  minStock: number | null;
+  maxStock: number | null;
 }
 
 /** One product in a warehouse's stock list. */
 export interface WarehouseStockRow {
   product: StockProduct;
   onHand: number;
+  reorderPoint: number;
+  source: ValueSource;
 }
 
 export interface WarehouseOption {
