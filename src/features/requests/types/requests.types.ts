@@ -1,0 +1,64 @@
+import type { UnitRef } from '@/shared/lib/units';
+
+/** CU-08 / CU-09 status cycle: pending → in progress → fulfilled, or rejected / cancelled. */
+export type RequestStatus = 'pending' | 'inProgress' | 'fulfilled' | 'rejected' | 'cancelled';
+
+/** 1 is the highest. */
+export type RequestPriority = 1 | 2 | 3;
+
+export interface StockRequest {
+  id: string;
+  /** `SR-00000012`. */
+  number: string;
+  status: RequestStatus;
+  priority: RequestPriority;
+  /** `YYYY-MM-DD`, or null when not given. */
+  requiredDate: string | null;
+  /** The warehouse that attends it. */
+  warehouse: { id: string; name: string };
+  /** The requesting area. */
+  department: { id: string; name: string };
+  requestedBy: { id: string; name: string | null };
+  notes: string | null;
+  rejectionReason: string | null;
+  lines: {
+    lineNumber: number;
+    product: { id: string; sku: string; name: string; unit: UnitRef };
+    quantity: number;
+  }[];
+  createdAt: string;
+}
+
+export interface RequestPage {
+  items: StockRequest[];
+  total: number;
+}
+
+export interface RequestFilters {
+  /** Null: every area the user can see. */
+  departmentId: string | null;
+  status: RequestStatus | null;
+  page: number;
+  pageSize: number;
+}
+
+export interface CreateRequestInput {
+  warehouseId: string;
+  priority: RequestPriority;
+  requiredDate: string | null;
+  notes: string | null;
+  lines: { productId: string; quantity: number }[];
+}
+
+/** A product that can be requested. */
+export interface RequestableProduct {
+  id: string;
+  sku: string;
+  name: string;
+  unit: UnitRef;
+}
+
+export interface Option {
+  id: string;
+  name: string;
+}
