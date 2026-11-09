@@ -148,7 +148,18 @@ export const usersRoutes: MockRoutes = {
       return error(403, 'FORBIDDEN', 'Only administrators can change another administrator');
     }
 
-    const input = (body ?? {}) as { jobTitle?: string | null };
+    const input = (body ?? {}) as { jobTitle?: string | null; departmentId?: number | null };
+    if ('departmentId' in input) {
+      if (input.departmentId === null) {
+        user.area_id = '';
+      } else {
+        const area = areas.find((row) => numericId(row.id) === input.departmentId);
+        if (!area || area.is_active === false) {
+          return error(404, 'DEPARTMENT_NOT_FOUND', 'Department not found or inactive');
+        }
+        user.area_id = area.id;
+      }
+    }
     if ('jobTitle' in input) user.job_title = input.jobTitle?.trim() || null;
     persistUsers();
     return { status: 200, data: toUserDto(user) };
