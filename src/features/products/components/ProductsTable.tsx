@@ -2,28 +2,39 @@ import { useMemo } from 'react';
 import { FiLayers } from 'react-icons/fi';
 import { MdEdit } from 'react-icons/md';
 import { TbHash } from 'react-icons/tb';
+import { unitLabel } from '@/shared/lib/units';
 import type { Column } from '@/shared/types/dataTable';
 import { Badge } from '@/shared/ui/components/Badge';
 import { Button } from '@/shared/ui/components/Button';
 import { DataTable } from '@/shared/ui/components/DataTable';
 import { HeaderTip } from '@/shared/ui/components/HeaderTip';
-import { formatMeasures, unitLabel } from '../content/catalog.labels';
+import { formatMeasures } from '../content/catalog.labels';
 import { PAGE_SIZES } from '../hooks/useProductFilters';
 import type { Product } from '../types/products.types';
 
+/** The name opens the product's detail panel. */
+const productColumn = (onOpen: (product: Product) => void): Column<Product> => ({
+  key: 'product',
+  header: 'Producto',
+  cell: (product) => (
+    <div className="min-w-0">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => onOpen(product)}
+        className="max-w-full justify-start truncate rounded-md p-0 text-left text-sm hover:bg-transparent hover:text-primary hover:underline"
+        aria-label={`Ver detalle de ${product.name}`}
+      >
+        {product.name}
+      </Button>
+      <p className="truncate text-xs text-muted">
+        {product.sku} · {unitLabel(product.stockUnit).toLowerCase()}
+      </p>
+    </div>
+  ),
+});
+
 const COLUMNS: Column<Product>[] = [
-  {
-    key: 'product',
-    header: 'Producto',
-    cell: (product) => (
-      <div className="min-w-0">
-        <p className="truncate font-semibold text-fg">{product.name}</p>
-        <p className="truncate text-xs text-muted">
-          {product.sku} · {unitLabel(product.stockUnit).toLowerCase()}
-        </p>
-      </div>
-    ),
-  },
   {
     key: 'category',
     header: 'Familia',
@@ -77,6 +88,7 @@ export interface ProductsTableProps {
   totalItems: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
+  onOpen: (product: Product) => void;
   /** Shown only with `product.manage`; without it the table is read-only. */
   onEdit?: (product: Product) => void;
 }
@@ -91,12 +103,14 @@ export function ProductsTable({
   totalItems,
   onPageChange,
   onPageSizeChange,
+  onOpen,
   onEdit,
 }: ProductsTableProps) {
   const columns = useMemo<Column<Product>[]>(
     () =>
       onEdit
         ? [
+            productColumn(onOpen),
             ...COLUMNS,
             {
               key: 'edit',
@@ -116,8 +130,8 @@ export function ProductsTable({
               ),
             },
           ]
-        : COLUMNS,
-    [onEdit],
+        : [productColumn(onOpen), ...COLUMNS],
+    [onOpen, onEdit],
   );
 
   return (

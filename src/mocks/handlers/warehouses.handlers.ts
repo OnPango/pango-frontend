@@ -1,4 +1,5 @@
 import { authorize, error } from '../guard';
+import { warehouseHasStock } from '../stock';
 import type { MockRoutes } from '../server';
 
 /**
@@ -51,9 +52,6 @@ const warehouses: WarehouseRow[] = [
   seed(3, 'BOD-DESPACHO', 'Despacho', 'WAREHOUSE', null, false),
 ];
 
-/** Warehouses with stock on hand: closing them answers `WAREHOUSE_HAS_STOCK`. */
-const WITH_STOCK = new Set([1]);
-
 const toDto = (row: WarehouseRow) => ({
   id: row.id,
   code: row.code,
@@ -65,6 +63,10 @@ const toDto = (row: WarehouseRow) => ({
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 });
+
+/** For other mocks: a warehouse of the organization by its numeric id. */
+export const findWarehouseRow = (organizationId: string, id: number) =>
+  warehouses.find((row) => row.organizationId === organizationId && row.id === id);
 
 const find = (organizationId: string, id: string) =>
   warehouses.find((row) => row.organizationId === organizationId && row.id === Number(id));
@@ -183,7 +185,7 @@ export const warehousesRoutes: MockRoutes = {
     if (name !== undefined && taken(organizationId, 'name', name, row.id)) {
       return error(409, 'WAREHOUSE_NAME_TAKEN', 'A warehouse with this name already exists');
     }
-    if (input.isActive === false && row.isActive && WITH_STOCK.has(row.id)) {
+    if (input.isActive === false && row.isActive && warehouseHasStock(organizationId, row.id)) {
       return error(409, 'WAREHOUSE_HAS_STOCK', 'The warehouse still has stock on hand');
     }
 

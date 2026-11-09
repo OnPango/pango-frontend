@@ -1,4 +1,6 @@
 import { authorize, error } from '../guard';
+import { enabledWarehouses, hasMovements, replenishmentOf, stockByWarehouse } from '../stock';
+import { findWarehouseRow } from './warehouses.handlers';
 import type { MockRoutes } from '../server';
 
 /**
@@ -114,15 +116,6 @@ const products: ProductRow[] = [
   product(9, 'PRD-090', 'Pintura antigua', 1, { stockUnitId: 4, isActive: false }),
 ];
 
-/**
- * On-hand stock of the seed products that already have movements: their code and tracking are
- * locked. Movements are not simulated here, so nothing else changes these numbers.
- */
-const STOCK_FROM_MOVEMENTS = new Map<number, number>([
-  [1, 1200],
-  [3, 85],
-]);
-
 const nextId = (rows: { id: number }[]) => rows.reduce((max, row) => Math.max(max, row.id), 0) + 1;
 
 const findUnit = (id: number) => units.find((unit) => unit.id === id);
@@ -182,15 +175,35 @@ function toProductDto(row: ProductRow) {
   };
 }
 
+/** For the movement mock: a product of the organization by its numeric id. */
+export const findProductRow = (organizationId: string, id: number) =>
+  products.find((row) => row.organizationId === organizationId && row.id === id);
+
+export const findUnitRow = (id: number) => units.find((unit) => unit.id === id);
+
 const findProduct = (organizationId: string, id: string) =>
   products.find((row) => row.organizationId === organizationId && row.id === Number(id));
 
-const toProductDetailDto = (row: ProductRow) => ({
-  ...toProductDto(row),
-  totalOnHand: STOCK_FROM_MOVEMENTS.get(row.id) ?? 0,
-  warehouses: [],
-  hasMovements: STOCK_FROM_MOVEMENTS.has(row.id),
-});
+function toProductDetailDto(row: ProductRow) {
+  const org = row.organizationId;
+  const stock = stockByWarehouse(org, row.id);
+  const warehouses = enabledWarehouses(org, row.id).map((id) => {
+    const { safetyStock, reorderPoint, valueSource } = replenishmentOf(org, row.id, id);
+    return {
+      warehouse: { id, name: findWarehouseRow(org, id)?.name ?? '' },
+      onHand: stock.get(id) ?? 0,
+      safetyStock,
+      reorderPoint,
+      valueSource,
+    };
+  });
+  return {
+    ...toProductDto(row),
+    totalOnHand: Number(warehouses.reduce((sum, w) => sum + w.onHand, 0).toFixed(4)),
+    warehouses,
+    hasMovements: hasMovements(row.organizationId, row.id),
+  };
+}
 
 const MEASURES = ['lengthCm', 'widthCm', 'heightCm', 'weightKg', 'volumeL'] as const;
 
@@ -372,7 +385,7 @@ export const catalogRoutes: MockRoutes = {
     const input = (body ?? {}) as Record<string, unknown>;
     const problems = validateProduct(input, true);
     if (problems.length > 0) return error(400, 'VALIDATION', problems.join(', '));
-    const locked = STOCK_FROM_MOVEMENTS.has(row.id);
+    const locked = hasMovements(organizationId, row.id);
 
     const sku = typeof input.sku === 'string' ? input.sku.trim() : undefined;
     if (sku !== undefined && sku !== row.sku) {

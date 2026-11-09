@@ -1,19 +1,5 @@
 import type { SelectOption } from '@/shared/ui/components/form/select/select.types';
-import type { ProductCategory, UnitOfMeasure } from '../types/products.types';
-
-/** Spanish names for the units the backend seeds (UN/ECE codes); other units keep theirs. */
-const UNIT_LABELS: Record<string, string> = {
-  EA: 'Unidad',
-  KGM: 'Kilogramo',
-  GRM: 'Gramo',
-  LTR: 'Litro',
-  MLT: 'Mililitro',
-  MTR: 'Metro',
-  BX: 'Caja',
-  PK: 'Paquete',
-};
-
-export const unitLabel = (unit: UnitOfMeasure) => UNIT_LABELS[unit.code] ?? unit.name;
+import type { ProductCategory } from '../types/products.types';
 
 /**
  * Each family's name with the families above it ("Ferretería › Tornillos"), so two subfamilies
