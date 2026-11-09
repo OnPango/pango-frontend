@@ -94,3 +94,10 @@ export interface UpdateRoleDto {
   description?: string | null;
   permissions?: string[];
 }
+
+/** `GET /departments` (only what the user screens need). */
+export interface DepartmentDto {
+  id: number;
+  name: string;
+  isActive: boolean;
+}

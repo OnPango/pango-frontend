@@ -82,7 +82,10 @@ export const toUpdateRoleDto = (input: UpdateRolePermissionsInput): UpdateRoleDt
 });
 
 export const toUpdateUserDto = (input: UpdateUserInput): UpdateUserDto => ({
-  jobTitle: input.jobTitle?.trim() || null,
+  ...(input.jobTitle !== undefined ? { jobTitle: input.jobTitle?.trim() || null } : {}),
+  ...(input.departmentId !== undefined
+    ? { departmentId: input.departmentId === null ? null : Number(input.departmentId) }
+    : {}),
 });
 
 export const toAddRoleAssignmentDto = (input: RoleAssignmentInput): AddRoleAssignmentDto => ({
