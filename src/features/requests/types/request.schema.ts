@@ -16,6 +16,7 @@ const quantity = z
  * zero (CU-08 step 5); a product only once.
  */
 export const requestSchema = z.object({
+  type: z.enum(['internalConsumption', 'internalReplenishment', 'return', 'incident']),
   warehouseId: z.string().min(1, 'Elige el almacén que atiende la solicitud.'),
   priority: z.enum(['1', '2', '3']),
   requiredDate: z.string(),
@@ -31,6 +32,7 @@ export type RequestFormValues = z.infer<typeof requestSchema>;
 export const EMPTY_LINE = { productId: '', quantity: '' };
 
 export const EMPTY_REQUEST_FORM: RequestFormValues = {
+  type: 'internalConsumption',
   warehouseId: '',
   priority: '2',
   requiredDate: '',

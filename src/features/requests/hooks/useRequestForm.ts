@@ -33,6 +33,7 @@ export function useRequestForm({
   const submit = form.handleSubmit((values) => {
     create.mutate(
       {
+        type: values.type,
         warehouseId: values.warehouseId,
         priority: Number(values.priority) as RequestPriority,
         requiredDate: values.requiredDate || null,

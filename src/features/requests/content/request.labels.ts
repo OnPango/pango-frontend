@@ -1,4 +1,4 @@
-import type { RequestPriority, RequestStatus } from '../types/requests.types';
+import type { RequestPriority, RequestStatus, RequestType } from '../types/requests.types';
 
 type Tone = 'warning' | 'primary' | 'success' | 'danger' | 'neutral';
 
@@ -8,6 +8,29 @@ export const STATUS_LABELS: Record<RequestStatus, { label: string; tone: Tone }>
   fulfilled: { label: 'Atendida', tone: 'success' },
   rejected: { label: 'Rechazada', tone: 'danger' },
   cancelled: { label: 'Cancelada', tone: 'neutral' },
+};
+
+/** RF-REQ-007. `available`: pango-core accepts it today (only internal consumption, for the MVP). */
+export const TYPE_LABELS: Record<
+  RequestType,
+  { label: string; description: string; available: boolean }
+> = {
+  internalConsumption: {
+    label: 'Consumo interno',
+    description: 'El área usa los productos. Cuenta como demanda para el pronóstico.',
+    available: true,
+  },
+  internalReplenishment: {
+    label: 'Reposición interna',
+    description: 'Disponible más adelante.',
+    available: false,
+  },
+  return: { label: 'Devolución', description: 'Disponible más adelante.', available: false },
+  incident: {
+    label: 'Novedad (daño, pérdida, vencimiento)',
+    description: 'Disponible más adelante.',
+    available: false,
+  },
 };
 
 export const PRIORITY_LABELS: Record<RequestPriority, string> = {

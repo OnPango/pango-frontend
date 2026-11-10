@@ -3,9 +3,15 @@ import type {
   RequestFilters,
   RequestPriority,
   RequestStatus,
+  RequestType,
   StockRequest,
 } from '../types/requests.types';
-import type { CreateStockRequestDto, RequestStatusDto, StockRequestDto } from './requests.dto';
+import type {
+  CreateStockRequestDto,
+  RequestStatusDto,
+  RequestTypeDto,
+  StockRequestDto,
+} from './requests.dto';
 
 const STATUS: Record<RequestStatusDto, RequestStatus> = {
   PENDING: 'pending',
@@ -18,9 +24,20 @@ const STATUS_DTO = Object.fromEntries(
   Object.entries(STATUS).map(([dto, status]) => [status, dto]),
 ) as Record<RequestStatus, RequestStatusDto>;
 
+const TYPE: Record<RequestTypeDto, RequestType> = {
+  INTERNAL_CONSUMPTION: 'internalConsumption',
+  INTERNAL_REPLENISHMENT: 'internalReplenishment',
+  RETURN: 'return',
+  INCIDENT: 'incident',
+};
+const TYPE_DTO = Object.fromEntries(
+  Object.entries(TYPE).map(([dto, type]) => [type, dto]),
+) as Record<RequestType, RequestTypeDto>;
+
 export const toStockRequest = (dto: StockRequestDto): StockRequest => ({
   id: String(dto.id),
   number: dto.number,
+  type: TYPE[dto.type] ?? 'internalConsumption',
   status: STATUS[dto.status],
   priority: Math.min(3, Math.max(1, dto.priority)) as RequestPriority,
   requiredDate: dto.requiredDate,
@@ -52,7 +69,7 @@ export const toListQuery = (filters: RequestFilters) => ({
 
 export const toCreateRequestDto = (input: CreateRequestInput): CreateStockRequestDto => ({
   warehouseId: Number(input.warehouseId),
-  type: 'INTERNAL_CONSUMPTION',
+  type: TYPE_DTO[input.type],
   priority: input.priority,
   ...(input.requiredDate ? { requiredDate: input.requiredDate } : {}),
   ...(input.notes?.trim() ? { notes: input.notes.trim() } : {}),

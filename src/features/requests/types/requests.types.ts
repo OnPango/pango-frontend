@@ -3,6 +3,12 @@ import type { UnitRef } from '@/shared/lib/units';
 /** CU-08 / CU-09 status cycle: pending → in progress → fulfilled, or rejected / cancelled. */
 export type RequestStatus = 'pending' | 'inProgress' | 'fulfilled' | 'rejected' | 'cancelled';
 
+/**
+ * RF-REQ-007. Only internal consumption counts as demand (RN-008) and, for now, the only one
+ * pango-core accepts; the others are enabled later.
+ */
+export type RequestType = 'internalConsumption' | 'internalReplenishment' | 'return' | 'incident';
+
 /** 1 is the highest. */
 export type RequestPriority = 1 | 2 | 3;
 
@@ -10,6 +16,7 @@ export interface StockRequest {
   id: string;
   /** `SR-00000012`. */
   number: string;
+  type: RequestType;
   status: RequestStatus;
   priority: RequestPriority;
   /** `YYYY-MM-DD`, or null when not given. */
@@ -43,6 +50,7 @@ export interface RequestFilters {
 }
 
 export interface CreateRequestInput {
+  type: RequestType;
   warehouseId: string;
   priority: RequestPriority;
   requiredDate: string | null;

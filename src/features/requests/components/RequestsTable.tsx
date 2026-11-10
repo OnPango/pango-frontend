@@ -8,6 +8,7 @@ import {
   PRIORITY_LABELS,
   productsSummary,
   STATUS_LABELS,
+  TYPE_LABELS,
 } from '../content/request.labels';
 import type { StockRequest } from '../types/requests.types';
 
@@ -47,6 +48,7 @@ export function RequestsTable({
         cell: (request) => (
           <div className="min-w-0">
             <p className="font-semibold text-fg tabular-nums">{request.number}</p>
+            <p className="text-xs text-muted">{TYPE_LABELS[request.type].label}</p>
             <p className="text-xs text-muted">{formatDate(request.createdAt, true)}</p>
           </div>
         ),

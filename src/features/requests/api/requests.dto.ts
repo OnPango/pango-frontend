@@ -1,11 +1,14 @@
 /** Bodies of the stock request endpoints (`docs/stock-requests.md` in pango-core). */
 
+export type RequestTypeDto =
+  'INTERNAL_CONSUMPTION' | 'INTERNAL_REPLENISHMENT' | 'RETURN' | 'INCIDENT';
+
 export type RequestStatusDto = 'PENDING' | 'IN_PROGRESS' | 'FULFILLED' | 'REJECTED' | 'CANCELLED';
 
 export interface StockRequestDto {
   id: number;
   number: string;
-  type: string;
+  type: RequestTypeDto;
   status: RequestStatusDto;
   priority: number;
   requiredDate: string | null;
@@ -33,7 +36,7 @@ export interface StockRequestPageDto {
 
 export interface CreateStockRequestDto {
   warehouseId: number;
-  type: 'INTERNAL_CONSUMPTION';
+  type: RequestTypeDto;
   priority: number;
   requiredDate?: string;
   notes?: string;
