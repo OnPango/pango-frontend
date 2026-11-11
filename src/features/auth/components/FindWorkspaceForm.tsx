@@ -7,6 +7,8 @@ import {
   WORKSPACE_DOMAIN,
 } from '@/core/tenant/tenant';
 import { Button } from '@/shared/ui/components/Button';
+import { useCheckWorkspace, workspaceState } from '../api/useWorkspace';
+import { getAuthErrorMessage } from '../lib/auth.errors';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 
 /**
@@ -16,14 +18,24 @@ import { TextBox } from '@/shared/ui/components/form/TextBox';
 export function FindWorkspaceForm() {
   const [subdomain, setSubdomain] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const check = useCheckWorkspace();
 
+  // Ask the API whether the space exists before leaving for an address that would only fail.
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!isValidSubdomain(subdomain)) {
       setError('Escribe la dirección de tu espacio, por ejemplo mi-empresa.');
       return;
     }
-    redirectToTenant(subdomain, '/login');
+    check.mutate(subdomain, {
+      onSuccess: () => redirectToTenant(subdomain, '/login'),
+      onError: (err) => {
+        const state = workspaceState(err, false);
+        // A failure that says nothing about the space (network…) does not block: its page will tell.
+        if (state === 'unknown') redirectToTenant(subdomain, '/login');
+        else setError(getAuthErrorMessage(err, 'No encontramos ese espacio.'));
+      },
+    });
   };
 
   return (
@@ -48,7 +60,7 @@ export function FindWorkspaceForm() {
           </span>
         }
       />
-      <Button type="submit" size="lg" className="group w-full gap-2.5">
+      <Button type="submit" size="lg" className="group w-full gap-2.5" isLoading={check.isPending}>
         Continuar
         <FiArrowRight aria-hidden className="transition-transform group-hover:translate-x-1" />
       </Button>
