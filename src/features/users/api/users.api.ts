@@ -1,6 +1,7 @@
 import { http } from '@/core/api/http';
 import type {
   ChangeUserRolesInput,
+  DepartmentOption,
   InviteUserInput,
   ManagedRole,
   ManagedUser,
@@ -9,7 +10,13 @@ import type {
   UpdateUserInput,
   WarehouseOption,
 } from '../types/users.types';
-import type { PendingInvitationDto, RoleDto, UserDto, WarehouseDto } from './users.dto';
+import type {
+  DepartmentDto,
+  PendingInvitationDto,
+  RoleDto,
+  UserDto,
+  WarehouseDto,
+} from './users.dto';
 import {
   toAddRoleAssignmentDto,
   toCreateInvitationDto,
@@ -34,7 +41,7 @@ export async function getUsers(): Promise<ManagedUser[]> {
   return data.map(toManagedUser);
 }
 
-/** `PATCH /users/:id`: job title (the department has no list to choose from yet). */
+/** `PATCH /users/:id`: job title and area. */
 export async function updateUser(input: UpdateUserInput): Promise<ManagedUser> {
   const { data } = await http.patch<UserDto>(`/users/${input.id}`, toUpdateUserDto(input));
   return toManagedUser(data);
@@ -111,4 +118,12 @@ export async function updateRolePermissions(
 ): Promise<ManagedRole> {
   const { data } = await http.patch<RoleDto>(`/roles/${input.id}`, toUpdateRoleDto(input));
   return toManagedRole(data);
+}
+
+// ---- Departments ----
+
+/** `GET /departments?status=ALL`: the areas a person can be assigned to (inactive ones only show). */
+export async function getDepartmentOptions(): Promise<DepartmentOption[]> {
+  const { data } = await http.get<DepartmentDto[]>('/departments', { params: { status: 'ALL' } });
+  return data.map((dto) => ({ id: String(dto.id), name: dto.name, isActive: dto.isActive }));
 }

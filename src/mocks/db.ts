@@ -31,9 +31,12 @@ export interface OrganizationRow {
   created_at: string;
 }
 
+/** A department (área) of pango-core. Older saved rows lack the optional fields: active, no cost center. */
 export interface AreaRow {
   id: string;
   name: string;
+  cost_center?: string | null;
+  is_active?: boolean;
 }
 
 export interface UserRow {

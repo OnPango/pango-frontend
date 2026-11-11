@@ -9,6 +9,7 @@ import { roleLabel } from '../content/roleLabels';
 import { usersErrorMessage } from '../content/users.errors';
 import type {
   ChangeUserRolesInput,
+  DepartmentOption,
   ManagedUser,
   RoleOption,
   WarehouseOption,
@@ -17,6 +18,8 @@ import type {
 /** What the modal changed; a field is absent when it was left as it was. */
 export interface UserChanges {
   jobTitle?: string | null;
+  /** Null: no area. */
+  departmentId?: string | null;
   roles?: Pick<ChangeUserRolesInput, 'add' | 'remove'>;
 }
 
@@ -26,6 +29,8 @@ interface UserModalProps {
   user: ManagedUser | null;
   roles: RoleOption[];
   warehouses: WarehouseOption[];
+  /** Areas the person can belong to. */
+  departments: DepartmentOption[];
   /** Rejects on failure: the modal shows the error and stays open. */
   onSave: (user: ManagedUser, changes: UserChanges) => Promise<void>;
   isSubmitting?: boolean;
@@ -55,10 +60,24 @@ function UserModalContent({
   user,
   roles,
   warehouses,
+  departments,
   onSave,
   isSubmitting = false,
 }: Omit<UserModalProps, 'isOpen' | 'user'> & { user: ManagedUser }) {
   const [jobTitle, setJobTitle] = useState(user.jobTitle ?? '');
+  const [departmentId, setDepartmentId] = useState(user.department?.id ?? '');
+  // "Sin área" first (a real option, reachable from the keyboard), then the active areas, plus the
+  // person's current one if it was deactivated (so the field keeps it).
+  const departmentOptions = [
+    { value: '', label: 'Sin área' },
+    ...departments
+      .filter((department) => department.isActive || department.id === user.department?.id)
+      .map((department) => ({
+        value: department.id,
+        label: department.name,
+        description: department.isActive ? undefined : 'Inactiva',
+      })),
+  ];
   const [rows, setRows] = useState<Row[]>(() => toRows(user));
   const [nextKey, setNextKey] = useState(rows.length);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -102,6 +121,7 @@ function UserModalContent({
 
     const changes: UserChanges = {};
     if (jobTitle.trim() !== (user.jobTitle ?? '')) changes.jobTitle = jobTitle.trim() || null;
+    if (departmentId !== (user.department?.id ?? '')) changes.departmentId = departmentId || null;
     const current = new Set(toRows(user).map((row) => assignmentKey(row.roleId, row.warehouseId)));
     const add = rows
       .filter((row) => !current.has(assignmentKey(row.roleId, row.warehouseId)))
@@ -130,7 +150,7 @@ function UserModalContent({
   return (
     <Modal
       title="Editar usuario"
-      description="Cargo y roles. El nombre y el correo pertenecen a la cuenta de la persona y no se editan aquí."
+      description="Cargo, área y roles. El nombre y el correo pertenecen a la cuenta de la persona y no se editan aquí."
       size="lg"
       onClose={onClose}
       dismissible={!isSubmitting}
@@ -165,6 +185,22 @@ function UserModalContent({
           maxLength={80}
           onChange={(e) => setJobTitle(e.target.value)}
           placeholder="Ej. Jefe de bodega"
+        />
+
+        <Select
+          label="Área"
+          value={departmentId}
+          onChange={setDepartmentId}
+          options={departmentOptions}
+          placeholder="Sin área"
+          hint={
+            departmentOptions.length > 1
+              ? 'Sin área, la persona no puede crear solicitudes internas.'
+              : 'Aún no hay áreas: créalas en Áreas.'
+          }
+          searchable
+          searchPlaceholder="Buscar área…"
+          emptyMessage="Ningún área coincide"
         />
 
         <fieldset className="space-y-3">
