@@ -4,7 +4,9 @@ import { authRoutes } from './handlers/auth.handlers';
 import { catalogRoutes } from './handlers/catalog.handlers';
 import { departmentsRoutes } from './handlers/departments.handlers';
 import { movementsRoutes } from './handlers/movements.handlers';
+import { organizationsRoutes } from './handlers/organizations.handlers';
 import { replenishmentRoutes } from './handlers/replenishment.handlers';
+import { stockRoutes } from './handlers/stock.handlers';
 import { stockRequestsRoutes } from './handlers/stock-requests.handlers';
 import { usersRoutes } from './handlers/users.handlers';
 import { warehousesRoutes } from './handlers/warehouses.handlers';
@@ -25,6 +27,8 @@ export function enableMocking(): void {
     ...warehousesRoutes,
     ...movementsRoutes,
     ...replenishmentRoutes,
+    ...stockRoutes,
+    ...organizationsRoutes,
     ...departmentsRoutes,
     ...stockRequestsRoutes,
   });

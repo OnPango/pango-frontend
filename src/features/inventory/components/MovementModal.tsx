@@ -28,6 +28,9 @@ interface MovementModalProps {
 
 const FORM_ID = 'movement-form';
 
+const formatDay = (iso: string) =>
+  new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(`${iso}T12:00:00`));
+
 function MovementForm({
   kind,
   products,
@@ -36,7 +39,7 @@ function MovementForm({
   onClose,
   onSaved,
 }: Omit<MovementModalProps, 'kind'> & { kind: MovementKind }) {
-  const { form, submit, product, available, isSubmitting, serverError } = useMovementForm({
+  const { form, submit, product, available, lots, isSubmitting, serverError } = useMovementForm({
     kind,
     products,
     initialProductId,
@@ -179,23 +182,53 @@ function MovementForm({
             }
             hint={
               product && available !== null && warehouseName
-                ? `${kind === 'outbound' ? 'Disponible' : 'Hay'} en ${warehouseName}: ${formatQuantity(available, product.unit)}.`
+                ? lots?.chosen
+                  ? `Disponible en el lote ${lots.chosen.code}: ${formatQuantity(available, product.unit)}.`
+                  : `${kind === 'outbound' ? 'Disponible' : 'Hay'} en ${warehouseName}: ${formatQuantity(available, product.unit)}.`
                 : undefined
             }
             error={errors.quantity?.message}
             {...register('quantity')}
           />
-          {product?.tracksLots && (
+          {product?.tracksLots && lots && (
+            <FormSelect
+              control={control}
+              name="lotCode"
+              label="Lote"
+              required
+              disabled={!warehouseId}
+              placeholder={
+                !warehouseId
+                  ? 'Primero elige el almacén'
+                  : lots.isLoading
+                    ? 'Cargando lotes…'
+                    : lots.items.length > 0
+                      ? 'Elige el lote'
+                      : 'No hay lotes con existencia aquí'
+              }
+              hint="Los lotes con existencia en este almacén; primero los que vencen antes."
+              options={lots.items.map((lot) => ({
+                value: lot.code,
+                label: lot.code,
+                description: [
+                  formatQuantity(lot.onHand, product.unit),
+                  lot.expiryDate ? `vence el ${formatDay(lot.expiryDate)}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · '),
+              }))}
+              searchable
+              searchPlaceholder="Buscar lote…"
+              emptyMessage="Ningún lote coincide"
+            />
+          )}
+          {product?.tracksLots && !lots && (
             <TextBox
               label="Lote"
               required
               maxLength={40}
               placeholder="Ej. L-2026-11"
-              hint={
-                kind === 'inbound'
-                  ? 'Si el lote no existe todavía, se crea.'
-                  : 'El lote del que sale. Debe existir en este almacén.'
-              }
+              hint="Si el lote no existe todavía, se crea."
               error={errors.lotCode?.message}
               {...register('lotCode')}
             />

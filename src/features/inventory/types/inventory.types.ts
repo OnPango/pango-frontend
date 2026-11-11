@@ -54,12 +54,23 @@ export interface SetReplenishmentInput {
   maxStock: number | null;
 }
 
-/** One product in a warehouse's stock list. */
+/** One product in a warehouse's stock list (`GET /stock`). */
 export interface WarehouseStockRow {
   product: StockProduct;
   onHand: number;
-  reorderPoint: number;
-  source: ValueSource;
+  /** Held by stock requests in attention. */
+  reserved: number;
+  /** On hand minus reserved: what can still go out, and what the reorder point compares to. */
+  available: number;
+}
+
+/** A lot of a product with stock in a warehouse (`GET /products/:id/lots`). */
+export interface ProductLot {
+  id: string;
+  code: string;
+  /** `YYYY-MM-DD`. */
+  expiryDate: string | null;
+  onHand: number;
 }
 
 export interface WarehouseOption {

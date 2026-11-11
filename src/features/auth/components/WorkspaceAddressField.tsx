@@ -6,11 +6,21 @@ interface WorkspaceAddressFieldProps extends Omit<InputHTMLAttributes<HTMLInputE
   /** Validation or server error for the address (taken, reserved, malformed). */
   error?: string;
   label?: string;
+  /** Overrides the default hint (e.g. "Disponible"). */
+  hint?: string;
 }
 
 /** Subdomain input with the `.onpango.com` suffix. Forwards its ref, so it works with `register`. */
 export const WorkspaceAddressField = forwardRef<HTMLInputElement, WorkspaceAddressFieldProps>(
-  function WorkspaceAddressField({ error, label = 'Dirección de tu espacio', ...inputProps }, ref) {
+  function WorkspaceAddressField(
+    {
+      error,
+      label = 'Dirección de tu espacio',
+      hint = 'Es donde tú y tu equipo entran. Solo minúsculas, números y guiones.',
+      ...inputProps
+    },
+    ref,
+  ) {
     return (
       <TextBox
         ref={ref}
@@ -20,7 +30,7 @@ export const WorkspaceAddressField = forwardRef<HTMLInputElement, WorkspaceAddre
         autoCapitalize="none"
         spellCheck={false}
         placeholder="tuempresa"
-        hint="Es donde tú y tu equipo entran. Solo minúsculas, números y guiones."
+        hint={hint}
         error={error}
         trailing={
           <span className="shrink-0 rounded-lg bg-fg/5 px-2.5 py-1 text-sm font-semibold text-muted">

@@ -1,6 +1,8 @@
 import type { ChangeEvent } from 'react';
-import type { UseFormReturn } from 'react-hook-form';
+import { useWatch, type UseFormReturn } from 'react-hook-form';
 import { FiArrowLeft, FiHome } from 'react-icons/fi';
+import { isValidSubdomain, WORKSPACE_DOMAIN } from '@/core/tenant/tenant';
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { Button } from '@/shared/ui/components/Button';
 import { FormSelect } from '@/shared/ui/components/form/FormSelect';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
@@ -12,6 +14,7 @@ import {
   TEAM_SIZE_OPTIONS,
 } from '../content/registration.options';
 import type { RegisterOrganizationValues } from '../types/auth.schema';
+import { useWorkspace, workspaceState } from '../api/useWorkspace';
 import { WorkspaceAddressField } from './WorkspaceAddressField';
 
 interface CompanyStepProps {
@@ -38,6 +41,27 @@ export function CompanyStep({
     formState: { errors },
   } = form;
 
+  // While typing, ask whether the address is free: an existing organization answers it.
+  const subdomain = useDebouncedValue(useWatch({ control, name: 'subdomain' }), 500);
+  const checkable = isValidSubdomain(subdomain);
+  const lookup = useWorkspace(subdomain, checkable);
+  const availability = !checkable
+    ? null
+    : lookup.isPending
+      ? 'checking'
+      : workspaceState(lookup.error, lookup.isSuccess);
+  const addressHint =
+    availability === 'checking'
+      ? 'Comprobando si está libre…'
+      : availability === 'notFound'
+        ? `${subdomain}.${WORKSPACE_DOMAIN} está libre.`
+        : undefined;
+  const addressError =
+    errors.subdomain?.message ??
+    (availability === 'exists' || availability === 'inactive'
+      ? 'Esa dirección ya está en uso. Elige otra.'
+      : undefined);
+
   return (
     <div className="space-y-5">
       <Reveal>
@@ -60,7 +84,8 @@ export function CompanyStep({
 
       <Reveal delay={STAGGER_MS * 2}>
         <WorkspaceAddressField
-          error={errors.subdomain?.message}
+          error={addressError}
+          hint={addressHint}
           {...register('subdomain', { onChange: onSubdomainChange })}
         />
       </Reveal>

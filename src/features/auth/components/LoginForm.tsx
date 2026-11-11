@@ -8,7 +8,14 @@ import { useLoginForm } from '../hooks/useLoginForm';
 import { AuthCard } from './AuthPageShell';
 
 /** Login card of one organization (the page is served from its subdomain). */
-export function LoginForm({ tenant }: { tenant: string }) {
+export function LoginForm({
+  tenant,
+  organizationName,
+}: {
+  tenant: string;
+  /** From `GET /organizations/current`, when it answered. */
+  organizationName?: string;
+}) {
   const {
     form,
     submit,
@@ -28,10 +35,17 @@ export function LoginForm({ tenant }: { tenant: string }) {
     <AuthCard
       eyebrow="BIENVENIDO A PANGO"
       title={
-        <div className="-space-y-1">
-          <h2>Iniciar sesión para</h2>
-          <h2>continuar</h2>
-        </div>
+        organizationName ? (
+          <div className="-space-y-1">
+            <h2>Iniciar sesión en</h2>
+            <h2>{organizationName}</h2>
+          </div>
+        ) : (
+          <div className="-space-y-1">
+            <h2>Iniciar sesión para</h2>
+            <h2>continuar</h2>
+          </div>
+        )
       }
       className="px-10 sm:px-12"
     >

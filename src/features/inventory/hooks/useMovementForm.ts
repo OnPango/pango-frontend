@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { getApiErrorCode } from '@/core/api/errors';
 import { formatQuantity } from '@/shared/lib/units';
-import { useProductStock, useRegisterMovement } from '../api/inventory.queries';
+import { useProductLots, useProductStock, useRegisterMovement } from '../api/inventory.queries';
 import { inventoryErrorMessage } from '../content/inventory.errors';
 import type { MovementKind, RegisteredMovement, StockProduct } from '../types/inventory.types';
 import { movementSchema, toQuantity, type MovementFormValues } from '../types/movement.schema';
@@ -62,15 +63,42 @@ export function useMovementForm({
   const product = products.find((candidate) => candidate.id === productId) ?? null;
   const stock = useProductStock(productId || null);
   /** On hand of the product in the chosen warehouse; null until both are known. */
-  const available =
+  const inWarehouse =
     product && warehouseId && stock.data?.product.id === productId
       ? (stock.data.warehouses.find((row) => row.warehouse.id === warehouseId)?.onHand ?? 0)
       : null;
 
+  // An outbound movement of a per-lot product takes stock from one lot: offer the lots with stock
+  // in that warehouse instead of typing the code (an inbound one may bring a new lot, so it types).
+  const picksLot = kind === 'outbound' && Boolean(product?.tracksLots);
+  const lots = useProductLots(
+    picksLot ? productId : null,
+    picksLot && warehouseId ? warehouseId : null,
+  );
+  const lotCode = useWatch({ control: form.control, name: 'lotCode' });
+  const lot = picksLot
+    ? (lots.data?.find((candidate) => candidate.code === lotCode) ?? null)
+    : null;
+  /** What can go out: the chosen lot's stock, or the warehouse's. */
+  const available = lot ? lot.onHand : inWarehouse;
+
+  // A lot that is not in the new warehouse (or product) cannot stay chosen.
+  useEffect(() => {
+    if (!picksLot || !lots.data) return;
+    const current = form.getValues('lotCode');
+    if (current && !lots.data.some((candidate) => candidate.code === current)) {
+      form.setValue('lotCode', '');
+    }
+  }, [picksLot, lots.data, form]);
+
   const submit = form.handleSubmit((values) => {
     const quantity = toQuantity(values.quantity);
     if (product?.tracksLots && !values.lotCode.trim()) {
-      form.setError('lotCode', { message: 'Este producto se sigue por lote: escribe el lote.' });
+      form.setError('lotCode', {
+        message: picksLot
+          ? 'Este producto se sigue por lote: elige el lote del que sale.'
+          : 'Este producto se sigue por lote: escribe el lote.',
+      });
       return;
     }
     // CU-05 step 4: an outbound movement cannot take more than the warehouse has.
@@ -81,7 +109,9 @@ export function useMovementForm({
           message:
             available === 0
               ? 'No hay existencia de este producto en este almacén.'
-              : `Solo hay ${formatQuantity(available, product.unit)} en este almacén.`,
+              : lot
+                ? `Solo hay ${formatQuantity(available, product.unit)} en el lote ${lot.code}.`
+                : `Solo hay ${formatQuantity(available, product.unit)} en este almacén.`,
         },
         { shouldFocus: true },
       );
@@ -114,6 +144,8 @@ export function useMovementForm({
     submit,
     product,
     available,
+    /** For outbound movements of per-lot products: the lots to choose from, and the chosen one. */
+    lots: picksLot ? { items: lots.data ?? [], isLoading: lots.isLoading, chosen: lot } : null,
     isSubmitting: register.isPending,
     /** Errors that are not about one field (permissions, network…). */
     serverError:

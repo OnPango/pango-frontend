@@ -33,6 +33,24 @@ export function applyStock(
 export const onHand = (org: string, productId: number, warehouseId: number, lot: string | null) =>
   balances.get(key(org, productId, warehouseId, lot ?? NO_LOT)) ?? 0;
 
+/** Lots of a product with stock in a warehouse, by code. */
+export function lotsInWarehouse(org: string, productId: number, warehouseId: number) {
+  const result: { code: string; onHand: number }[] = [];
+  for (const [k, quantity] of balances) {
+    const [o, p, w, lot] = k.split('|');
+    if (
+      o === org &&
+      Number(p) === productId &&
+      Number(w) === warehouseId &&
+      lot &&
+      quantity !== 0
+    ) {
+      result.push({ code: lot, onHand: quantity });
+    }
+  }
+  return result.sort((a, b) => a.code.localeCompare(b.code));
+}
+
 export const lotExists = (org: string, productId: number, lot: string) =>
   lots.has(`${org}|${productId}|${lot}`);
 
