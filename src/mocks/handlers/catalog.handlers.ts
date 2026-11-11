@@ -124,7 +124,7 @@ const findCategory = (organizationId: string, id: number) =>
   categories.find((row) => row.organizationId === organizationId && row.id === id);
 
 /** The family and every subfamily below it. */
-function withDescendants(organizationId: string, id: number): Set<number> {
+export function withDescendants(organizationId: string, id: number): Set<number> {
   const ids = new Set([id]);
   let grew = true;
   while (grew) {
@@ -180,6 +180,13 @@ export const findProductRow = (organizationId: string, id: number) =>
   products.find((row) => row.organizationId === organizationId && row.id === id);
 
 export const findUnitRow = (id: number) => units.find((unit) => unit.id === id);
+
+export const findCategoryRow = (organizationId: string, id: number) =>
+  categories.find((row) => row.organizationId === organizationId && row.id === id);
+
+/** Every product of the organization, for the stock mock. */
+export const productsOf = (organizationId: string) =>
+  products.filter((row) => row.organizationId === organizationId);
 
 const findProduct = (organizationId: string, id: string) =>
   products.find((row) => row.organizationId === organizationId && row.id === Number(id));
