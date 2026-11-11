@@ -72,8 +72,17 @@ export interface InviteUserInput {
 
 export interface UpdateUserInput {
   id: string;
-  /** Null (or empty) clears it. */
-  jobTitle: string | null;
+  /** Null (or empty) clears it; absent leaves it as it is. */
+  jobTitle?: string | null;
+  /** Null removes the person from their area; absent leaves it as it is. */
+  departmentId?: string | null;
+}
+
+/** An area (department) a person can belong to. */
+export interface DepartmentOption {
+  id: string;
+  name: string;
+  isActive: boolean;
 }
 
 export interface RoleAssignmentInput {

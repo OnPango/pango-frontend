@@ -27,3 +27,16 @@ export function authorize(...anyOf: Permission[]) {
   }
   return { user, role };
 }
+
+/** Session only, for endpoints any signed-in user may call (`GET /departments`). */
+export function authenticate() {
+  const session = readAccessCookie(tenantOf());
+  if (!session) {
+    return { error: error(401, 'UNAUTHENTICATED', 'Missing, invalid or expired access token') };
+  }
+  const user = findUserById(session.sub);
+  if (!user || !user.is_active) {
+    return { error: error(401, 'UNAUTHENTICATED', 'User not found or inactive') };
+  }
+  return { user, role: findRoleById(user.role_id) };
+}

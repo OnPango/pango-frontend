@@ -2,8 +2,10 @@ import { authHttp } from '@/core/api/authHttp';
 import { http } from '@/core/api/http';
 import { authRoutes } from './handlers/auth.handlers';
 import { catalogRoutes } from './handlers/catalog.handlers';
+import { departmentsRoutes } from './handlers/departments.handlers';
 import { movementsRoutes } from './handlers/movements.handlers';
 import { replenishmentRoutes } from './handlers/replenishment.handlers';
+import { stockRequestsRoutes } from './handlers/stock-requests.handlers';
 import { usersRoutes } from './handlers/users.handlers';
 import { warehousesRoutes } from './handlers/warehouses.handlers';
 import { createMockAdapter } from './server';
@@ -23,6 +25,8 @@ export function enableMocking(): void {
     ...warehousesRoutes,
     ...movementsRoutes,
     ...replenishmentRoutes,
+    ...departmentsRoutes,
+    ...stockRequestsRoutes,
   });
   http.defaults.adapter = adapter;
   authHttp.defaults.adapter = adapter;

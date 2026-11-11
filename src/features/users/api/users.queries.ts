@@ -12,6 +12,7 @@ import {
   setUserActive,
   updateRolePermissions,
   updateUser,
+  getDepartmentOptions,
 } from './users.api';
 import { usersKeys } from './users.keys';
 
@@ -39,6 +40,14 @@ export function useUpdateRolePermissions() {
 
 export function useInvitations() {
   return useQuery({ queryKey: usersKeys.invitations(), queryFn: getInvitations });
+}
+
+export function useDepartmentOptions() {
+  return useQuery({
+    queryKey: usersKeys.departments(),
+    queryFn: getDepartmentOptions,
+    staleTime: 300_000,
+  });
 }
 
 export function useWarehouses() {

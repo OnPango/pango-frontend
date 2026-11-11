@@ -14,6 +14,7 @@ import {
   useChangeUserRoles,
   useInviteUser,
   useRevokeInvitation,
+  useDepartmentOptions,
   useRoleOptions,
   useSetUserActive,
   useUpdateUser,
@@ -53,6 +54,7 @@ export default function UsersPage() {
   } = useInvitations();
   const { data: warehouses = [] } = useWarehouses();
   const roles = useRoleOptions();
+  const { data: departments = [] } = useDepartmentOptions();
 
   const updateUser = useUpdateUser();
   const changeUserRoles = useChangeUserRoles();
@@ -148,8 +150,12 @@ export default function UsersPage() {
   };
 
   const handleSave = async (user: ManagedUser, changes: UserChanges) => {
-    if ('jobTitle' in changes) {
-      await updateUser.mutateAsync({ id: user.id, jobTitle: changes.jobTitle ?? null });
+    if ('jobTitle' in changes || 'departmentId' in changes) {
+      await updateUser.mutateAsync({
+        id: user.id,
+        ...('jobTitle' in changes ? { jobTitle: changes.jobTitle ?? null } : {}),
+        ...('departmentId' in changes ? { departmentId: changes.departmentId ?? null } : {}),
+      });
     }
     if (changes.roles) {
       await changeUserRoles.mutateAsync({ id: user.id, ...changes.roles });
@@ -297,6 +303,7 @@ export default function UsersPage() {
         user={userToEdit}
         roles={roles}
         warehouses={warehouses}
+        departments={departments}
         onSave={handleSave}
         isSubmitting={updateUser.isPending || changeUserRoles.isPending}
       />
