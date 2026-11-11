@@ -4,20 +4,16 @@ import {
   useQueries,
   useQuery,
   useQueryClient,
-  type QueryClient,
 } from '@tanstack/react-query';
-import type {
-  ProductStock,
-  SetReplenishmentInput,
-  WarehouseStockRow,
-} from '../types/inventory.types';
+import type { ProductStock, SetReplenishmentInput } from '../types/inventory.types';
 import {
   getActiveProducts,
-  getAllProducts,
   getMovementTypes,
+  getProductLots,
   getProductStock,
   getReplenishment,
   getWarehouses,
+  getWarehouseStock,
   registerMovement,
   setReplenishment,
 } from './inventory.api';
@@ -39,61 +35,21 @@ export function useProductStock(productId: string | null) {
   return useQuery({ ...productStockQuery(productId ?? ''), enabled: productId !== null });
 }
 
-/** How many product details are asked for at the same time while building a warehouse's stock. */
-const PARALLEL_REQUESTS = 6;
-/** A product's stock read for the warehouse list stays fresh this long (a movement invalidates it). */
-const DETAIL_FRESH_MS = 60_000;
-
-async function mapInBatches<T, R>(items: T[], size: number, fn: (item: T) => Promise<R>) {
-  const results: R[] = [];
-  for (let start = 0; start < items.length; start += size) {
-    results.push(...(await Promise.all(items.slice(start, start + size).map(fn))));
-  }
-  return results;
-}
-
-/**
- * The products with stock in a warehouse.
- *
- * TEMPORARY: pango-core has no endpoint for a whole warehouse's stock yet (requested:
- * `GET /stock?warehouseId=`), so this reads every product's detail (`GET /products/:id`, cached and
- * shared with the product view) and keeps those enabled in the warehouse. Fine for tens of
- * products; when the endpoint exists, only this function changes.
- */
-async function loadWarehouseStock(
-  queryClient: QueryClient,
-  warehouseId: string,
-): Promise<WarehouseStockRow[]> {
-  const products = await queryClient.query({
-    queryKey: inventoryKeys.allProducts(),
-    queryFn: getAllProducts,
-    staleTime: DETAIL_FRESH_MS,
-  });
-  const stocks = await mapInBatches(products, PARALLEL_REQUESTS, (product) =>
-    queryClient.query({ ...productStockQuery(product.id), staleTime: DETAIL_FRESH_MS }),
-  );
-  return stocks.flatMap((stock) => {
-    const row = stock.warehouses.find((entry) => entry.warehouse.id === warehouseId);
-    return row
-      ? [
-          {
-            product: stock.product,
-            onHand: row.onHand,
-            reorderPoint: row.reorderPoint,
-            source: row.source,
-          },
-        ]
-      : [];
-  });
-}
-
 /** Products enabled in `warehouseId`, with their stock there. Null: no warehouse chosen yet. */
 export function useWarehouseStock(warehouseId: string | null) {
-  const queryClient = useQueryClient();
   return useQuery({
     queryKey: inventoryKeys.warehouseStock(warehouseId ?? ''),
-    queryFn: () => loadWarehouseStock(queryClient, warehouseId ?? ''),
+    queryFn: () => getWarehouseStock(warehouseId ?? ''),
     enabled: warehouseId !== null,
+  });
+}
+
+/** Lots of a per-lot product with stock in a warehouse. Null: not needed yet. */
+export function useProductLots(productId: string | null, warehouseId: string | null) {
+  return useQuery({
+    queryKey: inventoryKeys.lots(productId ?? '', warehouseId ?? ''),
+    queryFn: () => getProductLots(productId ?? '', warehouseId ?? ''),
+    enabled: productId !== null && warehouseId !== null,
   });
 }
 
@@ -126,6 +82,9 @@ export function useRegisterMovement() {
         }),
         queryClient.invalidateQueries({
           queryKey: inventoryKeys.replenishment(movement.productId, movement.warehouse.id),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: inventoryKeys.lots(movement.productId, movement.warehouse.id),
         }),
       ]);
     },
@@ -162,20 +121,8 @@ export function useSetReplenishment(productId: string, warehouseId: string) {
             ),
           },
       );
-      queryClient.setQueryData<WarehouseStockRow[]>(
-        inventoryKeys.warehouseStock(warehouseId),
-        (old) =>
-          old?.map((row) =>
-            row.product.id === productId
-              ? { ...row, reorderPoint: saved.reorderPoint, source: saved.source }
-              : row,
-          ),
-      );
-      // The rows show the values and their origin. Not awaited, like movements.
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: inventoryKeys.stock(productId) }),
-        queryClient.invalidateQueries({ queryKey: inventoryKeys.warehouseStock(warehouseId) }),
-      ]);
+      // The product view shows the values and their origin. Not awaited, like movements.
+      void queryClient.invalidateQueries({ queryKey: inventoryKeys.stock(productId) });
     },
   });
 }

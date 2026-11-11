@@ -93,3 +93,20 @@ export interface MovementDto {
   warehouse: { id: number; name: string };
   lines: { product: { id: number }; quantity: number }[];
 }
+
+/** `GET /stock`: products with stock in a warehouse. */
+export interface StockPageDto {
+  items: { product: ProductDto; onHand: number; reserved: number; available: number }[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** `GET /products/:id/lots`. */
+export interface LotDto {
+  id: number;
+  code: string;
+  manufactureDate: string | null;
+  expiryDate: string | null;
+  onHand: number;
+}

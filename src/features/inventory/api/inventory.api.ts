@@ -1,6 +1,7 @@
 import { http } from '@/core/api/http';
 import type {
   MovementType,
+  ProductLot,
   ProductStock,
   RegisteredMovement,
   RegisterMovementInput,
@@ -8,13 +9,16 @@ import type {
   SetReplenishmentInput,
   StockProduct,
   WarehouseOption,
+  WarehouseStockRow,
 } from '../types/inventory.types';
 import type {
+  LotDto,
   MovementDto,
   MovementTypeDto,
   ProductDetailDto,
   ProductPageDto,
   ReplenishmentDto,
+  StockPageDto,
   WarehouseDto,
 } from './inventory.dto';
 import {
@@ -48,9 +52,6 @@ async function getCatalog(status: 'ACTIVE' | 'ALL'): Promise<StockProduct[]> {
 
 /** Active products, to pick one by code or name (CU-05, step 2). */
 export const getActiveProducts = () => getCatalog('ACTIVE');
-
-/** Active and archived: an archived product can still hold stock. */
-export const getAllProducts = () => getCatalog('ALL');
 
 /** `GET /products/:id`: the total and the stock per warehouse (US-015). */
 export async function getProductStock(id: string): Promise<ProductStock> {
@@ -113,4 +114,52 @@ export async function setReplenishment(
     input,
   );
   return toReplenishment(data);
+}
+
+/**
+ * `GET /stock?warehouseId=&includeZero=true`: every product enabled in the warehouse, zeros
+ * included (the page hides them unless asked), 100 per request. The page searches (by family
+ * too) and paginates in the browser.
+ */
+export async function getWarehouseStock(warehouseId: string): Promise<WarehouseStockRow[]> {
+  const page = async (n: number) =>
+    (
+      await http.get<StockPageDto>('/stock', {
+        params: {
+          warehouseId: Number(warehouseId),
+          includeZero: true,
+          page: n,
+          pageSize: MAX_PAGE_SIZE,
+        },
+      })
+    ).data;
+  const first = await page(1);
+  const pages = Math.ceil(first.total / MAX_PAGE_SIZE);
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, pages - 1) }, (_, index) => page(index + 2)),
+  );
+  return [first, ...rest]
+    .flatMap((p) => p.items)
+    .map((item) => ({
+      product: toStockProduct(item.product),
+      onHand: item.onHand,
+      reserved: item.reserved,
+      available: item.available,
+    }));
+}
+
+/** `GET /products/:id/lots?warehouseId=`: lots with stock there, earliest expiry first. */
+export async function getProductLots(
+  productId: string,
+  warehouseId: string,
+): Promise<ProductLot[]> {
+  const { data } = await http.get<LotDto[]>(`/products/${productId}/lots`, {
+    params: { warehouseId: Number(warehouseId) },
+  });
+  return data.map((lot) => ({
+    id: String(lot.id),
+    code: lot.code,
+    expiryDate: lot.expiryDate,
+    onHand: lot.onHand,
+  }));
 }

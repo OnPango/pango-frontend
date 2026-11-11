@@ -141,7 +141,7 @@ export default function InventoryPage() {
         productName: row.product.name,
         unit: row.product.unit,
         warehouseId,
-        warehouseName: warehouseName ?? '',
+        warehouseName: warehouseName ?? 'este almacén',
       });
     },
     [warehouseId, warehouseName],
@@ -310,7 +310,7 @@ export default function InventoryPage() {
               )}
               <WarehouseStockTable
                 rows={visibleRows}
-                warehouseName={warehouseName ?? ''}
+                warehouseName={warehouseName ?? 'este almacén'}
                 isLoading={warehouseStock.isLoading}
                 error={
                   warehouseStock.error

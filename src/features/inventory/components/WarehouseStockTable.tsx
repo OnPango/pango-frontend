@@ -7,7 +7,6 @@ import { Badge } from '@/shared/ui/components/Badge';
 import { Button } from '@/shared/ui/components/Button';
 import { DataTable } from '@/shared/ui/components/DataTable';
 import { usePagination } from '@/shared/ui/components/pagination/usePagination';
-import { SOURCE_LABELS } from '../content/replenishment.labels';
 import type { MovementKind, WarehouseStockRow } from '../types/inventory.types';
 import { RowMovementActions } from './RowMovementActions';
 
@@ -90,15 +89,19 @@ export function WarehouseStockTable({
         ),
       },
       {
-        key: 'reorderPoint',
-        header: 'Punto de reorden',
+        key: 'available',
+        header: 'Disponible',
         className: 'text-right',
-        cell: ({ product, reorderPoint, source }) => (
+        cell: ({ product, reserved, available }) => (
           <div className="flex flex-col items-end">
             <span className="text-sm text-fg/90 tabular-nums">
-              {reorderPoint === 0 ? 'Sin definir' : formatQuantity(reorderPoint, product.unit)}
+              {formatQuantity(available, product.unit)}
             </span>
-            <span className="text-[11px] text-muted">{SOURCE_LABELS[source].label}</span>
+            {reserved > 0 && (
+              <span className="text-[11px] text-muted">
+                {formatQuantity(reserved, product.unit)} reservado
+              </span>
+            )}
           </div>
         ),
       },
@@ -114,7 +117,7 @@ export function WarehouseStockTable({
           <RowMovementActions
             subject={`${row.product.name} en ${warehouseName}`}
             canAdd={row.product.isActive}
-            canRemove={row.onHand > 0 && row.product.isActive}
+            canRemove={row.available > 0 && row.product.isActive}
             onRegister={onRegister ? (kind) => onRegister(kind, row) : undefined}
             onReplenish={onReplenish ? () => onReplenish(row) : undefined}
           />
