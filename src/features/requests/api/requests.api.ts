@@ -1,6 +1,8 @@
 import { http } from '@/core/api/http';
 import type {
   CreateRequestInput,
+  FulfilInput,
+  RequestLot,
   Option,
   RequestableProduct,
   RequestFilters,
@@ -9,6 +11,7 @@ import type {
 } from '../types/requests.types';
 import type {
   DepartmentDto,
+  LotDto,
   ProductPageDto,
   StockRequestDto,
   StockRequestPageDto,
@@ -69,6 +72,7 @@ export async function getRequestableProducts(): Promise<RequestableProduct[]> {
       sku: dto.sku,
       name: dto.name,
       unit: { code: dto.stockUnit.code, name: dto.stockUnit.name },
+      tracksLots: dto.tracksLots,
     }));
 }
 
@@ -88,4 +92,51 @@ export async function getDepartments(): Promise<(Option & { isActive: boolean })
 export async function getUserDepartment(userId: string): Promise<Option | null> {
   const { data } = await http.get<UserDto>(`/users/${userId}`);
   return data.department ? { id: String(data.department.id), name: data.department.name } : null;
+}
+
+// ---- Attention (US-030, US-031): `stock_request.approve` in the warehouse ----
+
+/** `GET /stock-requests/:id`: lines, status history and the fulfilling movement. */
+export async function getRequest(id: string): Promise<StockRequest> {
+  const { data } = await http.get<StockRequestDto>(`/stock-requests/${id}`);
+  return toStockRequest(data);
+}
+
+/** Pending → in attention: reserves the full quantity of every line (`409 INSUFFICIENT_STOCK`). */
+export async function startRequest(id: string): Promise<StockRequest> {
+  const { data } = await http.post<StockRequestDto>(`/stock-requests/${id}/start`, undefined, {
+    timeout: WRITE_TIMEOUT_MS,
+  });
+  return toStockRequest(data);
+}
+
+/**
+ * In attention → fulfilled: registers the outbound movement ("Consumption issue", source stock
+ * request) in the same operation. Per-lot lines say their lot; the rest use the default location.
+ */
+export async function fulfilRequest(id: string, input: FulfilInput): Promise<StockRequest> {
+  const { data } = await http.post<StockRequestDto>(
+    `/stock-requests/${id}/fulfil`,
+    { lines: input.lines },
+    { timeout: WRITE_TIMEOUT_MS },
+  );
+  return toStockRequest(data);
+}
+
+/** Pending or in attention → rejected, with a reason (releases the reservation). */
+export async function rejectRequest(id: string, reason: string): Promise<StockRequest> {
+  const { data } = await http.post<StockRequestDto>(
+    `/stock-requests/${id}/reject`,
+    { reason: reason.trim() },
+    { timeout: WRITE_TIMEOUT_MS },
+  );
+  return toStockRequest(data);
+}
+
+/** `GET /products/:id/lots?warehouseId=`: lots with stock there, earliest expiry first. */
+export async function getLots(productId: string, warehouseId: string): Promise<RequestLot[]> {
+  const { data } = await http.get<LotDto[]>(`/products/${productId}/lots`, {
+    params: { warehouseId: Number(warehouseId) },
+  });
+  return data.map((lot) => ({ code: lot.code, expiryDate: lot.expiryDate, onHand: lot.onHand }));
 }

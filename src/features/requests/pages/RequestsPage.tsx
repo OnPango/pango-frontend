@@ -1,9 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FiPlus } from 'react-icons/fi';
+import { FiInbox, FiPlus, FiUsers } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
 import { Alert } from '@/shared/ui/components/Alert';
+import { SegmentedControl } from '@/shared/ui/components/form/SegmentedControl';
 import { Select } from '@/shared/ui/components/form/select/Select';
 import type { SelectOption } from '@/shared/ui/components/form/select/select.types';
 import { PageHeader } from '@/shared/ui/PageHeader';
@@ -15,13 +16,25 @@ import {
   useRequests,
 } from '../api/requests.queries';
 import { CancelRequestDialog } from '../components/CancelRequestDialog';
+import { FulfilRequestModal } from '../components/FulfilRequestModal';
+import { RejectRequestDialog } from '../components/RejectRequestDialog';
+import { RequestDetailPanel, type RequestAction } from '../components/RequestDetailPanel';
+import { StartAttentionDialog } from '../components/StartAttentionDialog';
 import { NewRequestModal } from '../components/NewRequestModal';
 import { RequestsTable } from '../components/RequestsTable';
 import { STATUS_LABELS } from '../content/request.labels';
+import { attendance, attendedWarehouses } from '../content/request.permissions';
 import { requestsErrorMessage } from '../content/requests.errors';
 import type { Option, RequestStatus, StockRequest } from '../types/requests.types';
 
 const ALL = 'all';
+
+/** "De mi área" (who asks) or "Para atender" (the warehouse staff, US-030). */
+type View = 'mine' | 'attend';
+const VIEWS = [
+  { value: 'mine' as const, label: 'De mi área', icon: FiUsers },
+  { value: 'attend' as const, label: 'Para atender', icon: FiInbox },
+];
 
 const STATUS_OPTIONS: SelectOption[] = [
   { value: ALL, label: 'Todos los estados' },
@@ -57,23 +70,38 @@ export default function RequestsPage() {
     }
     return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, 'es'));
   }, [everyWarehouse, openWarehouses.data, grants]);
-  const products = useRequestableProducts(canCreate);
+  // Where the user attends requests; "Para atender" only exists for them.
+  const attending = attendedWarehouses(currentUser);
+  const attendsAny = attending === 'all' || attending.length > 0;
+  const attendAll = useOpenWarehouses(attending === 'all');
+  const attendOptions: Option[] = attending === 'all' ? (attendAll.data ?? []) : attending;
+  const [view, setViewState] = useState<View>(() => (canCreate || !attendsAny ? 'mine' : 'attend'));
+  const products = useRequestableProducts(canCreate || attendsAny);
 
   // Filters: by default, the user's own area (CU-08 step 7: "el listado de solicitudes del área").
   const [departmentChoice, setDepartmentChoice] = useState<string | null>(null);
   const departmentFilter = departmentChoice ?? myDepartment?.id ?? ALL;
-  const [status, setStatus] = useState<string>(ALL);
+  const [warehouseFilter, setWarehouseFilter] = useState<string>(ALL);
+  const [status, setStatus] = useState<string>(view === 'attend' ? 'pending' : ALL);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const setView = (next: View) => {
+    setViewState(next);
+    // What needs attention is what is pending; one's own area, everything.
+    setStatus(next === 'attend' ? 'pending' : ALL);
+    setPage(1);
+  };
   const filters = {
-    departmentId: departmentFilter === ALL ? null : departmentFilter,
+    departmentId: view === 'mine' && departmentFilter !== ALL ? departmentFilter : null,
+    warehouseId: view === 'attend' && warehouseFilter !== ALL ? warehouseFilter : null,
     status: status === ALL ? null : (status as RequestStatus),
     page,
     pageSize,
   };
   // When the user's area will be known, wait for it: listing every area first and then refetching
   // by area would flash other areas' requests.
-  const waitingForArea = canReadUsers && myDepartmentQuery.isPending && departmentChoice === null;
+  const waitingForArea =
+    view === 'mine' && canReadUsers && myDepartmentQuery.isPending && departmentChoice === null;
   const requests = useRequests(filters, !waitingForArea);
   const departments = useRequestDepartments();
   const departmentOptions: SelectOption[] = [
@@ -86,13 +114,26 @@ export default function RequestsPage() {
   ];
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [cancelling, setCancelling] = useState<StockRequest | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [acting, setActing] = useState<{ action: RequestAction; request: StockRequest } | null>(
+    null,
+  );
   const [notice, setNotice] = useState<string | null>(null);
 
-  const handleCancel = useCallback((request: StockRequest) => {
+  const act = useCallback((action: RequestAction, request: StockRequest) => {
     setNotice(null);
-    setCancelling(request);
+    setActing({ action, request });
   }, []);
+  const handleCancel = useCallback((request: StockRequest) => act('cancel', request), [act]);
+  const handleOpen = useCallback((request: StockRequest) => setOpenId(request.id), []);
+  const attendanceOf = useCallback(
+    (request: StockRequest) => attendance(currentUser, request),
+    [currentUser],
+  );
+  const done = (text: string) => {
+    setActing(null);
+    setNotice(text);
+  };
 
   return (
     <div className="space-y-6">
@@ -134,20 +175,48 @@ export default function RequestsPage() {
         </Alert>
       )}
 
-      <section aria-label="Filtros" className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Select
-          aria-label="Filtrar por área"
-          value={departmentFilter}
-          onChange={(value) => {
-            setDepartmentChoice(value || ALL);
-            setPage(1);
-          }}
-          options={departmentOptions}
-          searchable
-          searchPlaceholder="Buscar área…"
-          emptyMessage="Ningún área coincide"
-          className="w-full sm:w-64"
+      {attendsAny && (
+        <SegmentedControl<View>
+          legend="Qué solicitudes ver"
+          options={VIEWS}
+          value={view}
+          onChange={setView}
         />
+      )}
+
+      <section aria-label="Filtros" className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        {view === 'attend' ? (
+          <Select
+            aria-label="Filtrar por almacén"
+            value={warehouseFilter}
+            onChange={(value) => {
+              setWarehouseFilter(value || ALL);
+              setPage(1);
+            }}
+            options={[
+              { value: ALL, label: 'Todos tus almacenes' },
+              ...attendOptions.map((warehouse) => ({ value: warehouse.id, label: warehouse.name })),
+            ]}
+            searchable
+            searchPlaceholder="Buscar almacén…"
+            emptyMessage="Ningún almacén coincide"
+            className="w-full sm:w-64"
+          />
+        ) : (
+          <Select
+            aria-label="Filtrar por área"
+            value={departmentFilter}
+            onChange={(value) => {
+              setDepartmentChoice(value || ALL);
+              setPage(1);
+            }}
+            options={departmentOptions}
+            searchable
+            searchPlaceholder="Buscar área…"
+            emptyMessage="Ningún área coincide"
+            className="w-full sm:w-64"
+          />
+        )}
         <Select
           aria-label="Filtrar por estado"
           value={status}
@@ -169,11 +238,15 @@ export default function RequestsPage() {
             : undefined
         }
         emptyMessage={
-          departmentChoice === null && status === ALL && myDepartment
-            ? 'Tu área aún no tiene solicitudes.'
-            : departmentFilter !== ALL || status !== ALL
-              ? 'Ninguna solicitud coincide con los filtros.'
-              : 'Aún no hay solicitudes.'
+          view === 'attend'
+            ? status === 'pending'
+              ? 'No hay solicitudes pendientes por atender.'
+              : 'Ninguna solicitud coincide con los filtros.'
+            : departmentChoice === null && status === ALL && myDepartment
+              ? 'Tu área aún no tiene solicitudes.'
+              : departmentFilter !== ALL || status !== ALL
+                ? 'Ninguna solicitud coincide con los filtros.'
+                : 'Aún no hay solicitudes.'
         }
         page={page}
         pageSize={pageSize}
@@ -184,6 +257,7 @@ export default function RequestsPage() {
           setPage(1);
         }}
         currentUserId={currentUser?.id ?? null}
+        onOpen={handleOpen}
         onCancel={handleCancel}
       />
 
@@ -196,6 +270,7 @@ export default function RequestsPage() {
         onCreated={(request) => {
           setIsCreateOpen(false);
           // Show it where it lands: its area's list, first page.
+          setViewState('mine');
           setDepartmentChoice(request.department.id);
           setStatus(ALL);
           setPage(1);
@@ -205,14 +280,49 @@ export default function RequestsPage() {
         }}
       />
 
-      {cancelling && (
+      {openId && (
+        <RequestDetailPanel
+          requestId={openId}
+          attendance={attendanceOf}
+          currentUserId={currentUser?.id ?? null}
+          onClose={() => setOpenId(null)}
+          onAction={act}
+        />
+      )}
+
+      {acting?.action === 'cancel' && (
         <CancelRequestDialog
-          request={cancelling}
-          onClose={() => setCancelling(null)}
-          onDone={(request) => {
-            setCancelling(null);
-            setNotice(`Solicitud ${request.number} cancelada.`);
-          }}
+          request={acting.request}
+          onClose={() => setActing(null)}
+          onDone={(request) => done(`Solicitud ${request.number} cancelada.`)}
+        />
+      )}
+      {acting?.action === 'start' && (
+        <StartAttentionDialog
+          request={acting.request}
+          onClose={() => setActing(null)}
+          onDone={(request) =>
+            done(`Solicitud ${request.number} en atención. Su existencia quedó reservada.`)
+          }
+        />
+      )}
+      {acting?.action === 'reject' && (
+        <RejectRequestDialog
+          request={acting.request}
+          onClose={() => setActing(null)}
+          onDone={(request) => done(`Solicitud ${request.number} rechazada.`)}
+        />
+      )}
+      {acting?.action === 'fulfil' && (
+        <FulfilRequestModal
+          request={acting.request}
+          products={products.data ?? []}
+          onClose={() => setActing(null)}
+          onDone={(request) =>
+            done(
+              `Solicitud ${request.number} atendida. Se registró la salida ${request.movement?.number ?? ''} y la existencia se descontó.`,
+            )
+          }
         />
       )}
     </div>

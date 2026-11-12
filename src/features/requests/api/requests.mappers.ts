@@ -56,12 +56,21 @@ export const toStockRequest = (dto: StockRequestDto): StockRequest => ({
       unit: { code: line.product.unit, name: line.product.unit },
     },
     quantity: line.requestedQuantity,
+    reserved: line.reservedQuantity,
+  })),
+  movement: dto.movement ? { id: String(dto.movement.id), number: dto.movement.number } : null,
+  events: (dto.events ?? []).map((event) => ({
+    status: STATUS[event.status],
+    by: event.changedBy.name,
+    reason: event.reason,
+    at: event.createdAt,
   })),
   createdAt: dto.createdAt,
 });
 
 export const toListQuery = (filters: RequestFilters) => ({
   ...(filters.departmentId ? { departmentId: Number(filters.departmentId) } : {}),
+  ...(filters.warehouseId ? { warehouseId: Number(filters.warehouseId) } : {}),
   ...(filters.status ? { status: STATUS_DTO[filters.status] } : {}),
   page: filters.page,
   pageSize: filters.pageSize,
