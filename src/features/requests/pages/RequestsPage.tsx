@@ -13,6 +13,7 @@ import {
   useOpenWarehouses,
   useRequestableProducts,
   useRequestDepartments,
+  usePrefetchRequests,
   useRequests,
 } from '../api/requests.queries';
 import { CancelRequestDialog } from '../components/CancelRequestDialog';
@@ -25,7 +26,7 @@ import { RequestsTable } from '../components/RequestsTable';
 import { STATUS_LABELS } from '../content/request.labels';
 import { attendance, attendedWarehouses } from '../content/request.permissions';
 import { requestsErrorMessage } from '../content/requests.errors';
-import type { Option, RequestStatus, StockRequest } from '../types/requests.types';
+import type { Option, RequestFilters, RequestStatus, StockRequest } from '../types/requests.types';
 
 const ALL = 'all';
 
@@ -91,18 +92,25 @@ export default function RequestsPage() {
     setStatus(next === 'attend' ? 'pending' : ALL);
     setPage(1);
   };
-  const filters = {
-    departmentId: view === 'mine' && departmentFilter !== ALL ? departmentFilter : null,
-    warehouseId: view === 'attend' && warehouseFilter !== ALL ? warehouseFilter : null,
-    status: status === ALL ? null : (status as RequestStatus),
-    page,
+  const filtersOf = (of: View, ofStatus: string, ofPage: number): RequestFilters => ({
+    departmentId: of === 'mine' && departmentFilter !== ALL ? departmentFilter : null,
+    warehouseId: of === 'attend' && warehouseFilter !== ALL ? warehouseFilter : null,
+    status: ofStatus === ALL ? null : (ofStatus as RequestStatus),
+    page: ofPage,
     pageSize,
-  };
+  });
   // When the user's area will be known, wait for it: listing every area first and then refetching
   // by area would flash other areas' requests.
-  const waitingForArea =
-    view === 'mine' && canReadUsers && myDepartmentQuery.isPending && departmentChoice === null;
-  const requests = useRequests(filters, !waitingForArea);
+  const areaPending = canReadUsers && myDepartmentQuery.isPending && departmentChoice === null;
+  const waitingForArea = view === 'mine' && areaPending;
+  const requests = useRequests(filtersOf(view, status, page), !waitingForArea);
+  // The other tab, as it opens (its default status, first page), loaded once this list is in: the
+  // first switch between tabs is then immediate on a slow API.
+  const otherView: View = view === 'mine' ? 'attend' : 'mine';
+  usePrefetchRequests(
+    filtersOf(otherView, otherView === 'attend' ? 'pending' : ALL, 1),
+    attendsAny && requests.isSuccess && !(otherView === 'mine' && areaPending),
+  );
   const departments = useRequestDepartments();
   const departmentOptions: SelectOption[] = [
     { value: ALL, label: 'Todas las áreas' },
@@ -232,6 +240,8 @@ export default function RequestsPage() {
       <RequestsTable
         requests={requests.data?.items ?? []}
         isLoading={requests.isLoading || waitingForArea}
+        // Another view, filter or page is loading: the rows on screen are the previous ones.
+        isRefreshing={requests.isPlaceholderData}
         error={
           requests.error
             ? requestsErrorMessage(requests.error, 'No se pudieron cargar las solicitudes.')
