@@ -32,8 +32,26 @@ export interface StockRequest {
     lineNumber: number;
     product: { id: string; sku: string; name: string; unit: UnitRef };
     quantity: number;
+    /** Held while the request is in attention. */
+    reserved: number;
   }[];
+  /** The outbound movement that fulfilled it (source "stock request"). */
+  movement: { id: string; number: string } | null;
+  /** RF-REQ-003: every status change, oldest first, with who and when. */
+  events: { status: RequestStatus; by: string | null; reason: string | null; at: string }[];
   createdAt: string;
+}
+
+/** A lot of a product with stock in the attending warehouse. */
+export interface RequestLot {
+  code: string;
+  expiryDate: string | null;
+  onHand: number;
+}
+
+/** "Confirmar consumo": the lot each per-lot line takes stock from. */
+export interface FulfilInput {
+  lines: { lineNumber: number; lotCode: string }[];
 }
 
 export interface RequestPage {
@@ -44,6 +62,8 @@ export interface RequestPage {
 export interface RequestFilters {
   /** Null: every area the user can see. */
   departmentId: string | null;
+  /** Null: every warehouse the user can see. */
+  warehouseId: string | null;
   status: RequestStatus | null;
   page: number;
   pageSize: number;
@@ -64,6 +84,8 @@ export interface RequestableProduct {
   sku: string;
   name: string;
   unit: UnitRef;
+  /** Its stock is kept per lot: fulfilling it takes a lot. */
+  tracksLots: boolean;
 }
 
 export interface Option {

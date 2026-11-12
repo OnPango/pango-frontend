@@ -116,9 +116,48 @@ export function enabledWarehouses(org: string, productId: number): number[] {
   return [...ids].sort((a, b) => a - b);
 }
 
-/** No reservations in the mock: available is on hand. */
+// ---- Reservations of stock requests in attention ----
+
+/** `org|productId|warehouseId|requestId` → quantity held by a request being attended. */
+const reservations = new Map<string, number>();
+
+export function reserve(
+  org: string,
+  productId: number,
+  warehouseId: number,
+  requestId: number,
+  quantity: number,
+) {
+  reservations.set(`${pwKey(org, productId, warehouseId)}|${requestId}`, quantity);
+}
+
+/** Releases everything a request held (it was fulfilled or rejected). */
+export function release(requestId: number) {
+  for (const k of [...reservations.keys()]) if (k.endsWith(`|${requestId}`)) reservations.delete(k);
+}
+
+export function reservedOf(
+  org: string,
+  productId: number,
+  warehouseId: number,
+  exceptRequestId?: number,
+) {
+  const prefix = `${pwKey(org, productId, warehouseId)}|`;
+  let total = 0;
+  for (const [k, quantity] of reservations) {
+    if (k.startsWith(prefix) && k !== `${prefix}${exceptRequestId}`) total += quantity;
+  }
+  return Number(total.toFixed(4));
+}
+
+/** On hand minus what requests in attention hold: what the reorder point compares to. */
 export const availableOf = (org: string, productId: number, warehouseId: number) =>
-  stockByWarehouse(org, productId).get(warehouseId) ?? 0;
+  Number(
+    (
+      (stockByWarehouse(org, productId).get(warehouseId) ?? 0) -
+      reservedOf(org, productId, warehouseId)
+    ).toFixed(4),
+  );
 
 /**
  * CU-12a: available ≤ reorder point opens one alert (severity 1, 2 at or below the safety stock,

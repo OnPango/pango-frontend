@@ -24,6 +24,7 @@ export interface RequestsTableProps {
   onPageSizeChange: (pageSize: number) => void;
   /** Id of the signed-in user: only the requester cancels, and only while pending. */
   currentUserId: string | null;
+  onOpen: (request: StockRequest) => void;
   onCancel: (request: StockRequest) => void;
 }
 
@@ -38,6 +39,7 @@ export function RequestsTable({
   onPageChange,
   onPageSizeChange,
   currentUserId,
+  onOpen,
   onCancel,
 }: RequestsTableProps) {
   const columns = useMemo<Column<StockRequest>[]>(
@@ -47,7 +49,15 @@ export function RequestsTable({
         header: 'Solicitud',
         cell: (request) => (
           <div className="min-w-0">
-            <p className="font-semibold text-fg tabular-nums">{request.number}</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onOpen(request)}
+              className="justify-start rounded-md p-0 text-left text-sm tabular-nums hover:bg-transparent hover:text-primary hover:underline"
+              aria-label={`Ver la solicitud ${request.number}`}
+            >
+              {request.number}
+            </Button>
             <p className="text-xs text-muted">{TYPE_LABELS[request.type].label}</p>
             <p className="text-xs text-muted">{formatDate(request.createdAt, true)}</p>
           </div>
@@ -130,7 +140,7 @@ export function RequestsTable({
           ) : null,
       },
     ],
-    [currentUserId, onCancel],
+    [currentUserId, onOpen, onCancel],
   );
 
   return (

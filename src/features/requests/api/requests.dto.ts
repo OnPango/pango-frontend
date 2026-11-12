@@ -23,6 +23,13 @@ export interface StockRequestDto {
     requestedQuantity: number;
     reservedQuantity: number;
   }[];
+  movement: { id: number; number: string } | null;
+  events: {
+    status: RequestStatusDto;
+    changedBy: { id: number; name: string | null };
+    reason: string | null;
+    createdAt: string;
+  }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -50,6 +57,7 @@ export interface ProductPageDto {
     sku: string;
     name: string;
     stockUnit: { code: string; name: string };
+    tracksLots: boolean;
   }[];
   total: number;
 }
@@ -69,4 +77,17 @@ export interface DepartmentDto {
 /** `GET /users/:id` (only the area). */
 export interface UserDto {
   department: { id: number; name: string } | null;
+}
+
+/** `GET /products/:id/lots`. */
+export interface LotDto {
+  id: number;
+  code: string;
+  expiryDate: string | null;
+  onHand: number;
+}
+
+/** `POST /stock-requests/:id/fulfil`. */
+export interface FulfilStockRequestDto {
+  lines: { lineNumber: number; lotCode: string }[];
 }

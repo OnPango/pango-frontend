@@ -10,8 +10,18 @@ const MESSAGES: Record<string, string> = {
   PRODUCT_DUPLICATED: 'Este producto ya está en la solicitud.',
   STOCK_REQUEST_TYPE_NOT_SUPPORTED: 'Ese tipo de solicitud todavía no está disponible.',
   STOCK_REQUEST_NOT_FOUND: 'La solicitud ya no existe o no tienes acceso a ella.',
-  STOCK_REQUEST_STATUS_INVALID: 'La solicitud ya cambió de estado: recarga la lista.',
+  STOCK_REQUEST_STATUS_INVALID:
+    'La solicitud ya cambió de estado. Se actualizó con su estado actual.',
   NOT_REQUESTER: 'Solo quien creó la solicitud puede cancelarla.',
+  REQUESTER_CANNOT_ATTEND:
+    'Quien creó la solicitud no puede atenderla: debe hacerlo otra persona con permiso en el almacén.',
+  INSUFFICIENT_STOCK: 'No hay suficiente existencia disponible en el almacén (o en ese lote).',
+  LOT_REQUIRED: 'Este producto se sigue por lote: elige el lote.',
+  LOT_NOT_ALLOWED: 'Este producto no se sigue por lote.',
+  LOT_NOT_FOUND: 'Ese lote no existe para este producto.',
+  LINE_INVALID: 'Una de las líneas ya no es parte de la solicitud: recárgala.',
+  MOVEMENT_TYPE_NOT_CONFIGURED:
+    'La organización no tiene configurado el tipo de salida para solicitudes. Avisa a un administrador.',
   FORBIDDEN: 'No tienes permiso para crear solicitudes en este almacén.',
 };
 

@@ -1,19 +1,27 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { RequestFilters } from '../types/requests.types';
+import type { FulfilInput, RequestFilters, StockRequest } from '../types/requests.types';
 import {
   cancelRequest,
   createRequest,
+  fulfilRequest,
   getDepartments,
+  getLots,
+  getRequest,
   getOpenWarehouses,
   getRequestableProducts,
   getRequests,
   getUserDepartment,
+  rejectRequest,
+  startRequest,
 } from './requests.api';
 
 export const requestsKeys = {
   all: ['stock-requests'] as const,
   lists: () => [...requestsKeys.all, 'list'] as const,
   list: (filters: RequestFilters) => [...requestsKeys.lists(), filters] as const,
+  detail: (id: string) => [...requestsKeys.all, 'detail', id] as const,
+  lots: (productId: string, warehouseId: string) =>
+    [...requestsKeys.all, 'lots', productId, warehouseId] as const,
   products: () => [...requestsKeys.all, 'products'] as const,
   warehouses: () => [...requestsKeys.all, 'warehouses'] as const,
   /** Under `['departments']`, so changes made in Áreas refresh it. */
@@ -65,6 +73,41 @@ export function useCancelRequest() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: cancelRequest,
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: requestsKeys.lists() }),
+    onSuccess: (request) => {
+      queryClient.setQueryData(requestsKeys.detail(request.id), request);
+      void queryClient.invalidateQueries({ queryKey: requestsKeys.lists() });
+    },
   });
 }
+
+export function useRequest(id: string) {
+  return useQuery({ queryKey: requestsKeys.detail(id), queryFn: () => getRequest(id) });
+}
+
+export function useRequestLots(productId: string, warehouseId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: requestsKeys.lots(productId, warehouseId),
+    queryFn: () => getLots(productId, warehouseId),
+    enabled,
+  });
+}
+
+/** After a transition: the detail shows the answer at once; the lists refetch behind it. */
+function useTransition<T>(fn: (input: T) => Promise<StockRequest>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: (request) => {
+      queryClient.setQueryData(requestsKeys.detail(request.id), request);
+      void queryClient.invalidateQueries({ queryKey: requestsKeys.lists() });
+      // Stock and lots changed (reserved or taken out).
+      void queryClient.invalidateQueries({ queryKey: [...requestsKeys.all, 'lots'] });
+    },
+  });
+}
+
+export const useStartRequest = () => useTransition(startRequest);
+export const useRejectRequest = () =>
+  useTransition(({ id, reason }: { id: string; reason: string }) => rejectRequest(id, reason));
+export const useFulfilRequest = () =>
+  useTransition(({ id, input }: { id: string; input: FulfilInput }) => fulfilRequest(id, input));

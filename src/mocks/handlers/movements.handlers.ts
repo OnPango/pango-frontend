@@ -23,6 +23,12 @@ const types: { id: number; name: string; nature: Nature; countsAsDemand: boolean
 
 let lastId = 0;
 
+/** The next movement number, also for the outbound movement that fulfils a stock request. */
+export function nextMovement() {
+  lastId += 1;
+  return { id: lastId, number: `MV-${String(lastId).padStart(8, '0')}` };
+}
+
 interface LineInput {
   productId?: unknown;
   quantity?: unknown;
@@ -142,13 +148,13 @@ export const movementsRoutes: MockRoutes = {
     plan.forEach((p) => applyStock(org, p.productId, warehouse.id, p.lot, p.delta));
     // Each movement re-evaluates the alerts of its products in the warehouse (CU-12a).
     new Set(plan.map((p) => p.productId)).forEach((id) => evaluateAlert(org, id, warehouse.id));
-    lastId += 1;
+    const { id, number } = nextMovement();
     const location = { id: warehouse.defaultLocationId, code: 'DEFAULT' };
     return {
       status: 201,
       data: {
-        id: lastId,
-        number: `MV-${String(lastId).padStart(8, '0')}`,
+        id,
+        number,
         status: 'CONFIRMED',
         source: 'MANUAL',
         movementType: {
