@@ -220,6 +220,10 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+  /* Without motion the sweeping segment would stop off the edge: light the whole edge instead. */
+  .edge-progress {
+    background: color-mix(in oklab, var(--primary) 60%, transparent) !important;
+  }
 }
 
 /* Fade the top and bottom edges of a scroll area */
@@ -247,4 +251,39 @@
   @media (prefers-reduced-motion: reduce) {
     animation: none;
   }
+}
+
+/*
+ * Indeterminate progress along the top edge of a rounded box (a table refreshing). Place it over
+ * the box with the same radius: the mask keeps a 2px band on the top edge that follows the corners
+ * and tapers down their curve, and a segment of primary sweeps along it.
+ */
+@keyframes edge-progress {
+  from {
+    background-position:
+      -70% 0,
+      0 0;
+  }
+  to {
+    background-position:
+      170% 0,
+      0 0;
+  }
+}
+@utility edge-progress {
+  padding-top: 2px;
+  background:
+    linear-gradient(90deg, transparent, var(--primary) 30% 70%, transparent) no-repeat,
+    color-mix(in oklab, var(--primary) 15%, transparent);
+  background-size:
+    40% 100%,
+    100% 100%;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  animation: edge-progress 1.1s ease-in-out infinite;
 }
