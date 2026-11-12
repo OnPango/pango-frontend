@@ -2,6 +2,7 @@ import { authorize, error } from '../guard';
 import type { MockRoutes } from '../server';
 import {
   availableOf,
+  reservedOf,
   openAlertOf,
   replenishmentOf,
   setReplenishment,
@@ -41,7 +42,7 @@ function toDto(org: string, productId: number, warehouseId: number) {
     },
     warehouse: { id: warehouse.id, name: warehouse.name },
     onHand,
-    reserved: 0,
+    reserved: reservedOf(org, productId, warehouseId),
     available: availableOf(org, productId, warehouseId),
     ...values,
     openAlert: openAlertOf(org, productId, warehouseId),

@@ -1,7 +1,7 @@
 import { authorize, error } from '../guard';
 import { numericId } from '../ids';
 import type { MockRoutes } from '../server';
-import { enabledWarehouses, lotsInWarehouse, stockByWarehouse } from '../stock';
+import { enabledWarehouses, lotsInWarehouse, reservedOf, stockByWarehouse } from '../stock';
 import {
   findCategoryRow,
   findProductRow,
@@ -13,7 +13,7 @@ import { findWarehouseRow } from './warehouses.handlers';
 
 /**
  * Stock queries of pango-core (`docs/stock.md`): a warehouse's stock and a product's lots in a
- * warehouse. The mock has no reservations (reserved is 0) and no lot dates.
+ * warehouse. The mock has no lot dates.
  */
 
 function stockProduct(org: string, row: NonNullable<ReturnType<typeof findProductRow>>) {
@@ -70,8 +70,8 @@ export const stockRoutes: MockRoutes = {
         items: items.slice((page - 1) * pageSize, page * pageSize).map(({ row, onHand }) => ({
           product: stockProduct(org, row),
           onHand,
-          reserved: 0,
-          available: onHand,
+          reserved: reservedOf(org, row.id, warehouse.id),
+          available: Number((onHand - reservedOf(org, row.id, warehouse.id)).toFixed(4)),
         })),
         total: items.length,
         page,

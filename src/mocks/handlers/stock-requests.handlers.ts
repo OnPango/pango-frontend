@@ -1,14 +1,26 @@
 import { areas, findUserById } from '../db';
 import { authorize, error } from '../guard';
+import {
+  applyStock,
+  evaluateAlert,
+  lotExists,
+  onHand,
+  release,
+  reserve,
+  reservedOf,
+  stockByWarehouse,
+} from '../stock';
+import { nextMovement } from './movements.handlers';
 import { numericId } from '../ids';
-import type { MockRoutes } from '../server';
+import type { MockResponse, MockRoutes } from '../server';
 import { findProductRow, findUnitRow } from './catalog.handlers';
 import { findWarehouseRow } from './warehouses.handlers';
 
 /**
  * Internal stock requests of pango-core (`docs/stock-requests.md`): created `PENDING` (stock does
- * not change), listed most recent first, cancelled by the requester while still pending. Attending
- * them (start, fulfil, reject) is not mocked yet. In memory: a reload starts over.
+ * not change), listed most recent first, cancelled by the requester while still pending, and
+ * attended: start (reserves the stock), fulfil (registers the outbound movement) or reject (with a
+ * reason; releases the reservation). In memory: a reload starts over.
  */
 
 type Status = 'PENDING' | 'IN_PROGRESS' | 'FULFILLED' | 'REJECTED' | 'CANCELLED';
@@ -23,7 +35,9 @@ interface RequestRow {
   departmentId: string;
   requestedById: string;
   notes: string | null;
-  lines: { productId: number; quantity: number }[];
+  lines: { productId: number; quantity: number; reserved: number }[];
+  rejectionReason: string | null;
+  movement: { id: number; number: string } | null;
   events: { status: Status; userId: string; reason: string | null; createdAt: string }[];
   createdAt: string;
   updatedAt: string;
@@ -47,8 +61,8 @@ function toDto(row: RequestRow) {
     department: { id: numericId(row.departmentId), name: area?.name ?? '' },
     requestedBy: userRef(row.requestedById),
     notes: row.notes,
-    rejectionReason: null,
-    movement: null,
+    rejectionReason: row.rejectionReason,
+    movement: row.movement,
     lines: row.lines.map((line, index) => {
       const product = findProductRow(row.organizationId, line.productId)!;
       return {
@@ -60,7 +74,7 @@ function toDto(row: RequestRow) {
           unit: findUnitRow(product.stockUnitId)?.code ?? '',
         },
         requestedQuantity: line.quantity,
-        reservedQuantity: 0,
+        reservedQuantity: line.reserved,
       };
     }),
     events: row.events.map((event) => ({
@@ -207,7 +221,10 @@ export const stockRequestsRoutes: MockRoutes = {
       lines: lines.map((line) => ({
         productId: Number(line.productId),
         quantity: line.quantity as number,
+        reserved: 0,
       })),
+      rejectionReason: null,
+      movement: null,
       events: [{ status: 'PENDING', userId: auth.user.id, reason: null, createdAt: now }],
       createdAt: now,
       updatedAt: now,
@@ -239,4 +256,167 @@ export const stockRequestsRoutes: MockRoutes = {
     row.updatedAt = now;
     return { status: 200, data: toDto(row) };
   },
+  'POST /stock-requests/:id/start': ({ params }) => {
+    const found = forAttention(params.id);
+    if (!found.ok) return found.response;
+    const { row, org, userId } = found;
+    const invalid = transition(row, 'IN_PROGRESS');
+    if (invalid) return invalid;
+    // The full quantity of every line, against what other requests in attention already hold.
+    for (const [index, line] of row.lines.entries()) {
+      const free =
+        (stockByWarehouse(org, line.productId).get(row.warehouseId) ?? 0) -
+        reservedOf(org, line.productId, row.warehouseId, row.id);
+      if (free < line.quantity) {
+        const sku = findProductRow(org, line.productId)?.sku ?? '';
+        return error(
+          409,
+          'INSUFFICIENT_STOCK',
+          `Line ${index + 1}: not enough available stock of ${sku} in the warehouse`,
+        );
+      }
+    }
+    row.lines.forEach((line) => {
+      line.reserved = line.quantity;
+      reserve(org, line.productId, row.warehouseId, row.id, line.quantity);
+      evaluateAlert(org, line.productId, row.warehouseId);
+    });
+    setStatus(row, 'IN_PROGRESS', userId, null);
+    return { status: 200, data: toDto(row) };
+  },
+
+  'POST /stock-requests/:id/fulfil': ({ params, body }) => {
+    const found = forAttention(params.id);
+    if (!found.ok) return found.response;
+    const { row, org, userId } = found;
+    const invalid = transition(row, 'FULFILLED');
+    if (invalid) return invalid;
+    const input = (body ?? {}) as { lines?: { lineNumber?: unknown; lotCode?: unknown }[] };
+    const chosen = new Map<number, string | null>();
+    for (const line of input.lines ?? []) {
+      const n = Number(line.lineNumber);
+      if (!Number.isInteger(n) || n < 1 || n > row.lines.length) {
+        return error(
+          400,
+          'LINE_INVALID',
+          `Line ${String(line.lineNumber)} is not a line of the request`,
+        );
+      }
+      const lot =
+        typeof line.lotCode === 'string' && line.lotCode.trim() ? line.lotCode.trim() : null;
+      chosen.set(n, lot);
+    }
+    // Check every line before touching the stock: all or nothing.
+    for (const [index, line] of row.lines.entries()) {
+      const n = index + 1;
+      const product = findProductRow(org, line.productId)!;
+      const lot = chosen.get(n) ?? null;
+      if (product.tracksLots && !lot) {
+        return error(
+          400,
+          'LOT_REQUIRED',
+          `Line ${n}: the product tracks lots; a lot code is required`,
+        );
+      }
+      if (!product.tracksLots && lot) {
+        return error(400, 'LOT_NOT_ALLOWED', `Line ${n}: the product does not track lots`);
+      }
+      if (lot && !lotExists(org, product.id, lot)) {
+        return error(400, 'LOT_NOT_FOUND', `Line ${n}: the lot does not exist for this product`);
+      }
+      if (onHand(org, product.id, row.warehouseId, lot) < line.quantity) {
+        return error(
+          409,
+          'INSUFFICIENT_STOCK',
+          `Line ${n}: not enough stock of ${product.sku} at that location`,
+        );
+      }
+    }
+    release(row.id);
+    row.lines.forEach((line, index) => {
+      applyStock(
+        org,
+        line.productId,
+        row.warehouseId,
+        chosen.get(index + 1) ?? null,
+        -line.quantity,
+      );
+      line.reserved = 0;
+      evaluateAlert(org, line.productId, row.warehouseId);
+    });
+    row.movement = nextMovement();
+    setStatus(row, 'FULFILLED', userId, null);
+    return { status: 200, data: toDto(row) };
+  },
+
+  'POST /stock-requests/:id/reject': ({ params, body }) => {
+    const found = forAttention(params.id);
+    if (!found.ok) return found.response;
+    const { row, org, userId } = found;
+    const raw = (body as { reason?: unknown } | undefined)?.reason;
+    const reason = typeof raw === 'string' ? raw.trim() : '';
+    if (!reason) return error(400, 'VALIDATION', 'reason should not be empty');
+    const invalid = transition(row, 'REJECTED');
+    if (invalid) return invalid;
+    release(row.id);
+    row.lines.forEach((line) => {
+      line.reserved = 0;
+      evaluateAlert(org, line.productId, row.warehouseId);
+    });
+    row.rejectionReason = reason;
+    setStatus(row, 'REJECTED', userId, reason);
+    return { status: 200, data: toDto(row) };
+  },
 };
+
+/** RF-REQ-003 / RN-016: the only transitions there are. */
+const NEXT: Record<Status, Status[]> = {
+  PENDING: ['IN_PROGRESS', 'REJECTED', 'CANCELLED'],
+  IN_PROGRESS: ['FULFILLED', 'REJECTED'],
+  FULFILLED: [],
+  REJECTED: [],
+  CANCELLED: [],
+};
+
+function transition(row: RequestRow, to: Status) {
+  return NEXT[row.status].includes(to)
+    ? null
+    : error(409, 'STOCK_REQUEST_STATUS_INVALID', `A ${row.status} request cannot become ${to}`);
+}
+
+function setStatus(row: RequestRow, status: Status, userId: string, reason: string | null) {
+  const now = new Date().toISOString();
+  row.status = status;
+  row.events.push({ status, userId, reason, createdAt: now });
+  row.updatedAt = now;
+}
+
+function forAttention(
+  id: string,
+):
+  | { ok: false; response: MockResponse }
+  | { ok: true; row: RequestRow; org: string; userId: string } {
+  const auth = authorize('stock_request.approve');
+  if (auth.error) return { ok: false, response: auth.error };
+  const org = auth.user.organization_id;
+  const row = requests.find((r) => r.organizationId === org && r.id === Number(id));
+  if (!row) {
+    return {
+      ok: false,
+      response: error(404, 'STOCK_REQUEST_NOT_FOUND', 'Stock request not found'),
+    };
+  }
+  // Separation of duties: whoever asked does not attend their own request. Not in pango-core
+  // yet (requested); the code is the one proposed to the backend team.
+  if (row.requestedById === auth.user.id) {
+    return {
+      ok: false,
+      response: error(
+        403,
+        'REQUESTER_CANNOT_ATTEND',
+        'The requester cannot attend their own stock request',
+      ),
+    };
+  }
+  return { ok: true, row, org, userId: auth.user.id };
+}
