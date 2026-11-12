@@ -41,11 +41,13 @@ export function AlertsTable({
     () => [
       {
         key: 'severity',
+        skeleton: 'badge',
         header: 'Severidad',
         cell: (alert) => <SeverityBadge severity={alert.severity} />,
       },
       {
         key: 'product',
+        skeleton: 'title',
         header: 'Producto',
         cell: (alert) => (
           <div className="min-w-0">
@@ -69,6 +71,7 @@ export function AlertsTable({
       },
       {
         key: 'stock',
+        skeleton: 'title',
         header: 'Disponible / punto de reorden',
         cell: (alert) => (
           <div className="text-sm tabular-nums">
@@ -85,6 +88,7 @@ export function AlertsTable({
       },
       {
         key: 'status',
+        skeleton: 'badge',
         header: 'Estado',
         cell: (alert) => (
           <div>

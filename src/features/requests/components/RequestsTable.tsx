@@ -49,6 +49,7 @@ export function RequestsTable({
     () => [
       {
         key: 'number',
+        skeleton: 'stack',
         header: 'Solicitud',
         cell: (request) => (
           <div className="min-w-0">
@@ -78,6 +79,7 @@ export function RequestsTable({
       },
       {
         key: 'products',
+        skeleton: 'title',
         header: 'Productos',
         cell: (request) => (
           <div className="min-w-0">
@@ -93,6 +95,7 @@ export function RequestsTable({
       },
       {
         key: 'priority',
+        skeleton: 'badge',
         header: 'Prioridad',
         cell: (request) => (
           <Badge
@@ -106,6 +109,7 @@ export function RequestsTable({
       },
       {
         key: 'status',
+        skeleton: 'badge',
         header: 'Estado',
         cell: (request) => (
           <Badge tone={STATUS_LABELS[request.status].tone} dot>
@@ -127,6 +131,7 @@ export function RequestsTable({
       },
       {
         key: 'actions',
+        skeleton: 'none',
         header: <span className="sr-only">Acciones</span>,
         className: 'text-right',
         cell: (request) =>

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { Pagination, type PaginationProps } from './pagination/Pagination';
+import { CellPlaceholder, Skeleton } from './Skeleton';
 import type { Column } from '@/shared/types/dataTable';
 
 interface DataTableProps<T> {
@@ -10,7 +11,10 @@ interface DataTableProps<T> {
   getRowKey: (row: T) => string;
   /** Accessible name of the table (visually hidden). */
   caption: string;
+  /** First load: skeleton rows shaped like the columns (`Column.skeleton`) keep the layout. */
   isLoading?: boolean;
+  /** How many skeleton rows while loading (default: the page size, up to 6). */
+  skeletonRows?: number;
   /**
    * The rows on screen belong to the previous query (other filters or page) while the new one
    * loads: they are dimmed and locked, and a progress bar says the change is under way.
@@ -32,6 +36,7 @@ export function DataTable<T>({
   caption,
   isLoading = false,
   isRefreshing = false,
+  skeletonRows,
   error,
   emptyMessage = 'No hay datos para mostrar.',
   className,
@@ -47,8 +52,22 @@ export function DataTable<T>({
   );
 
   let body: ReactNode;
-  if (isLoading) body = statusRow('Cargando…');
-  else if (error) body = statusRow(<span role="alert">{error}</span>, 'text-danger');
+  if (isLoading) {
+    const count = skeletonRows ?? Math.min(pagination?.pageSize ?? 5, 6);
+    body = Array.from({ length: count }, (_, row) => (
+      <tr key={row} aria-hidden className="border-t border-line2">
+        {columns.map((column, index) => (
+          <td key={column.key} className={cn('px-4 py-3', column.className)}>
+            <CellPlaceholder
+              shape={column.skeleton}
+              seed={row * 3 + index}
+              alignEnd={/\btext-right\b/.test(column.className ?? '')}
+            />
+          </td>
+        ))}
+      </tr>
+    ));
+  } else if (error) body = statusRow(<span role="alert">{error}</span>, 'text-danger');
   else if (rows.length === 0) body = statusRow(emptyMessage);
   else
     body = rows.map((row) => (
@@ -68,6 +87,11 @@ export function DataTable<T>({
         className,
       )}
     >
+      {isLoading && (
+        <p role="status" className="sr-only">
+          Cargando…
+        </p>
+      )}
       {refreshing && (
         <>
           {/* Over the card's border (-1px), with its radius: the edge itself shows the progress. */}
@@ -105,8 +129,22 @@ export function DataTable<T>({
           </table>
         </div>
 
-        {pagination && !error && (
-          <Pagination {...pagination} className="border-t border-line px-4 py-3" />
+        {pagination && !error && isLoading ? (
+          // The bar the pagination will take, so the card does not grow when the data lands.
+          <div
+            aria-hidden
+            className="flex flex-col gap-3 border-t border-line px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <Skeleton className="w-36" />
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-9 w-10 rounded-xl" />
+              <Skeleton className="h-8 w-8 rounded-xl" />
+              <Skeleton className="h-9 w-10 rounded-xl" />
+            </div>
+          </div>
+        ) : (
+          pagination &&
+          !error && <Pagination {...pagination} className="border-t border-line px-4 py-3" />
         )}
       </div>
     </div>

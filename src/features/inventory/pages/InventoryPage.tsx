@@ -11,6 +11,7 @@ import { SegmentedControl } from '@/shared/ui/components/form/SegmentedControl';
 import { Select } from '@/shared/ui/components/form/select/Select';
 import { Switch } from '@/shared/ui/components/form/Switch';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
+import { Skeleton } from '@/shared/ui/components/Skeleton';
 import { Spinner } from '@/shared/ui/components/Spinner';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import {
@@ -300,6 +301,12 @@ export default function InventoryPage() {
             <EmptyPrompt>Elige un almacén para ver sus productos y su existencia.</EmptyPrompt>
           ) : (
             <>
+              {warehouseStock.isLoading && (
+                // Its place while the stock loads, so the table does not jump down afterwards.
+                <div className="py-0.75">
+                  <Skeleton className="w-64" />
+                </div>
+              )}
               {warehouseStock.data && (
                 <p className="text-sm text-muted" aria-live="polite">
                   {withStock.length === 1
