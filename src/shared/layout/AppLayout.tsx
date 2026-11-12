@@ -2,9 +2,8 @@ import { RxHamburgerMenu } from 'react-icons/rx';
 import { TbLayoutSidebarLeftCollapseFilled } from 'react-icons/tb';
 import { TbLayoutSidebarRightCollapseFilled } from 'react-icons/tb';
 import { FiSearch } from 'react-icons/fi';
-import { IoNotifications } from 'react-icons/io5';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Button } from '@/shared/ui/components/Button';
 import { ThemeToggle } from '@/shared/ui/components/ThemeToggle';
@@ -22,18 +21,23 @@ import { Logo } from '../ui/Logo';
 interface AppLayoutProps {
   /** The whole menu. The layout only shows the items the signed-in user may open. */
   navSections: NavSection[];
+  /**
+   * Header controls owned by features (the alerts bell), placed before the avatar. The app layer
+   * passes them in: shared code does not import features.
+   */
+  headerActions?: ReactNode;
 }
 
 /** Provides the menu to the shell: the title in the header reads it from the context too. */
-export function AppLayout({ navSections }: AppLayoutProps) {
+export function AppLayout({ navSections, headerActions }: AppLayoutProps) {
   return (
     <NavContext value={navSections}>
-      <AppShell />
+      <AppShell headerActions={headerActions} />
     </NavContext>
   );
 }
 
-function AppShell() {
+function AppShell({ headerActions }: { headerActions?: ReactNode }) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const isCollapsed = useSidebarStore((state) => state.isCollapsed);
   const toggle = useSidebarStore((state) => state.toggle);
@@ -95,9 +99,7 @@ function AppShell() {
 
         <section className="flex gap-5">
           <ThemeToggle />
-          <Button variant="ghost" size="sm" className="p-2 text-fg" aria-label="Notificaciones">
-            <IoNotifications aria-hidden className="size-5" />
-          </Button>
+          {headerActions}
           <div className={cn('flex items-center gap-2 text-right')}>
             {user ? <AvatarButton user={user} /> : null}
           </div>

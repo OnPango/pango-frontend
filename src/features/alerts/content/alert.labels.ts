@@ -1,0 +1,46 @@
+import type { AlertSeverity, AlertStatus, ValueSource } from '../types/alerts.types';
+
+type Tone = 'neutral' | 'warning' | 'danger' | 'success';
+
+/** RF-ALT-001: the severity names of the SRS, with what each one means. Crítica stands out solid. */
+export const SEVERITY_LABELS: Record<
+  AlertSeverity,
+  { label: string; long: string; tone: Tone; appearance: 'solid' | 'soft' }
+> = {
+  3: { label: 'Crítica', long: 'Sin disponible', tone: 'danger', appearance: 'solid' },
+  2: { label: 'Alta', long: 'En o bajo el stock de seguridad', tone: 'danger', appearance: 'soft' },
+  1: { label: 'Media', long: 'En o bajo el punto de reorden', tone: 'warning', appearance: 'soft' },
+};
+
+export const STATUS_LABELS: Record<AlertStatus, { label: string; tone: Tone }> = {
+  open: { label: 'Pendiente', tone: 'warning' },
+  resolved: { label: 'Resuelta', tone: 'neutral' },
+  dismissed: { label: 'Descartada', tone: 'neutral' },
+};
+
+export const SOURCE_LABELS: Record<ValueSource, { label: string; long: string }> = {
+  manual: { label: 'Manual', long: 'definido a mano' },
+  calculated: { label: 'Calculado', long: 'calculado por el pronóstico' },
+};
+
+export function formatDate(iso: string, withTime = false): string {
+  try {
+    return new Intl.DateTimeFormat('es-CO', {
+      dateStyle: 'medium',
+      ...(withTime ? { timeStyle: 'short' } : {}),
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
+
+/** "hace 5 min", "hace 3 h", "hace 2 días": for the bell, where the exact date matters less. */
+export function timeAgo(iso: string, now = Date.now()): string {
+  const minutes = Math.max(0, Math.round((now - new Date(iso).getTime()) / 60_000));
+  if (minutes < 1) return 'ahora';
+  if (minutes < 60) return `hace ${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  const days = Math.round(hours / 24);
+  return days === 1 ? 'hace 1 día' : `hace ${days} días`;
+}
