@@ -30,6 +30,7 @@ export function WarehousesTable({
     const base: Column<Warehouse>[] = [
       {
         key: 'warehouse',
+        skeleton: 'title',
         header: 'Almacén',
         cell: (warehouse) => (
           <div className="min-w-0">
@@ -48,6 +49,7 @@ export function WarehousesTable({
       },
       {
         key: 'type',
+        skeleton: 'badge',
         header: 'Tipo',
         cell: (warehouse) => <WarehouseTypeBadge type={warehouse.type} />,
       },
@@ -58,6 +60,7 @@ export function WarehousesTable({
       },
       {
         key: 'status',
+        skeleton: 'badge',
         header: 'Estado',
         cell: (warehouse) => <WarehouseStatusBadge isActive={warehouse.isActive} />,
       },
@@ -67,6 +70,7 @@ export function WarehousesTable({
       ...base,
       {
         key: 'actions',
+        skeleton: 'button',
         header: <span className="sr-only">Acciones</span>,
         className: 'text-right',
         cell: (warehouse) => (

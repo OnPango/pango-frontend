@@ -86,6 +86,8 @@ export function useRegisterMovement() {
         queryClient.invalidateQueries({
           queryKey: inventoryKeys.lots(movement.productId, movement.warehouse.id),
         }),
+        // The movement may have raised or resolved an alert (the alerts feature, and its bell).
+        queryClient.invalidateQueries({ queryKey: inventoryKeys.alerts() }),
       ]);
     },
   });
@@ -123,6 +125,8 @@ export function useSetReplenishment(productId: string, warehouseId: string) {
       );
       // The product view shows the values and their origin. Not awaited, like movements.
       void queryClient.invalidateQueries({ queryKey: inventoryKeys.stock(productId) });
+      // New values re-evaluate the alert (US-016: the next alerts use them).
+      void queryClient.invalidateQueries({ queryKey: inventoryKeys.alerts() });
     },
   });
 }

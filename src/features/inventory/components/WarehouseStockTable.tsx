@@ -38,6 +38,7 @@ export function WarehouseStockTable({
     const base: Column<WarehouseStockRow>[] = [
       {
         key: 'product',
+        skeleton: 'title',
         header: 'Producto',
         cell: ({ product }) => (
           <div className="min-w-0">
@@ -64,6 +65,7 @@ export function WarehouseStockTable({
       },
       {
         key: 'tracking',
+        skeleton: 'badge',
         header: 'Seguimiento',
         cell: ({ product }) =>
           product.tracksLots ? (
@@ -111,6 +113,7 @@ export function WarehouseStockTable({
       ...base,
       {
         key: 'actions',
+        skeleton: 'button',
         header: <span className="sr-only">Acciones</span>,
         className: 'text-right',
         cell: (row) => (

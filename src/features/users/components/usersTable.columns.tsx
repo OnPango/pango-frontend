@@ -52,6 +52,7 @@ export function getUsersTableColumns({
   const columns: Column<UserListItem>[] = [
     {
       key: 'person',
+      skeleton: 'avatar',
       header: 'Persona',
       cell: (item) =>
         item.kind === 'user' ? (
@@ -88,6 +89,7 @@ export function getUsersTableColumns({
     },
     {
       key: 'roles',
+      skeleton: 'badge',
       header: 'Roles',
       cell: (item) =>
         item.kind === 'user' ? (
@@ -136,6 +138,7 @@ export function getUsersTableColumns({
     },
     {
       key: 'status',
+      skeleton: 'badge',
       header: 'Estado',
       cell: (item) => {
         if (item.kind === 'invitation') {
@@ -164,6 +167,7 @@ export function getUsersTableColumns({
     ...columns,
     {
       key: 'actions',
+      skeleton: 'button',
       header: 'Acciones',
       className: 'text-right',
       cell: (item) => {
@@ -237,6 +241,7 @@ export function getUsersTableColumns({
     },
     {
       key: 'edit',
+      skeleton: 'button',
       header: '',
       className: 'flex justify-end',
       cell: (item) =>

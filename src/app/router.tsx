@@ -10,6 +10,7 @@ import type { RouteObject } from 'react-router-dom';
 import { ForbiddenPage } from '@/fallbacks/error-pages/ForbiddenPage';
 import { NotFoundPage } from '@/fallbacks/error-pages/NotFoundPage';
 import { RouteErrorPage } from '@/fallbacks/error-pages/RouteErrorPage';
+import { AlertsBell } from '@/features/alerts/components/AlertsBell';
 import { AppLayout } from '@/shared/layout/AppLayout';
 
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
@@ -55,7 +56,7 @@ export const router = createBrowserRouter(
           element: <RequireAuth loadingFallback={<SessionCheck />} />,
           children: [
             {
-              element: <AppLayout navSections={NAV_SECTIONS} />,
+              element: <AppLayout navSections={NAV_SECTIONS} headerActions={<AlertsBell />} />,
               children: APP_ROUTES.map(toRoute),
             },
           ],

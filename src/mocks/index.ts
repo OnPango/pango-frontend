@@ -1,5 +1,6 @@
 import { authHttp } from '@/core/api/authHttp';
 import { http } from '@/core/api/http';
+import { alertsRoutes } from './handlers/alerts.handlers';
 import { authRoutes } from './handlers/auth.handlers';
 import { catalogRoutes } from './handlers/catalog.handlers';
 import { departmentsRoutes } from './handlers/departments.handlers';
@@ -31,6 +32,7 @@ export function enableMocking(): void {
     ...organizationsRoutes,
     ...departmentsRoutes,
     ...stockRequestsRoutes,
+    ...alertsRoutes,
   });
   http.defaults.adapter = adapter;
   authHttp.defaults.adapter = adapter;

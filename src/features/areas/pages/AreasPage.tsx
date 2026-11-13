@@ -79,6 +79,7 @@ export default function AreasPage() {
     },
     {
       key: 'status',
+      skeleton: 'badge',
       header: 'Estado',
       cell: (department) => (
         <Badge tone={department.isActive ? 'success' : 'neutral'} dot>
@@ -90,6 +91,7 @@ export default function AreasPage() {
       ? [
           {
             key: 'actions',
+            skeleton: 'button' as const,
             header: <span className="sr-only">Acciones</span>,
             className: 'text-right',
             cell: (department: Department) => (

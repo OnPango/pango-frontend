@@ -15,6 +15,7 @@ import type { Product } from '../types/products.types';
 /** The name opens the product's detail panel. */
 const productColumn = (onOpen: (product: Product) => void): Column<Product> => ({
   key: 'product',
+  skeleton: 'title',
   header: 'Producto',
   cell: (product) => (
     <div className="min-w-0">
@@ -47,6 +48,7 @@ const COLUMNS: Column<Product>[] = [
   },
   {
     key: 'tracking',
+    skeleton: 'badge',
     header: (
       <span className="inline-flex items-center">
         Seguimiento
@@ -69,6 +71,7 @@ const COLUMNS: Column<Product>[] = [
   },
   {
     key: 'status',
+    skeleton: 'badge',
     header: 'Estado',
     cell: (product) => (
       <Badge tone={product.isActive ? 'success' : 'neutral'} dot>
@@ -114,6 +117,7 @@ export function ProductsTable({
             ...COLUMNS,
             {
               key: 'edit',
+              skeleton: 'button',
               header: <span className="sr-only">Acciones</span>,
               className: 'text-right',
               cell: (product) => (

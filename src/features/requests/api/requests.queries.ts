@@ -1,4 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import type { FulfilInput, RequestFilters, StockRequest } from '../types/requests.types';
 import {
   cancelRequest,
@@ -27,6 +28,8 @@ export const requestsKeys = {
   /** Under `['departments']`, so changes made in Áreas refresh it. */
   departments: () => ['departments', 'request-filter'] as const,
   myDepartment: (userId: string) => [...requestsKeys.all, 'my-department', userId] as const,
+  /** The alerts feature's root (`['alerts']`): attending a request moves stock. */
+  alerts: () => ['alerts'] as const,
 };
 
 /** `enabled: false` while the default filter (the user's area) is still unknown. */
@@ -37,6 +40,24 @@ export function useRequests(filters: RequestFilters, enabled = true) {
     placeholderData: keepPreviousData,
     enabled,
   });
+}
+
+/**
+ * Loads a list the user is likely to open next (the other tab's default view) once `enabled`, so
+ * switching to it shows it at once instead of waiting on the API.
+ */
+export function usePrefetchRequests(filters: RequestFilters, enabled: boolean) {
+  const queryClient = useQueryClient();
+  // By value: the caller builds a new object on every render.
+  const key = JSON.stringify(filters);
+  useEffect(() => {
+    if (!enabled) return;
+    const next = JSON.parse(key) as RequestFilters;
+    void queryClient.prefetchQuery({
+      queryKey: requestsKeys.list(next),
+      queryFn: () => getRequests(next),
+    });
+  }, [enabled, key, queryClient]);
 }
 
 export function useRequestableProducts(enabled: boolean) {
@@ -102,6 +123,8 @@ function useTransition<T>(fn: (input: T) => Promise<StockRequest>) {
       void queryClient.invalidateQueries({ queryKey: requestsKeys.lists() });
       // Stock and lots changed (reserved or taken out).
       void queryClient.invalidateQueries({ queryKey: [...requestsKeys.all, 'lots'] });
+      // Reserving, releasing or taking stock out re-evaluates the alerts.
+      void queryClient.invalidateQueries({ queryKey: requestsKeys.alerts() });
     },
   });
 }

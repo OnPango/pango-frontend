@@ -15,6 +15,8 @@ import type { StockRequest } from '../types/requests.types';
 export interface RequestsTableProps {
   requests: StockRequest[];
   isLoading?: boolean;
+  /** The rows are the previous query's while another view, filter or page loads. */
+  isRefreshing?: boolean;
   error?: string;
   emptyMessage: string;
   page: number;
@@ -31,6 +33,7 @@ export interface RequestsTableProps {
 export function RequestsTable({
   requests,
   isLoading = false,
+  isRefreshing = false,
   error,
   emptyMessage,
   page,
@@ -46,6 +49,7 @@ export function RequestsTable({
     () => [
       {
         key: 'number',
+        skeleton: 'stack',
         header: 'Solicitud',
         cell: (request) => (
           <div className="min-w-0">
@@ -75,6 +79,7 @@ export function RequestsTable({
       },
       {
         key: 'products',
+        skeleton: 'title',
         header: 'Productos',
         cell: (request) => (
           <div className="min-w-0">
@@ -90,6 +95,7 @@ export function RequestsTable({
       },
       {
         key: 'priority',
+        skeleton: 'badge',
         header: 'Prioridad',
         cell: (request) => (
           <Badge
@@ -103,6 +109,7 @@ export function RequestsTable({
       },
       {
         key: 'status',
+        skeleton: 'badge',
         header: 'Estado',
         cell: (request) => (
           <Badge tone={STATUS_LABELS[request.status].tone} dot>
@@ -124,6 +131,7 @@ export function RequestsTable({
       },
       {
         key: 'actions',
+        skeleton: 'none',
         header: <span className="sr-only">Acciones</span>,
         className: 'text-right',
         cell: (request) =>
@@ -150,6 +158,7 @@ export function RequestsTable({
       rows={requests}
       getRowKey={(request) => request.id}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
       error={error}
       emptyMessage={emptyMessage}
       pagination={{
