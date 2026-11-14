@@ -1,13 +1,16 @@
+import { areas, findUserById } from '../db';
 import { authorize, error } from '../guard';
+import { numericId } from '../ids';
 import { applyStock, evaluateAlert, lotExists, onHand } from '../stock';
 import type { MockRoutes } from '../server';
 import { findProductRow, findUnitRow } from './catalog.handlers';
 import { findWarehouseRow } from './warehouses.handlers';
 
 /**
- * The movement endpoints of pango-core (`docs/movements.md`): movement types and registering a
- * movement, which is confirmed at once and changes the shared stock (`../stock.ts`). Every role
- * may register every type here; the API narrows types per role and warehouse.
+ * The movement endpoints of pango-core (`docs/movements.md`): movement types, registering a
+ * movement (confirmed at once, it changes the shared stock in `../stock.ts`) and the history
+ * (US-014), which also holds the outbound movements that fulfil stock requests. Every role may
+ * register every type here; the API narrows types per role and warehouse.
  */
 
 type Nature = 'INBOUND' | 'OUTBOUND' | 'TRANSFER' | 'ADJUSTMENT';
@@ -23,10 +26,96 @@ const types: { id: number; name: string; nature: Nature; countsAsDemand: boolean
 
 let lastId = 0;
 
-/** The next movement number, also for the outbound movement that fulfils a stock request. */
-export function nextMovement() {
+interface MovementLineRow {
+  productId: number;
+  lot: string | null;
+  quantity: number;
+  /** Stock left the warehouse (outbound, or an adjustment that decreases). */
+  removes: boolean;
+  unitCost: number;
+}
+
+/** An immutable movement of the history (RN-006): never edited nor deleted. */
+interface MovementRow {
+  id: number;
+  number: string;
+  org: string;
+  source: 'MANUAL' | 'STOCK_REQUEST';
+  typeId: number;
+  warehouseId: number;
+  userId: string;
+  /** The requesting area, on movements that fulfil a stock request. */
+  departmentId: string | null;
+  documentRef: string | null;
+  notes: string | null;
+  occurredAt: string;
+  lines: MovementLineRow[];
+}
+
+const movements: MovementRow[] = [];
+
+/** Adds a confirmed movement to the history, with the next number (`MV-00000012`). */
+export function recordMovement(
+  input: Omit<MovementRow, 'id' | 'number' | 'occurredAt'> & { occurredAt?: string },
+): MovementRow {
   lastId += 1;
-  return { id: lastId, number: `MV-${String(lastId).padStart(8, '0')}` };
+  const row: MovementRow = {
+    ...input,
+    id: lastId,
+    number: `MV-${String(lastId).padStart(8, '0')}`,
+    occurredAt: input.occurredAt ?? new Date().toISOString(),
+  };
+  movements.push(row);
+  return row;
+}
+
+function toDto(row: MovementRow) {
+  const type = types.find((t) => t.id === row.typeId)!;
+  const warehouse = findWarehouseRow(row.org, row.warehouseId)!;
+  const location = { id: warehouse.defaultLocationId, code: 'DEFAULT' };
+  const area = row.departmentId ? areas.find((a) => a.id === row.departmentId) : undefined;
+  return {
+    id: row.id,
+    number: row.number,
+    status: 'CONFIRMED',
+    source: row.source,
+    movementType: {
+      id: type.id,
+      name: type.name,
+      nature: type.nature,
+      countsAsDemand: type.countsAsDemand,
+    },
+    warehouse: { id: warehouse.id, name: warehouse.name },
+    registeredBy: { id: numericId(row.userId), name: findUserById(row.userId)?.full_name ?? null },
+    department: area ? { id: numericId(area.id), name: area.name } : null,
+    documentRef: row.documentRef,
+    notes: row.notes,
+    occurredAt: row.occurredAt,
+    lines: row.lines.map((line, index) => {
+      const product = findProductRow(row.org, line.productId)!;
+      return {
+        lineNumber: index + 1,
+        product: {
+          id: product.id,
+          sku: product.sku,
+          name: product.name,
+          unit: findUnitRow(product.stockUnitId)?.code ?? '',
+        },
+        originLocation: line.removes ? location : null,
+        destinationLocation: line.removes ? null : location,
+        lot: line.lot ? { id: index + 1, code: line.lot } : null,
+        quantity: line.quantity,
+        unitCost: line.unitCost,
+      };
+    }),
+  };
+}
+
+/** An inclusive ISO 8601 bound, or `undefined` if absent; `null` if it does not parse. */
+function instant(value: string | undefined): number | null | undefined {
+  if (!value) return undefined;
+  const time = Date.parse(value);
+  return Number.isNaN(time) ? null : time;
 }
 
 interface LineInput {
@@ -47,6 +136,51 @@ export const movementsRoutes: MockRoutes = {
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((type) => ({ ...type, isBase: true }));
     return { status: 200, data };
+  },
+
+  'GET /movements': ({ query }) => {
+    const auth = authorize('movement.read');
+    if (auth.error) return auth.error;
+    const from = instant(query.from);
+    const to = instant(query.to);
+    if (from === null || to === null) {
+      return error(400, 'VALIDATION', 'from and to must be valid ISO 8601 date strings');
+    }
+    const page = Math.max(1, Number(query.page ?? 1));
+    const pageSize = Math.min(100, Math.max(1, Number(query.pageSize ?? 25)));
+    const list = movements
+      .filter((row) => row.org === auth.user.organization_id)
+      .filter((row) => !query.warehouseId || row.warehouseId === Number(query.warehouseId))
+      .filter(
+        (row) =>
+          !query.productId || row.lines.some((line) => line.productId === Number(query.productId)),
+      )
+      .filter((row) => !query.movementTypeId || row.typeId === Number(query.movementTypeId))
+      .filter(
+        (row) => !query.nature || types.find((t) => t.id === row.typeId)?.nature === query.nature,
+      )
+      .filter((row) => from === undefined || Date.parse(row.occurredAt) >= from)
+      .filter((row) => to === undefined || Date.parse(row.occurredAt) <= to)
+      .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt) || b.id - a.id);
+    return {
+      status: 200,
+      data: {
+        items: list.slice((page - 1) * pageSize, page * pageSize).map(toDto),
+        total: list.length,
+        page,
+        pageSize,
+      },
+    };
+  },
+
+  'GET /movements/:id': ({ params }) => {
+    const auth = authorize('movement.read');
+    if (auth.error) return auth.error;
+    const row = movements.find(
+      (m) => m.org === auth.user.organization_id && m.id === Number(params.id),
+    );
+    if (!row) return error(404, 'MOVEMENT_NOT_FOUND', 'Movement not found');
+    return { status: 200, data: toDto(row) };
   },
 
   'POST /movements': ({ body }) => {
@@ -148,47 +282,88 @@ export const movementsRoutes: MockRoutes = {
     plan.forEach((p) => applyStock(org, p.productId, warehouse.id, p.lot, p.delta));
     // Each movement re-evaluates the alerts of its products in the warehouse (CU-12a).
     new Set(plan.map((p) => p.productId)).forEach((id) => evaluateAlert(org, id, warehouse.id));
-    const { id, number } = nextMovement();
-    const location = { id: warehouse.defaultLocationId, code: 'DEFAULT' };
-    return {
-      status: 201,
-      data: {
-        id,
-        number,
-        status: 'CONFIRMED',
-        source: 'MANUAL',
-        movementType: {
-          id: type.id,
-          name: type.name,
-          nature: type.nature,
-          countsAsDemand: type.countsAsDemand,
-        },
-        warehouse: { id: warehouse.id, name: warehouse.name },
-        registeredBy: { id: 1, name: auth.user.full_name },
-        department: null,
-        documentRef:
-          typeof input.documentRef === 'string' ? input.documentRef.trim() || null : null,
-        notes: typeof input.notes === 'string' ? input.notes.trim() || null : null,
-        occurredAt: new Date().toISOString(),
-        lines: lines.map((line, index) => {
-          const product = findProductRow(org, Number(line.productId))!;
-          const removes = plan[index].delta < 0;
-          return {
-            lineNumber: index + 1,
-            product: {
-              id: product.id,
-              sku: product.sku,
-              name: product.name,
-              unit: findUnitRow(product.stockUnitId)?.code ?? '',
-            },
-            originLocation: removes ? location : null,
-            destinationLocation: removes ? null : location,
-            lot: plan[index].lot ? { id: index + 1, code: plan[index].lot } : null,
-            quantity: line.quantity,
-            unitCost: typeof line.unitCost === 'number' ? line.unitCost : 0,
-          };
-        }),
-      },
-    };
+    const row = recordMovement({
+      org,
+      source: 'MANUAL',
+      typeId: type.id,
+      warehouseId: warehouse.id,
+      userId: auth.user.id,
+      departmentId: null,
+      documentRef: typeof input.documentRef === 'string' ? input.documentRef.trim() || null : null,
+      notes: typeof input.notes === 'string' ? input.notes.trim() || null : null,
+      lines: plan.map((p, index) => ({
+        productId: p.productId,
+        lot: p.lot,
+        quantity: Math.abs(p.delta),
+        removes: p.delta < 0,
+        unitCost: typeof lines[index].unitCost === 'number' ? (lines[index].unitCost as number) : 0,
+      })),
+    });
+    return { status: 201, data: toDto(row) };
   },
 };
+
+// Seed: the history behind the seeded stock (`../stock.ts`), so on hand is inbound minus outbound:
+// Tornillo M8 1 000 + 400 − 200 = 1 200 (lot L-2026-10); Caja corrugada 150 − 40 − 25 = 85.
+const daysAgo = (days: number, hour: number) =>
+  new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 11) +
+  `${String(hour).padStart(2, '0')}:20:00.000Z`;
+const seedLine = (
+  productId: number,
+  quantity: number,
+  removes: boolean,
+  lot: string | null = null,
+) => ({
+  productId,
+  lot,
+  quantity,
+  removes,
+  unitCost: 0,
+});
+const seed = {
+  org: 'org-pango',
+  warehouseId: 1,
+  departmentId: null,
+  documentRef: null,
+  notes: null,
+  source: 'MANUAL' as const,
+};
+recordMovement({
+  ...seed,
+  typeId: 1,
+  userId: 'usr-001',
+  occurredAt: daysAgo(20, 13),
+  lines: [seedLine(1, 1000, false, 'L-2026-10'), seedLine(3, 150, false)],
+});
+recordMovement({
+  ...seed,
+  typeId: 2,
+  userId: 'usr-002',
+  documentRef: 'FAC-1043',
+  occurredAt: daysAgo(12, 15),
+  lines: [seedLine(1, 400, false, 'L-2026-10')],
+});
+recordMovement({
+  ...seed,
+  typeId: 3,
+  userId: 'usr-002',
+  source: 'STOCK_REQUEST',
+  departmentId: 'area-admin',
+  occurredAt: daysAgo(10, 16),
+  lines: [seedLine(3, 40, true)],
+});
+recordMovement({
+  ...seed,
+  typeId: 3,
+  userId: 'usr-002',
+  notes: 'Mantenimiento de la línea 2',
+  occurredAt: daysAgo(5, 14),
+  lines: [seedLine(1, 200, true, 'L-2026-10')],
+});
+recordMovement({
+  ...seed,
+  typeId: 3,
+  userId: 'usr-001',
+  occurredAt: daysAgo(4, 18),
+  lines: [seedLine(3, 25, true)],
+});

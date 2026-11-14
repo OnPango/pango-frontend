@@ -38,6 +38,8 @@ export interface DatePickerProps {
   max?: string;
   placeholder?: string;
   clearable?: boolean;
+  /** Accessible name when there is no visible `label` (a filter bar). */
+  'aria-label'?: string;
 }
 
 /** Date field with a month calendar. Mondays first, Spanish (es-CO) labels, keyboard navigable. */
@@ -57,6 +59,7 @@ export function DatePicker({
   max,
   placeholder = 'dd/mm/aaaa',
   clearable = false,
+  'aria-label': ariaLabel,
 }: DatePickerProps) {
   const { id, hintId, errorId, describedBy } = useFieldIds(idProp, hint, error);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -167,6 +170,7 @@ export function DatePicker({
           type="button"
           disabled={disabled}
           aria-haspopup="dialog"
+          aria-label={ariaLabel}
           aria-expanded={open}
           aria-describedby={describedBy}
           onClick={() => (open ? closeMenu(false) : openMenu())}

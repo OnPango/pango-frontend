@@ -28,6 +28,7 @@ export default function ProductPage() {
   const canManage = hasAnyPermission(currentUser, ['product.manage']);
   const canManageCategories = hasAnyPermission(currentUser, ['category.manage']);
   const canReadStock = hasAnyPermission(currentUser, ['stock.read']);
+  const canReadMovements = hasAnyPermission(currentUser, ['movement.read']);
 
   const {
     search,
@@ -182,6 +183,7 @@ export default function ProductPage() {
           familyPath={paths.get(opened.category.id) ?? opened.category.name}
           canManage={canManage}
           canSeeStockPerWarehouse={canReadStock}
+          canSeeMovements={canReadMovements}
           onClose={() => setOpenId(null)}
           onEdit={handleEdit}
         />

@@ -30,6 +30,8 @@ export const requestsKeys = {
   myDepartment: (userId: string) => [...requestsKeys.all, 'my-department', userId] as const,
   /** The alerts feature's root (`['alerts']`): attending a request moves stock. */
   alerts: () => ['alerts'] as const,
+  /** The movements feature's root (`['movements']`): fulfilling registers an outbound movement. */
+  movements: () => ['movements'] as const,
 };
 
 /** `enabled: false` while the default filter (the user's area) is still unknown. */
@@ -125,6 +127,7 @@ function useTransition<T>(fn: (input: T) => Promise<StockRequest>) {
       void queryClient.invalidateQueries({ queryKey: [...requestsKeys.all, 'lots'] });
       // Reserving, releasing or taking stock out re-evaluates the alerts.
       void queryClient.invalidateQueries({ queryKey: requestsKeys.alerts() });
+      void queryClient.invalidateQueries({ queryKey: requestsKeys.movements() });
     },
   });
 }

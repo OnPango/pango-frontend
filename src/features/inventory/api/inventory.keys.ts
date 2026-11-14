@@ -13,4 +13,6 @@ export const inventoryKeys = {
     [...inventoryKeys.all, 'movement-types', warehouseId] as const,
   /** The alerts feature's root (`['alerts']`): stock changes here open or resolve its alerts. */
   alerts: () => ['alerts'] as const,
+  /** The movements feature's root (`['movements']`): a new movement joins its history. */
+  movements: () => ['movements'] as const,
 };

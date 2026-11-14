@@ -91,7 +91,7 @@ export const APP_ROUTES: AppRoute[] = [
     icon: HiOutlineSwitchHorizontal,
     section: 'operations',
     anyOf: ['movement.read'],
-    Page: placeholder('Movements'),
+    Page: lazy(() => import('@/features/movements/pages/MovementsPage')),
   },
   {
     path: '/import-history',

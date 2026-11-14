@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { FiAlertTriangle, FiLayers } from 'react-icons/fi';
+import { FiAlertTriangle, FiArrowRight, FiLayers } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
 import { formatQuantity, unitLabel } from '@/shared/lib/units';
 import type { Column } from '@/shared/types/dataTable';
 import { Badge } from '@/shared/ui/components/Badge';
@@ -18,8 +19,11 @@ export function ProductStockCard({
   onOpenWarehouse,
   onRegister,
   onReplenish,
+  historyHref,
 }: {
   stock: ProductStock;
+  /** With `movement.read`: the product's movement history, which adds up to the total. */
+  historyHref?: string;
   onOpenWarehouse: (warehouseId: string) => void;
   /** Without `movement.create` there are no movement actions. */
   onRegister?: (kind: MovementKind, warehouseId: string) => void;
@@ -167,8 +171,17 @@ export function ProductStockCard({
         getRowKey={(row) => row.warehouse.id}
         emptyMessage="Este producto aún no tiene existencia en ningún almacén. Regístrala con una entrada."
       />
-      <p className="text-xs text-muted">
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
         El total es la suma de las entradas menos las salidas de todos los almacenes.
+        {historyHref && (
+          <Link
+            to={historyHref}
+            className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+          >
+            Ver el historial de movimientos
+            <FiArrowRight aria-hidden className="size-3.5" />
+          </Link>
+        )}
       </p>
     </section>
   );
