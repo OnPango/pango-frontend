@@ -1,3 +1,4 @@
+import { dayBound } from '@/shared/lib/localDay';
 import type {
   Movement,
   MovementFilters,
@@ -53,15 +54,6 @@ export function toMovement(dto: MovementDto): Movement {
       };
     }),
   };
-}
-
-/** A local day as an instant: its first or its last millisecond, in the user's time zone. */
-function dayBound(day: string, end: boolean): string {
-  const [year, month, date] = day.split('-').map(Number);
-  const local = end
-    ? new Date(year, month - 1, date, 23, 59, 59, 999)
-    : new Date(year, month - 1, date, 0, 0, 0, 0);
-  return local.toISOString();
 }
 
 export function toListQuery(filters: MovementFilters) {
