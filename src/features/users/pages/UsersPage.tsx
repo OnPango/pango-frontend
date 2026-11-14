@@ -225,7 +225,7 @@ export default function UsersPage() {
           containerClassName="flex-1"
         />
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <Select
             aria-label="Filtrar por rol"
             value={selectedRole}

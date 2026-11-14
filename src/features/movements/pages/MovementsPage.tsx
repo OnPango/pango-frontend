@@ -161,7 +161,7 @@ export default function MovementsPage() {
             className="w-full lg:w-56"
           />
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-row sm:items-center">
           <DatePicker
             aria-label="Desde"
             placeholder="Desde"
@@ -186,16 +186,18 @@ export default function MovementsPage() {
             clearable
             className="w-full sm:w-44"
           />
-          {filtered && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearFilters}
-              className="gap-1.5 self-start sm:self-auto"
-            >
-              <FiX aria-hidden className="size-4" /> Limpiar filtros
-            </Button>
-          )}
+          <div>
+            {filtered && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="gap-1.5 self-start sm:self-auto"
+              >
+                <FiX aria-hidden className="size-4" /> Limpiar filtros
+              </Button>
+            )}
+          </div>
         </div>
       </section>
 
