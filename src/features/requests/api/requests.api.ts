@@ -1,13 +1,15 @@
 import { http } from '@/core/api/http';
-import type {
-  CreateRequestInput,
-  FulfilInput,
-  RequestLot,
-  Option,
-  RequestableProduct,
-  RequestFilters,
-  RequestPage,
-  StockRequest,
+import {
+  ACTIVE_STATUSES,
+  type CreateRequestInput,
+  type FulfilInput,
+  type RequestLot,
+  type Option,
+  type RequestableProduct,
+  type RequestFilters,
+  type RequestPage,
+  type RequestStatus,
+  type StockRequest,
 } from '../types/requests.types';
 import type {
   DepartmentDto,
@@ -25,10 +27,46 @@ import { toCreateRequestDto, toListQuery, toStockRequest } from './requests.mapp
  * hold `stock_request.read` and every request of their own area.
  */
 export async function getRequests(filters: RequestFilters): Promise<RequestPage> {
+  if (filters.status === 'active') return getActiveRequests(filters);
   const { data } = await http.get<StockRequestPageDto>('/stock-requests', {
-    params: toListQuery(filters),
+    params: toListQuery({ ...filters, status: filters.status }),
   });
   return { items: data.items.map(toStockRequest), total: data.total };
+}
+
+/** Every request with one status that matches the other filters, 100 per request. */
+async function getAllWithStatus(
+  filters: RequestFilters,
+  status: RequestStatus,
+): Promise<StockRequest[]> {
+  const page = async (n: number) =>
+    (
+      await http.get<StockRequestPageDto>('/stock-requests', {
+        params: toListQuery({ ...filters, status, page: n, pageSize: MAX_PAGE_SIZE }),
+      })
+    ).data;
+  const first = await page(1);
+  const pages = Math.ceil(first.total / MAX_PAGE_SIZE);
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, pages - 1) }, (_, index) => page(index + 2)),
+  );
+  return [first, ...rest].flatMap((p) => p.items).map(toStockRequest);
+}
+
+/**
+ * Pending and in attention together. The API filters by one status at a time, so this reads both
+ * and pages them here, in the API's order. Active requests are few (they get attended); the
+ * history, which grows without end, is always paged by the API.
+ */
+async function getActiveRequests(filters: RequestFilters): Promise<RequestPage> {
+  const lists = await Promise.all(
+    ACTIVE_STATUSES.map((status) => getAllWithStatus(filters, status)),
+  );
+  const all = lists
+    .flat()
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || Number(b.id) - Number(a.id));
+  const start = (filters.page - 1) * filters.pageSize;
+  return { items: all.slice(start, start + filters.pageSize), total: all.length };
 }
 
 /** A request waits up to this long: like movements, a timeout must not hide one that was saved. */
@@ -52,12 +90,17 @@ export async function cancelRequest(id: string): Promise<StockRequest> {
 
 const MAX_PAGE_SIZE = 100;
 
-/** Active products, to request them by code or name. */
-export async function getRequestableProducts(): Promise<RequestableProduct[]> {
+/**
+ * Active products, to request them by code or name; with `ALL`, archived ones too (the history
+ * filter: a finished request may name a product retired since).
+ */
+export async function getRequestableProducts(
+  status: 'ACTIVE' | 'ALL' = 'ACTIVE',
+): Promise<RequestableProduct[]> {
   const page = async (n: number) =>
     (
       await http.get<ProductPageDto>('/products', {
-        params: { status: 'ACTIVE', page: n, pageSize: MAX_PAGE_SIZE },
+        params: { status, page: n, pageSize: MAX_PAGE_SIZE },
       })
     ).data;
   const first = await page(1);

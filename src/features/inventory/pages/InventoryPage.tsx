@@ -238,7 +238,7 @@ export default function InventoryPage() {
         </Alert>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <SegmentedControl<InventoryView>
           legend="Ver la existencia"
           options={VIEWS}
@@ -246,7 +246,7 @@ export default function InventoryPage() {
           onChange={setView}
         />
         {canRegister && (
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap md:justify-end">
             <Button variant="primary" onClick={() => registerHere('inbound')} className="gap-2">
               <FiArrowDownLeft aria-hidden className="size-4" />
               {KIND_LABELS.inbound.title}

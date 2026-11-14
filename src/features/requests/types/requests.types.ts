@@ -59,12 +59,21 @@ export interface RequestPage {
   total: number;
 }
 
+/** Still waiting or being attended; the rest are finished and live in the history (US-032). */
+export const ACTIVE_STATUSES: RequestStatus[] = ['pending', 'inProgress'];
+
 export interface RequestFilters {
   /** Null: every area the user can see. */
   departmentId: string | null;
   /** Null: every warehouse the user can see. */
   warehouseId: string | null;
-  status: RequestStatus | null;
+  /** `active`: pending and in attention together. */
+  status: RequestStatus | 'active' | null;
+  /** Only requests with a line of this product. */
+  productId: string | null;
+  /** Created on or after / on or before these local days (`YYYY-MM-DD`). */
+  from: string | null;
+  to: string | null;
   page: number;
   pageSize: number;
 }

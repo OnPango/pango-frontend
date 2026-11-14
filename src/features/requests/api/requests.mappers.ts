@@ -1,3 +1,4 @@
+import { dayBound } from '@/shared/lib/localDay';
 import type {
   CreateRequestInput,
   RequestFilters,
@@ -68,10 +69,16 @@ export const toStockRequest = (dto: StockRequestDto): StockRequest => ({
   createdAt: dto.createdAt,
 });
 
-export const toListQuery = (filters: RequestFilters) => ({
+/** One status at a time: the API takes a single one (`active` is resolved by the caller). */
+export const toListQuery = (
+  filters: Omit<RequestFilters, 'status'> & { status: RequestStatus | null },
+) => ({
   ...(filters.departmentId ? { departmentId: Number(filters.departmentId) } : {}),
   ...(filters.warehouseId ? { warehouseId: Number(filters.warehouseId) } : {}),
   ...(filters.status ? { status: STATUS_DTO[filters.status] } : {}),
+  ...(filters.productId ? { productId: Number(filters.productId) } : {}),
+  ...(filters.from ? { from: dayBound(filters.from, false) } : {}),
+  ...(filters.to ? { to: dayBound(filters.to, true) } : {}),
   page: filters.page,
   pageSize: filters.pageSize,
 });
