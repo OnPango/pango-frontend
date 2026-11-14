@@ -17,7 +17,11 @@ export interface AlertDto {
   /** In English: not shown. */
   message: string;
   createdAt: string;
+  /** Last change: values refreshed while open, or resolution. Absent before `alert_updated_at`. */
+  updatedAt?: string;
   resolvedAt: string | null;
+  /** Why it was resolved; absent before `alert_resolution`, null while open or for older ones. */
+  resolution?: 'STOCK_RECOVERED' | 'REORDER_POINT_CHANGED' | 'NO_REORDER_POINT' | 'INACTIVE' | null;
 }
 
 export interface AlertPageDto {

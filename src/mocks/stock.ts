@@ -144,7 +144,10 @@ export interface AlertRow {
   reorderPointSource: 'MANUAL' | 'CALCULATED';
   suggestedQuantity: number;
   createdAt: string;
+  /** Last change: values refreshed while open, or resolution. */
+  updatedAt: string;
   resolvedAt: string | null;
+  resolution: 'STOCK_RECOVERED' | 'REORDER_POINT_CHANGED' | 'NO_REORDER_POINT' | 'INACTIVE' | null;
 }
 export const alerts: AlertRow[] = [];
 let lastAlertId = 0;
@@ -218,25 +221,44 @@ export function evaluateAlert(org: string, productId: number, warehouseId: numbe
   const available = availableOf(org, productId, warehouseId);
   const open = openAlertRow(org, productId, warehouseId);
   const below = reorderPoint > 0 && available <= reorderPoint;
+  const now = new Date().toISOString();
+  const values = {
+    severity: (available <= 0 ? 3 : available <= safetyStock ? 2 : 1) as 1 | 2 | 3,
+    availableQuantity: available,
+    reorderPoint,
+    reorderPointSource: valueSource,
+    // Up to the max stock, or to the reorder point without one.
+    suggestedQuantity: Number(Math.max(0, (maxStock ?? reorderPoint) - available).toFixed(4)),
+  };
   if (below && !open) {
     alerts.push({
       id: ++lastAlertId,
       org,
       productId,
       warehouseId,
-      severity: available <= 0 ? 3 : available <= safetyStock ? 2 : 1,
       status: 'OPEN',
-      availableQuantity: available,
-      reorderPoint,
-      reorderPointSource: valueSource,
-      // Up to the max stock, or to the reorder point without one.
-      suggestedQuantity: Number(Math.max(0, (maxStock ?? reorderPoint) - available).toFixed(4)),
-      createdAt: new Date().toISOString(),
+      ...values,
+      createdAt: now,
+      updatedAt: now,
       resolvedAt: null,
+      resolution: null,
     });
+  } else if (below && open) {
+    // pango-core refreshes the open alert instead of opening another; `createdAt` stays.
+    const changed = (Object.keys(values) as (keyof typeof values)[]).some(
+      (k) => open[k] !== values[k],
+    );
+    if (changed) Object.assign(open, values, { updatedAt: now });
   } else if (!below && open) {
     open.status = 'RESOLVED';
-    open.resolvedAt = new Date().toISOString();
+    open.resolvedAt = now;
+    open.updatedAt = now;
+    open.resolution =
+      reorderPoint <= 0
+        ? 'NO_REORDER_POINT'
+        : available > open.reorderPoint
+          ? 'STOCK_RECOVERED'
+          : 'REORDER_POINT_CHANGED';
   }
 }
 
@@ -251,7 +273,9 @@ const openAlertRow = (org: string, productId: number, warehouseId: number) =>
 
 export function openAlertOf(org: string, productId: number, warehouseId: number) {
   const open = openAlertRow(org, productId, warehouseId);
-  return open ? { id: open.id, severity: open.severity, createdAt: open.createdAt } : null;
+  return open
+    ? { id: open.id, severity: open.severity, createdAt: open.createdAt, updatedAt: open.updatedAt }
+    : null;
 }
 
 export function setReplenishment(

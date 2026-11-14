@@ -193,6 +193,8 @@ export default function RolesPermissionsPage() {
                       startAction();
                       setFormFor(role);
                     }}
+                    aria-label={`Editar el rol ${roleLabel(role.name)}`}
+                    title="Editar nombre y descripción"
                     className="gap-1.5 p-3"
                   >
                     <FiEdit2 aria-hidden className="size-4" />
@@ -206,6 +208,8 @@ export default function RolesPermissionsPage() {
                       startAction();
                       setDeleting(role);
                     }}
+                    aria-label={`Eliminar el rol ${roleLabel(role.name)}`}
+                    title="Eliminar rol"
                     className="gap-1.5 p-3"
                   >
                     <FiTrash2 aria-hidden className="size-4" />

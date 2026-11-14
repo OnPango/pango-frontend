@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { movementTypeLabel } from '@/shared/lib/movementTypes';
+import { feedsDemand, movementTypeLabel } from '@/shared/lib/movementTypes';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Badge } from '@/shared/ui/components/Badge';
 import { Drawer } from '@/shared/ui/components/Drawer';
@@ -60,7 +60,9 @@ export function MovementDetailPanel({
             <Badge appearance="outline" className="rounded-lg font-medium">
               <MovementTypeLabel type={movement.type} />
             </Badge>
-            {movement.type.countsAsDemand && <Badge tone="primary">Cuenta como demanda</Badge>}
+            {feedsDemand(movement.type, movement.source === 'stockRequest') && (
+              <Badge tone="primary">Cuenta como demanda</Badge>
+            )}
           </div>
 
           <section aria-labelledby="movement-data">

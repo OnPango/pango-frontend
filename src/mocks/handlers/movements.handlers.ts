@@ -22,6 +22,8 @@ const types: { id: number; name: string; nature: Nature; countsAsDemand: boolean
   { id: 3, name: 'Consumption issue', nature: 'OUTBOUND', countsAsDemand: true },
   { id: 4, name: 'Transfer', nature: 'TRANSFER', countsAsDemand: false },
   { id: 5, name: 'Inventory adjustment', nature: 'ADJUSTMENT', countsAsDemand: false },
+  // `sales_issue_movement_type` migration.
+  { id: 6, name: 'Sales issue', nature: 'OUTBOUND', countsAsDemand: true },
 ];
 
 let lastId = 0;

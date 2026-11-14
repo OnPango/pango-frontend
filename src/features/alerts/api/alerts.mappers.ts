@@ -1,5 +1,7 @@
 import type {
   AlertFilters,
+  AlertResolution,
+  AlertSort,
   AlertSeverity,
   AlertStatus,
   CurrentStock,
@@ -17,6 +19,18 @@ const STATUS_DTO: Record<AlertStatus, AlertDto['status']> = {
   open: 'OPEN',
   resolved: 'RESOLVED',
   dismissed: 'DISMISSED',
+};
+
+const RESOLUTION: Record<NonNullable<AlertDto['resolution']>, AlertResolution> = {
+  STOCK_RECOVERED: 'stockRecovered',
+  REORDER_POINT_CHANGED: 'reorderPointChanged',
+  NO_REORDER_POINT: 'noReorderPoint',
+  INACTIVE: 'inactive',
+};
+const SORT_DTO: Record<AlertSort, 'CREATED' | 'UPDATED' | 'SEVERITY'> = {
+  created: 'CREATED',
+  updated: 'UPDATED',
+  severity: 'SEVERITY',
 };
 
 const source = (value: AlertDto['reorderPointSource']): ValueSource =>
@@ -43,13 +57,17 @@ export function toStockAlert(dto: AlertDto): StockAlert {
     source: source(dto.reorderPointSource),
     suggested: dto.suggestedQuantity,
     createdAt: dto.createdAt,
+    updatedAt: dto.updatedAt ?? dto.createdAt,
     resolvedAt: dto.resolvedAt,
+    resolution: dto.resolution ? RESOLUTION[dto.resolution] : null,
   };
 }
 
 export function toListQuery(filters: AlertFilters) {
   return {
     ...(filters.status && { status: STATUS_DTO[filters.status] }),
+    // The API's default is the raised date: only send another order.
+    ...(filters.sort && filters.sort !== 'created' && { sort: SORT_DTO[filters.sort] }),
     ...(filters.warehouseId && { warehouseId: Number(filters.warehouseId) }),
     ...(filters.productId && { productId: Number(filters.productId) }),
     page: filters.page,

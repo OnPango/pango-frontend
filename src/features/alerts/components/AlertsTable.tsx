@@ -82,7 +82,9 @@ export function AlertsTable({
               {' '}
               / {formatQuantity(alert.reorderPoint, alert.product.unit)}
             </span>
-            <p className="text-xs text-muted">al generarse</p>
+            <p className="text-xs text-muted">
+              {alert.status === 'open' ? 'según la última revisión' : 'antes de resolverse'}
+            </p>
           </div>
         ),
       },
@@ -105,9 +107,14 @@ export function AlertsTable({
         key: 'createdAt',
         header: 'Generada',
         cell: (alert) => (
-          <span className="text-sm whitespace-nowrap text-fg/90">
+          <div className="text-sm whitespace-nowrap text-fg/90">
             {formatDate(alert.createdAt, true)}
-          </span>
+            {alert.status === 'open' && alert.updatedAt !== alert.createdAt && (
+              <p className="mt-1 text-xs text-muted">
+                actualizada el {formatDate(alert.updatedAt)}
+              </p>
+            )}
+          </div>
         ),
       },
     ],

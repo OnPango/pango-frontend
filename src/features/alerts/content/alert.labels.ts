@@ -1,4 +1,9 @@
-import type { AlertSeverity, AlertStatus, ValueSource } from '../types/alerts.types';
+import type {
+  AlertResolution,
+  AlertSeverity,
+  AlertStatus,
+  ValueSource,
+} from '../types/alerts.types';
 
 type Tone = 'neutral' | 'warning' | 'danger' | 'success';
 
@@ -16,6 +21,14 @@ export const STATUS_LABELS: Record<AlertStatus, { label: string; tone: Tone }> =
   open: { label: 'Pendiente', tone: 'warning' },
   resolved: { label: 'Resuelta', tone: 'neutral' },
   dismissed: { label: 'Descartada', tone: 'neutral' },
+};
+
+/** Why it was resolved, completing "Se resolvió el … porque …". */
+export const RESOLUTION_LABELS: Record<AlertResolution, string> = {
+  stockRecovered: 'el disponible volvió a superar el punto de reorden',
+  reorderPointChanged: 'el punto de reorden bajó por debajo del disponible',
+  noReorderPoint: 'se quitó el punto de reorden',
+  inactive: 'se archivó el producto o se cerró el almacén',
 };
 
 export const SOURCE_LABELS: Record<ValueSource, { label: string; long: string }> = {

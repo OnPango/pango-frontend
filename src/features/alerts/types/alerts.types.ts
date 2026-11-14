@@ -13,9 +13,16 @@ export type AlertStatus = 'open' | 'resolved' | 'dismissed';
 
 export type ValueSource = 'manual' | 'calculated';
 
+/** Why an alert was resolved; null while open, or when it was resolved before reasons existed. */
+export type AlertResolution =
+  'stockRecovered' | 'reorderPointChanged' | 'noReorderPoint' | 'inactive';
+
+/** Order of the list: raised most recently, changed most recently, or most severe first. */
+export type AlertSort = 'created' | 'updated' | 'severity';
+
 /**
- * A replenishment alert of a product in a warehouse (CU-12). It keeps the values it was raised
- * with: they do not follow the stock while it stays open.
+ * A replenishment alert of a product in a warehouse (CU-12). While open, every evaluation refreshes
+ * its values (severity, available, reorder point); once resolved they stay as they last were.
  */
 export interface StockAlert {
   id: string;
@@ -23,7 +30,7 @@ export interface StockAlert {
   status: AlertStatus;
   product: { id: string; sku: string; name: string; unit: UnitRef };
   warehouse: Option;
-  /** Available stock (on hand minus reservations) when it was raised. */
+  /** Available stock (on hand minus reservations) at its last evaluation. */
   available: number;
   reorderPoint: number;
   /** Whether that reorder point was set by hand or calculated by the forecast (US-044). */
@@ -31,11 +38,16 @@ export interface StockAlert {
   /** What brings available stock up to the max stock, or to the reorder point without one. */
   suggested: number;
   createdAt: string;
+  /** When its values last changed (or it was resolved); `createdAt` until then. */
+  updatedAt: string;
   resolvedAt: string | null;
+  resolution: AlertResolution | null;
 }
 
 export interface AlertFilters {
   status: AlertStatus | null;
+  /** Absent: most recently raised first. */
+  sort?: AlertSort;
   warehouseId: string | null;
   productId: string | null;
   page: number;
