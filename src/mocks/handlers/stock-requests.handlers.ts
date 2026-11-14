@@ -96,8 +96,20 @@ export const stockRequestsRoutes: MockRoutes = {
     if (auth.error) return auth.error;
     const page = Math.max(1, Number(query.page ?? 1));
     const pageSize = Math.min(100, Math.max(1, Number(query.pageSize ?? 25)));
+    const instant = (raw: string | undefined) => (raw ? Date.parse(raw) : null);
+    const from = instant(query.from);
+    const to = instant(query.to);
+    if (Number.isNaN(from) || Number.isNaN(to)) {
+      return error(400, 'VALIDATION', 'from and to must be ISO 8601 date strings');
+    }
     const list = requests
       .filter((row) => row.organizationId === auth.user.organization_id)
+      .filter(
+        (row) =>
+          !query.productId || row.lines.some((line) => line.productId === Number(query.productId)),
+      )
+      .filter((row) => from === null || Date.parse(row.createdAt) >= from)
+      .filter((row) => to === null || Date.parse(row.createdAt) <= to)
       .filter(
         (row) => !query.departmentId || numericId(row.departmentId) === Number(query.departmentId),
       )
