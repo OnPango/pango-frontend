@@ -7,11 +7,8 @@ import { FormSelect } from '@/shared/ui/components/form/FormSelect';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { Modal } from '@/shared/ui/components/Modal';
 import { useMovementTypes, useStockWarehouses } from '../api/inventory.queries';
-import {
-  KIND_LABELS,
-  movementTypeDescription,
-  movementTypeLabel,
-} from '../content/movement.labels';
+import { movementTypeDescription, movementTypeLabel } from '@/shared/lib/movementTypes';
+import { KIND_LABELS } from '../content/movement.labels';
 import { useMovementForm } from '../hooks/useMovementForm';
 import type { MovementKind, RegisteredMovement, StockProduct } from '../types/inventory.types';
 
