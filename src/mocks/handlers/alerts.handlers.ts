@@ -27,9 +27,18 @@ function toDto(row: AlertRow) {
     // pango-core writes it in English; the frontend composes its own text.
     message: `${product.sku}: available stock ${row.availableQuantity} ${unit} is at or below the reorder point ${row.reorderPoint}`,
     createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
     resolvedAt: row.resolvedAt,
+    resolution: row.resolution,
   };
 }
+
+const ORDER = {
+  CREATED: (a: AlertRow, b: AlertRow) => b.createdAt.localeCompare(a.createdAt) || b.id - a.id,
+  UPDATED: (a: AlertRow, b: AlertRow) => b.updatedAt.localeCompare(a.updatedAt) || b.id - a.id,
+  SEVERITY: (a: AlertRow, b: AlertRow) =>
+    b.severity - a.severity || b.updatedAt.localeCompare(a.updatedAt) || b.id - a.id,
+};
 
 export const alertsRoutes: MockRoutes = {
   'GET /alerts': ({ query }) => {
@@ -39,6 +48,10 @@ export const alertsRoutes: MockRoutes = {
     if (status && !['OPEN', 'RESOLVED', 'DISMISSED'].includes(status)) {
       return error(400, 'VALIDATION_ERROR', 'status must be one of: OPEN, RESOLVED, DISMISSED');
     }
+    const sort = (query.sort ?? 'CREATED') as keyof typeof ORDER;
+    if (!(sort in ORDER)) {
+      return error(400, 'VALIDATION_ERROR', 'sort must be one of: CREATED, UPDATED, SEVERITY');
+    }
     const page = Math.max(1, Number(query.page ?? 1));
     const pageSize = Math.min(100, Math.max(1, Number(query.pageSize ?? 25)));
     const list = alerts
@@ -46,7 +59,7 @@ export const alertsRoutes: MockRoutes = {
       .filter((row) => !query.warehouseId || row.warehouseId === Number(query.warehouseId))
       .filter((row) => !query.productId || row.productId === Number(query.productId))
       .filter((row) => !status || row.status === status)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id - a.id);
+      .sort(ORDER[sort]);
     return {
       status: 200,
       data: {
