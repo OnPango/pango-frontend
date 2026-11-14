@@ -152,7 +152,7 @@ export default function RolesPermissionsPage() {
 
       {role && (
         <>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-x-3 gap-y-2">
+          <div className="flex flex-col gap-x-3 gap-y-2 sm:flex-row sm:items-center">
             <div className="flex gap-2">
               <span className="text-sm font-medium text-muted">Editando</span>
               <details className="group relative">
@@ -165,12 +165,12 @@ export default function RolesPermissionsPage() {
                 <div className="absolute top-8 -left-2 z-20 w-64 rounded-xl bg-fg p-3 text-xs leading-relaxed text-canvas shadow-lg">
                   <b className="text-primary">Permisos relacionados</b>
                   <br />
-                  Para atender una alerta hay que poder verla. Por eso Pango activa el permiso de ver
-                  cuando activas el de gestionar.
+                  Para atender una alerta hay que poder verla. Por eso Pango activa el permiso de
+                  ver cuando activas el de gestionar.
                 </div>
               </details>
             </div>
-            <div className='flex gap-2'>
+            <div className="flex gap-2">
               <Select
                 aria-label="Rol que estás editando"
                 value={role.id}
