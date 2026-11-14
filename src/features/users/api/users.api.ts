@@ -1,11 +1,13 @@
 import { http } from '@/core/api/http';
 import type {
   ChangeUserRolesInput,
+  CreateRoleInput,
   DepartmentOption,
   InviteUserInput,
   ManagedRole,
   ManagedUser,
   PendingInvitation,
+  UpdateRoleDetailsInput,
   UpdateRolePermissionsInput,
   UpdateUserInput,
   WarehouseOption,
@@ -20,9 +22,11 @@ import type {
 import {
   toAddRoleAssignmentDto,
   toCreateInvitationDto,
+  toCreateRoleDto,
   toManagedRole,
   toManagedUser,
   toPendingInvitation,
+  toUpdateRoleDetailsDto,
   toUpdateRoleDto,
   toUpdateUserDto,
   toWarehouseOption,
@@ -118,6 +122,23 @@ export async function updateRolePermissions(
 ): Promise<ManagedRole> {
   const { data } = await http.patch<RoleDto>(`/roles/${input.id}`, toUpdateRoleDto(input));
   return toManagedRole(data);
+}
+
+/** `POST /roles`: a role of the organization; it may register every movement type. */
+export async function createRole(input: CreateRoleInput): Promise<ManagedRole> {
+  const { data } = await http.post<RoleDto>('/roles', toCreateRoleDto(input));
+  return toManagedRole(data);
+}
+
+/** `PATCH /roles/:id` with the name and description; the permissions stay as they are. */
+export async function updateRoleDetails(input: UpdateRoleDetailsInput): Promise<ManagedRole> {
+  const { data } = await http.patch<RoleDto>(`/roles/${input.id}`, toUpdateRoleDetailsDto(input));
+  return toManagedRole(data);
+}
+
+/** `DELETE /roles/:id`: only a role nobody holds and no pending invitation offers. */
+export async function deleteRole(id: string): Promise<void> {
+  await http.delete(`/roles/${id}`);
 }
 
 // ---- Departments ----

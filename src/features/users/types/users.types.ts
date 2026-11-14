@@ -115,3 +115,17 @@ export interface UpdateRolePermissionsInput {
   id: string;
   permissions: Permission[];
 }
+
+/** `POST /roles`: the role starts with these permissions (none is fine). */
+export interface CreateRoleInput {
+  name: string;
+  description: string | null;
+  permissions: Permission[];
+}
+
+/** `PATCH /roles/:id` with only the name and description (absent: unchanged). */
+export interface UpdateRoleDetailsInput {
+  id: string;
+  name?: string;
+  description?: string | null;
+}

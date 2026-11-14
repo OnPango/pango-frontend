@@ -18,12 +18,13 @@ const MESSAGES: Record<string, string> = {
   ALREADY_MEMBER: 'Esa persona ya pertenece a la organización.',
   MAIL_DELIVERY_FAILED: 'No se pudo enviar el correo de la invitación. Intenta de nuevo.',
   INVITATION_NOT_FOUND: 'La invitación ya no existe.',
-  ROLE_SYSTEM_LOCKED: 'El rol de Propietario no se puede modificar.',
+  ROLE_SYSTEM_LOCKED: 'El rol de Propietario no se puede modificar ni eliminar.',
   ROLE_NAME_TAKEN: 'Ya existe un rol con ese nombre.',
-  ROLE_IN_USE: 'El rol está asignado a personas o invitaciones.',
+  ROLE_IN_USE:
+    'El rol está asignado a personas o tiene invitaciones pendientes: quítaselo o revoca las invitaciones primero.',
   PERMISSION_NOT_FOUND: 'Alguno de los permisos ya no existe. Recarga la página.',
   ROLE_EXCEEDS_YOUR_PERMISSIONS: 'No puedes darle a un rol permisos que tú no tienes.',
-  ROLE_HELD_BY_YOU: 'No puedes editar un rol que tú mismo tienes asignado.',
+  ROLE_HELD_BY_YOU: 'No puedes editar ni eliminar un rol que tú mismo tienes asignado.',
 };
 
 /** Message for a failed users / invitations request: the known code's text, else the API's. */
