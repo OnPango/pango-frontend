@@ -76,6 +76,82 @@ function toRoleDto(role: RoleRow) {
 
 const findRoleByNumericId = (id: number) => roles.find((role) => roleNumericId(role.id) === id);
 
+interface RoleBody {
+  name?: string;
+  description?: string | null;
+  permissions?: string[];
+}
+
+/** pango-core's `findEditable`: system roles never change, and only the Owner edits a role they hold. */
+function editableRole(role: RoleRow, actor: UserRow) {
+  if (role.id === 'role-admin') {
+    return error(409, 'ROLE_SYSTEM_LOCKED', 'System roles (Owner) cannot be edited or deleted');
+  }
+  if (!isAdmin(actor) && actor.role_id === role.id) {
+    return error(403, 'ROLE_HELD_BY_YOU', 'You cannot edit or delete a role you hold');
+  }
+  return null;
+}
+
+/** Validates a role body like `CreateRoleDto` / `UpdateRoleDto` and the role service do. */
+function checkRoleBody(
+  input: RoleBody,
+  actor: UserRow,
+  actorRole: RoleRow,
+  current: RoleRow | null,
+  creating: boolean,
+): {
+  error?: ReturnType<typeof error>;
+  name?: string;
+  description?: string | null;
+  permissions?: Permission[];
+} {
+  const result: { name?: string; description?: string | null; permissions?: Permission[] } = {};
+  if (creating || input.name !== undefined) {
+    const name = typeof input.name === 'string' ? input.name.trim() : '';
+    if (!name || name.length > 60) {
+      return { error: error(400, 'VALIDATION', 'name must be 1 to 60 characters') };
+    }
+    const taken = roles.some(
+      (role) =>
+        role !== current && roleApiName(role.id, role.name).toLowerCase() === name.toLowerCase(),
+    );
+    if (taken)
+      return { error: error(409, 'ROLE_NAME_TAKEN', 'A role with this name already exists') };
+    result.name = name;
+  }
+  if (input.description !== undefined) {
+    const description = typeof input.description === 'string' ? input.description.trim() : null;
+    if (description && description.length > 500) {
+      return { error: error(400, 'VALIDATION', 'description must be at most 500 characters') };
+    }
+    result.description = description || null;
+  }
+  if (creating || input.permissions !== undefined) {
+    const codes = input.permissions;
+    if (!Array.isArray(codes) || new Set(codes).size !== codes.length) {
+      return { error: error(400, 'VALIDATION', 'permissions must be an array of unique codes') };
+    }
+    if (codes.some((code) => !(PERMISSIONS as readonly string[]).includes(code))) {
+      return { error: error(400, 'PERMISSION_NOT_FOUND', 'Unknown permissions') };
+    }
+    if (
+      !isAdmin(actor) &&
+      codes.some((code) => !actorRole.permissions.includes(code as Permission))
+    ) {
+      return {
+        error: error(
+          403,
+          'ROLE_EXCEEDS_YOUR_PERMISSIONS',
+          'You cannot give a role permissions you do not hold',
+        ),
+      };
+    }
+    result.permissions = codes as Permission[];
+  }
+  return result;
+}
+
 /** The user of the caller's organization with this API id, or undefined (other organizations do not exist for the caller). */
 function findManagedUser(id: string, organizationId: string) {
   return users.find(
@@ -250,27 +326,62 @@ export const usersRoutes: MockRoutes = {
     return { status: 200, data: list.map(toRoleDto) };
   },
 
+  'POST /roles': ({ body }) => {
+    const auth = authorize('role.manage');
+    if (auth.error) return auth.error;
+    const input = (body ?? {}) as RoleBody;
+    const checked = checkRoleBody(input, auth.user, auth.role, null, true);
+    if (checked.error) return checked.error;
+
+    const role: RoleRow = {
+      id: `role-${crypto.randomUUID().slice(0, 8)}`,
+      name: checked.name!,
+      description: checked.description ?? undefined,
+      permissions: checked.permissions ?? [],
+    };
+    roles.push(role);
+    persistRoles();
+    return { status: 201, data: toRoleDto(role) };
+  },
+
   'PATCH /roles/:id': ({ params, body }) => {
     const auth = authorize('role.manage');
     if (auth.error) return auth.error;
     const role = findRoleByNumericId(Number(params.id));
     if (!role) return error(404, 'ROLE_NOT_FOUND', 'Role not found');
-    if (role.id === 'role-admin') {
-      return error(409, 'ROLE_SYSTEM_LOCKED', 'System roles cannot be changed');
-    }
-    if (role.id === auth.user.role_id) {
-      return error(403, 'ROLE_HELD_BY_YOU', 'You cannot edit a role you hold');
-    }
+    const locked = editableRole(role, auth.user);
+    if (locked) return locked;
 
-    const input = (body ?? {}) as { permissions?: string[] };
-    if (input.permissions) {
-      if (input.permissions.some((code) => !(PERMISSIONS as readonly string[]).includes(code))) {
-        return error(400, 'PERMISSION_NOT_FOUND', 'Permission not found');
-      }
-      role.permissions = input.permissions as Permission[];
-      persistRoles();
-    }
+    const checked = checkRoleBody((body ?? {}) as RoleBody, auth.user, auth.role, role, false);
+    if (checked.error) return checked.error;
+    if (checked.name !== undefined) role.name = checked.name;
+    if (checked.description !== undefined) role.description = checked.description ?? undefined;
+    if (checked.permissions !== undefined) role.permissions = checked.permissions;
+    persistRoles();
     return { status: 200, data: toRoleDto(role) };
+  },
+
+  'DELETE /roles/:id': ({ params }) => {
+    const auth = authorize('role.manage');
+    if (auth.error) return auth.error;
+    const role = findRoleByNumericId(Number(params.id));
+    if (!role) return error(404, 'ROLE_NOT_FOUND', 'Role not found');
+    const locked = editableRole(role, auth.user);
+    if (locked) return locked;
+    const held = users.some((user) => user.role_id === role.id);
+    const offered = invitations.some(
+      (invitation) => !invitation.used && invitation.role_id === role.id,
+    );
+    if (held || offered) {
+      return error(
+        409,
+        'ROLE_IN_USE',
+        'The role is assigned to users or pending invitations; remove them first',
+      );
+    }
+    roles.splice(roles.indexOf(role), 1);
+    persistRoles();
+    return { status: 204 };
   },
 
   // ---- INVITATIONS ----
