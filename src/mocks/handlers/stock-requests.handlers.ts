@@ -10,7 +10,7 @@ import {
   reservedOf,
   stockByWarehouse,
 } from '../stock';
-import { nextMovement } from './movements.handlers';
+import { recordMovement } from './movements.handlers';
 import { numericId } from '../ids';
 import type { MockResponse, MockRoutes } from '../server';
 import { findProductRow, findUnitRow } from './catalog.handlers';
@@ -333,6 +333,7 @@ export const stockRequestsRoutes: MockRoutes = {
       }
     }
     release(row.id);
+    const lots = row.lines.map((_, index) => chosen.get(index + 1) ?? null);
     row.lines.forEach((line, index) => {
       applyStock(
         org,
@@ -344,7 +345,26 @@ export const stockRequestsRoutes: MockRoutes = {
       line.reserved = 0;
       evaluateAlert(org, line.productId, row.warehouseId);
     });
-    row.movement = nextMovement();
+    // The "Consumption issue" movement, sourced from the request, in the movement history.
+    const movement = recordMovement({
+      org,
+      source: 'STOCK_REQUEST',
+      typeId: 3,
+      warehouseId: row.warehouseId,
+      userId,
+      departmentId: row.departmentId,
+      // As pango-core: the request's number is the movement's document.
+      documentRef: `SR-${String(row.id).padStart(8, '0')}`,
+      notes: null,
+      lines: row.lines.map((line, index) => ({
+        productId: line.productId,
+        lot: lots[index],
+        quantity: line.quantity,
+        removes: true,
+        unitCost: 0,
+      })),
+    });
+    row.movement = { id: movement.id, number: movement.number };
     setStatus(row, 'FULFILLED', userId, null);
     return { status: 200, data: toDto(row) };
   },
