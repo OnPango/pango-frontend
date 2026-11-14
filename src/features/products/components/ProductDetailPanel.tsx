@@ -32,6 +32,7 @@ export function ProductDetailPanel({
   familyPath,
   canManage,
   canSeeStockPerWarehouse,
+  canSeeMovements,
   onClose,
   onEdit,
 }: {
@@ -41,6 +42,8 @@ export function ProductDetailPanel({
   canManage: boolean;
   /** `stock.read`: the link to Inventario. */
   canSeeStockPerWarehouse: boolean;
+  /** With `movement.read`: a link to the product's movement history (US-014). */
+  canSeeMovements: boolean;
   onClose: () => void;
   onEdit: (product: Product) => void;
 }) {
@@ -88,6 +91,15 @@ export function ProductDetailPanel({
             className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
           >
             Ver existencia por almacén
+            <FiArrowRight aria-hidden className="size-4" />
+          </Link>
+        )}
+        {canSeeMovements && (
+          <Link
+            to={`/movements?product=${product.id}`}
+            className="flex w-fit items-center gap-1 text-sm font-semibold text-primary hover:underline"
+          >
+            Ver sus movimientos
             <FiArrowRight aria-hidden className="size-4" />
           </Link>
         )}

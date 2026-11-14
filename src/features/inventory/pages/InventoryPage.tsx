@@ -62,6 +62,7 @@ export default function InventoryPage() {
   const currentUser = useAuthStore((state) => state.user);
   const canRegister = hasAnyPermission(currentUser, ['movement.create']);
   const canReplenish = hasAnyPermission(currentUser, ['replenishment.manage']);
+  const canReadMovements = hasAnyPermission(currentUser, ['movement.read']);
   const queryClient = useQueryClient();
 
   const warehouses = useStockWarehouses();
@@ -364,6 +365,7 @@ export default function InventoryPage() {
               onOpenWarehouse={showWarehouse}
               onRegister={canRegister ? registerFromProductRow : undefined}
               onReplenish={canReplenish ? replenishFromProductRow : undefined}
+              historyHref={canReadMovements ? `/movements?product=${productId}` : undefined}
             />
           ) : null}
         </section>

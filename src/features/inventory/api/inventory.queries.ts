@@ -88,6 +88,7 @@ export function useRegisterMovement() {
         }),
         // The movement may have raised or resolved an alert (the alerts feature, and its bell).
         queryClient.invalidateQueries({ queryKey: inventoryKeys.alerts() }),
+        queryClient.invalidateQueries({ queryKey: inventoryKeys.movements() }),
       ]);
     },
   });
