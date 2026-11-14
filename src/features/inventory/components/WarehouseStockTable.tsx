@@ -7,7 +7,7 @@ import { Badge } from '@/shared/ui/components/Badge';
 import { Button } from '@/shared/ui/components/Button';
 import { DataTable } from '@/shared/ui/components/DataTable';
 import { usePagination } from '@/shared/ui/components/pagination/usePagination';
-import type { MovementKind, WarehouseStockRow } from '../types/inventory.types';
+import type { StockAction, WarehouseStockRow } from '../types/inventory.types';
 import { RowMovementActions } from './RowMovementActions';
 
 /** The products of one warehouse with their stock there. */
@@ -28,7 +28,7 @@ export function WarehouseStockTable({
   emptyMessage: string;
   onOpenProduct: (productId: string) => void;
   /** Without `movement.create` there are no movement actions. */
-  onRegister?: (kind: MovementKind, row: WarehouseStockRow) => void;
+  onRegister?: (kind: StockAction, row: WarehouseStockRow) => void;
   /** With `replenishment.manage`: edit the row's safety stock and reorder point. */
   onReplenish?: (row: WarehouseStockRow) => void;
 }) {

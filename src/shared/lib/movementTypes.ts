@@ -18,7 +18,7 @@ const BASE_TYPES: Record<string, { label: string; description: string }> = {
   },
   'Inventory adjustment': {
     label: 'Ajuste de inventario',
-    description: 'Corrige la existencia.',
+    description: 'Corrige la existencia con lo que se contó.',
   },
   Transfer: { label: 'Traslado', description: 'Pasa de un almacén a otro.' },
 };

@@ -1,5 +1,5 @@
 import type { IconType } from 'react-icons';
-import { FiArrowDownLeft, FiArrowUpRight, FiRepeat, FiSliders } from 'react-icons/fi';
+import { FiArrowDownLeft, FiArrowUpRight, FiClipboard, FiRepeat } from 'react-icons/fi';
 import { formatQuantity } from '@/shared/lib/units';
 import type { Movement, MovementLine, MovementNature } from '../types/movements.types';
 
@@ -10,7 +10,7 @@ export const NATURE_LABELS: Record<
 > = {
   inbound: { label: 'Entrada', icon: FiArrowDownLeft, className: 'text-success' },
   outbound: { label: 'Salida', icon: FiArrowUpRight, className: 'text-danger' },
-  adjustment: { label: 'Ajuste', icon: FiSliders, className: 'text-muted' },
+  adjustment: { label: 'Ajuste', icon: FiClipboard, className: 'text-primary' },
   transfer: { label: 'Traslado', icon: FiRepeat, className: 'text-muted' },
 };
 

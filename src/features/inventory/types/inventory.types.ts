@@ -79,8 +79,11 @@ export interface WarehouseOption {
   code: string;
 }
 
-/** Inbound adds stock, outbound removes it. Adjustments and transfers come in later sprints. */
+/** Inbound adds stock, outbound removes it. Adjustments have their own form; transfers come later. */
 export type MovementKind = 'inbound' | 'outbound';
+
+/** What a stock row offers to register: a movement, or an adjustment from a count. */
+export type StockAction = MovementKind | 'adjustment';
 
 /** The reason of a movement (`Purchase receipt`, `Consumption issue`…). */
 export interface MovementType {
@@ -105,8 +108,46 @@ export interface RegisteredMovement {
   id: string;
   /** `MV-00000012`. */
   number: string;
-  kind: MovementKind;
+  kind: MovementKind | 'adjustment';
   warehouse: { id: string; name: string };
   productId: string;
+  /** Of every line (an adjustment may take from several locations). */
   quantity: number;
+  /** Whether it took stock out (an outbound movement, or an adjustment that decreased it). */
+  removes: boolean;
+}
+
+/** A product's stock in one warehouse (`GET /products/:id/stock?warehouseId=`). */
+export interface WarehouseProductStock {
+  productId: string;
+  warehouseId: string;
+  onHand: number;
+  /** Held by stock requests in attention. */
+  reserved: number;
+  available: number;
+  /** Non-zero balances, by location and lot. */
+  balances: {
+    locationId: string;
+    lot: { code: string; expiryDate: string | null } | null;
+    onHand: number;
+  }[];
+}
+
+/** An adjustment adds what a count found over the stock, or removes what it found missing. */
+export type AdjustmentDirection = 'increase' | 'decrease';
+
+/** One product (and lot) in one warehouse, corrected by the difference with a count. */
+export interface RegisterAdjustmentInput {
+  movementTypeId: string;
+  warehouseId: string;
+  productId: string;
+  lotCode: string | null;
+  direction: AdjustmentDirection;
+  /**
+   * What to add (one line, to the default location), or what to remove from each location that
+   * holds it (one line each: a line removes from one location).
+   */
+  lines: { quantity: number; locationId: string | null }[];
+  notes: string;
+  documentRef: string | null;
 }

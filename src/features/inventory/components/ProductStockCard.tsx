@@ -8,7 +8,7 @@ import { Button } from '@/shared/ui/components/Button';
 import { DataTable } from '@/shared/ui/components/DataTable';
 import { useReplenishments } from '../api/inventory.queries';
 import { ALERT_LABELS, SOURCE_LABELS } from '../content/replenishment.labels';
-import type { MovementKind, ProductStock, Replenishment } from '../types/inventory.types';
+import type { StockAction, ProductStock, Replenishment } from '../types/inventory.types';
 import { RowMovementActions } from './RowMovementActions';
 
 type Row = ProductStock['warehouses'][number];
@@ -26,7 +26,7 @@ export function ProductStockCard({
   historyHref?: string;
   onOpenWarehouse: (warehouseId: string) => void;
   /** Without `movement.create` there are no movement actions. */
-  onRegister?: (kind: MovementKind, warehouseId: string) => void;
+  onRegister?: (kind: StockAction, warehouseId: string) => void;
   /** With `replenishment.manage`: edit the warehouse's safety stock and reorder point. */
   onReplenish?: (warehouseId: string) => void;
 }) {

@@ -1,19 +1,26 @@
 import {
+  type QueryClient,
   queryOptions,
   useMutation,
   useQueries,
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import type { ProductStock, SetReplenishmentInput } from '../types/inventory.types';
+import type {
+  ProductStock,
+  RegisteredMovement,
+  SetReplenishmentInput,
+} from '../types/inventory.types';
 import {
   getActiveProducts,
   getMovementTypes,
   getProductLots,
   getProductStock,
   getReplenishment,
+  getWarehouseProductStock,
   getWarehouses,
   getWarehouseStock,
+  registerAdjustment,
   registerMovement,
   setReplenishment,
 } from './inventory.api';
@@ -67,30 +74,61 @@ export function useMovementTypes(warehouseId: string | null) {
   });
 }
 
+/**
+ * Both views of the stock changed: the product's and the warehouse's. Other screens (the product
+ * detail) refetch on their own next time they open: their keys live in their feature. Not
+ * awaited: the form closes as soon as the API confirms; the lists catch up behind it.
+ */
+function afterMovement(queryClient: QueryClient, movement: RegisteredMovement) {
+  const { productId } = movement;
+  const warehouseId = movement.warehouse.id;
+  void Promise.all([
+    queryClient.invalidateQueries({ queryKey: inventoryKeys.stock(productId) }),
+    queryClient.invalidateQueries({ queryKey: inventoryKeys.warehouseStock(warehouseId) }),
+    queryClient.invalidateQueries({ queryKey: inventoryKeys.stockIn(productId, warehouseId) }),
+    queryClient.invalidateQueries({
+      queryKey: inventoryKeys.replenishment(productId, warehouseId),
+    }),
+    queryClient.invalidateQueries({ queryKey: inventoryKeys.lots(productId, warehouseId) }),
+    // The movement may have raised or resolved an alert (the alerts feature, and its bell).
+    queryClient.invalidateQueries({ queryKey: inventoryKeys.alerts() }),
+    queryClient.invalidateQueries({ queryKey: inventoryKeys.movements() }),
+  ]);
+}
+
 export function useRegisterMovement() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: registerMovement,
-    // Both views of the stock changed: the product's and the warehouse's. Other screens (the
-    // product detail) refetch on their own next time they open: their keys live in their feature.
-    // Not awaited: the form closes as soon as the API confirms; the lists catch up behind it.
-    onSuccess: (movement) => {
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: inventoryKeys.stock(movement.productId) }),
-        queryClient.invalidateQueries({
-          queryKey: inventoryKeys.warehouseStock(movement.warehouse.id),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: inventoryKeys.replenishment(movement.productId, movement.warehouse.id),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: inventoryKeys.lots(movement.productId, movement.warehouse.id),
-        }),
-        // The movement may have raised or resolved an alert (the alerts feature, and its bell).
-        queryClient.invalidateQueries({ queryKey: inventoryKeys.alerts() }),
-        queryClient.invalidateQueries({ queryKey: inventoryKeys.movements() }),
-      ]);
-    },
+    onSuccess: (movement) => afterMovement(queryClient, movement),
+  });
+}
+
+export function useRegisterAdjustment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: registerAdjustment,
+    onSuccess: (movement) => afterMovement(queryClient, movement),
+  });
+}
+
+/** A product's stock in one warehouse, also to read it fresh right before an adjustment. */
+export const warehouseProductStockQuery = (productId: string, warehouseId: string) =>
+  queryOptions({
+    queryKey: inventoryKeys.stockIn(productId, warehouseId),
+    queryFn: () => getWarehouseProductStock(productId, warehouseId),
+  });
+
+/**
+ * Null: not both chosen yet. Read again every time the form opens: a count is compared with it,
+ * so a cached figure is not good enough.
+ */
+export function useWarehouseProductStock(productId: string | null, warehouseId: string | null) {
+  return useQuery({
+    ...warehouseProductStockQuery(productId ?? '', warehouseId ?? ''),
+    enabled: productId !== null && warehouseId !== null,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
 

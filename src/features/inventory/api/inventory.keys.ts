@@ -4,6 +4,9 @@ export const inventoryKeys = {
   warehouseStock: (warehouseId: string) =>
     [...inventoryKeys.all, 'warehouse-stock', warehouseId] as const,
   stock: (productId: string) => [...inventoryKeys.all, 'stock', productId] as const,
+  /** A product's stock in one warehouse, by lot (the adjustment form). */
+  stockIn: (productId: string, warehouseId: string) =>
+    [...inventoryKeys.all, 'stock-in', productId, warehouseId] as const,
   lots: (productId: string, warehouseId: string) =>
     [...inventoryKeys.all, 'lots', productId, warehouseId] as const,
   replenishment: (productId: string, warehouseId: string) =>

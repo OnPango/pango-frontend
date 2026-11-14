@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
-import { FiArrowDownLeft, FiArrowUpRight, FiBox, FiSearch } from 'react-icons/fi';
+import { FiArrowDownLeft, FiArrowUpRight, FiBox, FiClipboard, FiSearch } from 'react-icons/fi';
 import { MdWarehouse } from 'react-icons/md';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
@@ -21,18 +21,20 @@ import {
   useStockWarehouses,
   useWarehouseStock,
 } from '../api/inventory.queries';
+import { AdjustmentModal, type AdjustmentTarget } from '../components/AdjustmentModal';
 import { MovementModal } from '../components/MovementModal';
 import { ReplenishmentModal, type ReplenishmentTarget } from '../components/ReplenishmentModal';
 import { ProductStockCard } from '../components/ProductStockCard';
 import { WarehouseStockTable } from '../components/WarehouseStockTable';
 import { inventoryErrorMessage } from '../content/inventory.errors';
-import { KIND_LABELS } from '../content/movement.labels';
+import { adjustedText, KIND_LABELS, registeredText } from '../content/movement.labels';
 import { ALERT_LABELS } from '../content/replenishment.labels';
 import { useInventoryView, type InventoryView } from '../hooks/useInventoryView';
 import type {
   MovementKind,
   RegisteredMovement,
   Replenishment,
+  StockAction,
   WarehouseStockRow,
 } from '../types/inventory.types';
 
@@ -84,6 +86,7 @@ export default function InventoryPage() {
   const [search, setSearch] = useState('');
   const [showZero, setShowZero] = useState(false);
   const [draft, setDraft] = useState<MovementDraft | null>(null);
+  const [adjusting, setAdjusting] = useState<AdjustmentTarget | null>(null);
   const [replenishing, setReplenishing] = useState<ReplenishmentTarget | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -118,19 +121,26 @@ export default function InventoryPage() {
     description: warehouse.code,
   }));
 
-  const register = (next: MovementDraft) => {
+  const register = (kind: StockAction, target: AdjustmentTarget) => {
     setNotice(null);
-    setDraft(next);
+    if (kind === 'adjustment') setAdjusting(target);
+    else setDraft({ kind, ...target });
   };
+  /** From the header: the product or warehouse being looked at, the other one to choose. */
+  const registerHere = (kind: StockAction) =>
+    register(kind, {
+      productId: view === 'product' ? productId : null,
+      warehouseId: view === 'warehouse' ? warehouseId : null,
+    });
 
   const registerFromWarehouseRow = useCallback(
-    (kind: MovementKind, row: WarehouseStockRow) =>
-      register({ kind, productId: row.product.id, warehouseId }),
+    (kind: StockAction, row: WarehouseStockRow) =>
+      register(kind, { productId: row.product.id, warehouseId }),
     [warehouseId],
   );
   const registerFromProductRow = useCallback(
-    (kind: MovementKind, rowWarehouseId: string) =>
-      register({ kind, productId, warehouseId: rowWarehouseId }),
+    (kind: StockAction, rowWarehouseId: string) =>
+      register(kind, { productId, warehouseId: rowWarehouseId }),
     [productId],
   );
 
@@ -185,16 +195,22 @@ export default function InventoryPage() {
   // confirmation shows at once; the new stock is added when it arrives (the API can be slow).
   const handleSaved = async (movement: RegisteredMovement) => {
     setDraft(null);
+    setAdjusting(null);
     if (view === 'product') setProductId(movement.productId);
     else setWarehouseId(movement.warehouse.id);
-    const confirmed = `${KIND_LABELS[movement.kind].noun} ${movement.number} registrada.`;
+    const confirmed = registeredText(movement);
     setNotice(confirmed);
     try {
       const fresh = await queryClient.query(productStockQuery(movement.productId));
       const here = fresh.warehouses.find((row) => row.warehouse.id === movement.warehouse.id);
+      const amount = (value: number) => formatQuantity(value, fresh.product.unit);
+      const adjusted =
+        movement.kind === 'adjustment'
+          ? ` ${adjustedText(movement.removes, movement.quantity, amount(movement.quantity), true)}.`
+          : '';
       const withStock =
-        `${confirmed} Existencia de «${fresh.product.name}» en ${movement.warehouse.name}: ` +
-        `${formatQuantity(here?.onHand ?? 0, fresh.product.unit)}.`;
+        `${confirmed}${adjusted} Existencia de «${fresh.product.name}» en ${movement.warehouse.name}: ` +
+        `${amount(here?.onHand ?? 0)}.`;
       // Only if nothing else replaced the notice meanwhile.
       setNotice((current) => (current === confirmed ? withStock : current));
     } catch {
@@ -213,7 +229,7 @@ export default function InventoryPage() {
     <div className="space-y-6">
       <PageHeader
         title="Inventario"
-        subtitle="Consulta cuánto hay de cada producto y en qué almacén, y registra lo que entra y lo que sale."
+        subtitle="Consulta cuánto hay de cada producto y en qué almacén, registra lo que entra y lo que sale, y corrige la existencia con un conteo."
       />
 
       {notice && (
@@ -231,33 +247,17 @@ export default function InventoryPage() {
         />
         {canRegister && (
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant="primary"
-              onClick={() =>
-                register({
-                  kind: 'inbound',
-                  productId: view === 'product' ? productId : null,
-                  warehouseId: view === 'warehouse' ? warehouseId : null,
-                })
-              }
-              className="gap-2"
-            >
+            <Button variant="primary" onClick={() => registerHere('inbound')} className="gap-2">
               <FiArrowDownLeft aria-hidden className="size-4" />
               {KIND_LABELS.inbound.title}
             </Button>
-            <Button
-              variant="outline"
-              onClick={() =>
-                register({
-                  kind: 'outbound',
-                  productId: view === 'product' ? productId : null,
-                  warehouseId: view === 'warehouse' ? warehouseId : null,
-                })
-              }
-              className="gap-2"
-            >
+            <Button variant="outline" onClick={() => registerHere('outbound')} className="gap-2">
               <FiArrowUpRight aria-hidden className="size-4" />
               {KIND_LABELS.outbound.title}
+            </Button>
+            <Button variant="outline" onClick={() => registerHere('adjustment')} className="gap-2">
+              <FiClipboard aria-hidden className="size-4" />
+              Registrar ajuste
             </Button>
           </div>
         )}
@@ -375,6 +375,13 @@ export default function InventoryPage() {
         target={replenishing}
         onClose={() => setReplenishing(null)}
         onSaved={handleReplenished}
+      />
+
+      <AdjustmentModal
+        target={adjusting}
+        products={products.data ?? []}
+        onClose={() => setAdjusting(null)}
+        onSaved={(movement) => void handleSaved(movement)}
       />
 
       <MovementModal
