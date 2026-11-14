@@ -24,6 +24,7 @@ import {
 import { AdjustmentModal, type AdjustmentTarget } from '../components/AdjustmentModal';
 import { MovementModal } from '../components/MovementModal';
 import { ReplenishmentModal, type ReplenishmentTarget } from '../components/ReplenishmentModal';
+import { LotsPanel, type LotsTarget } from '../components/LotsPanel';
 import { ProductStockCard } from '../components/ProductStockCard';
 import { WarehouseStockTable } from '../components/WarehouseStockTable';
 import { inventoryErrorMessage } from '../content/inventory.errors';
@@ -65,6 +66,8 @@ export default function InventoryPage() {
   const canRegister = hasAnyPermission(currentUser, ['movement.create']);
   const canReplenish = hasAnyPermission(currentUser, ['replenishment.manage']);
   const canReadMovements = hasAnyPermission(currentUser, ['movement.read']);
+  // A lot's dates are part of the product: `PATCH /products/:id/lots/:lotId` asks for `product.manage`.
+  const canEditLots = hasAnyPermission(currentUser, ['product.manage']);
   const queryClient = useQueryClient();
 
   const warehouses = useStockWarehouses();
@@ -88,6 +91,7 @@ export default function InventoryPage() {
   const [draft, setDraft] = useState<MovementDraft | null>(null);
   const [adjusting, setAdjusting] = useState<AdjustmentTarget | null>(null);
   const [replenishing, setReplenishing] = useState<ReplenishmentTarget | null>(null);
+  const [showingLots, setShowingLots] = useState<LotsTarget | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const warehouseName = warehouses.data?.find((warehouse) => warehouse.id === warehouseId)?.name;
@@ -172,6 +176,25 @@ export default function InventoryPage() {
           stockData.warehouses.find((row) => row.warehouse.id === rowWarehouseId)?.warehouse.name ??
           '',
       });
+    },
+    [stockData],
+  );
+
+  const lotsFromWarehouseRow = useCallback(
+    (row: WarehouseStockRow) => {
+      if (!warehouseId) return;
+      setShowingLots({
+        product: row.product,
+        warehouse: { id: warehouseId, name: warehouseName ?? 'este almacén' },
+      });
+    },
+    [warehouseId, warehouseName],
+  );
+  const lotsFromProductRow = useCallback(
+    (rowWarehouseId: string) => {
+      const row = stockData?.warehouses.find((item) => item.warehouse.id === rowWarehouseId);
+      if (!stockData || !row) return;
+      setShowingLots({ product: stockData.product, warehouse: row.warehouse });
     },
     [stockData],
   );
@@ -332,6 +355,7 @@ export default function InventoryPage() {
                 onOpenProduct={showProduct}
                 onRegister={canRegister ? registerFromWarehouseRow : undefined}
                 onReplenish={canReplenish ? replenishFromWarehouseRow : undefined}
+                onShowLots={lotsFromWarehouseRow}
               />
             </>
           )}
@@ -365,10 +389,19 @@ export default function InventoryPage() {
               onOpenWarehouse={showWarehouse}
               onRegister={canRegister ? registerFromProductRow : undefined}
               onReplenish={canReplenish ? replenishFromProductRow : undefined}
+              onShowLots={lotsFromProductRow}
               historyHref={canReadMovements ? `/movements?product=${productId}` : undefined}
             />
           ) : null}
         </section>
+      )}
+
+      {showingLots && (
+        <LotsPanel
+          target={showingLots}
+          canEditDates={canEditLots}
+          onClose={() => setShowingLots(null)}
+        />
       )}
 
       <ReplenishmentModal
