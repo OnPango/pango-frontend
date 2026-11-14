@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ManagedRole, ManagedUser, RoleOption } from '../types/users.types';
 import {
   changeUserRoles,
+  createRole,
+  deleteRole,
   getInvitations,
   getRoles,
   getUsers,
@@ -10,6 +12,7 @@ import {
   inviteUser,
   revokeInvitation,
   setUserActive,
+  updateRoleDetails,
   updateRolePermissions,
   updateUser,
   getDepartmentOptions,
@@ -38,8 +41,49 @@ export function useUpdateRolePermissions() {
   });
 }
 
-export function useInvitations() {
-  return useQuery({ queryKey: usersKeys.invitations(), queryFn: getInvitations });
+export function useCreateRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createRole,
+    onSuccess: (created) => {
+      queryClient.setQueryData<ManagedRole[]>(usersKeys.roles(), (old = []) => [...old, created]);
+      void queryClient.invalidateQueries({ queryKey: usersKeys.roles() });
+    },
+  });
+}
+
+export function useUpdateRoleDetails() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateRoleDetails,
+    onSuccess: (updated) => {
+      queryClient.setQueryData<ManagedRole[]>(usersKeys.roles(), (old = []) =>
+        old.map((role) => (role.id === updated.id ? updated : role)),
+      );
+      void queryClient.invalidateQueries({ queryKey: usersKeys.roles() });
+      // People and invitations show the role's name.
+      void queryClient.invalidateQueries({ queryKey: usersKeys.all });
+    },
+  });
+}
+
+export function useDeleteRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteRole,
+    onSuccess: (_, id) => {
+      queryClient.setQueryData<ManagedRole[]>(usersKeys.roles(), (old = []) =>
+        old.filter((role) => role.id !== id),
+      );
+      void queryClient.invalidateQueries({ queryKey: usersKeys.roles() });
+    },
+    // Someone else may have deleted it or given it to a person meanwhile.
+    onError: () => queryClient.invalidateQueries({ queryKey: usersKeys.roles() }),
+  });
+}
+
+export function useInvitations({ enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery({ queryKey: usersKeys.invitations(), queryFn: getInvitations, enabled });
 }
 
 export function useDepartmentOptions() {

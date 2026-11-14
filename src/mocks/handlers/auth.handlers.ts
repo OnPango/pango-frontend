@@ -17,7 +17,7 @@ import {
   type OrganizationRow,
   type UserRow,
 } from '../db';
-import { numericId } from '../ids';
+import { numericId, roleApiName, roleNumericId } from '../ids';
 import { requestContext, type MockResponse, type MockRoutes } from '../server';
 import {
   clearSessionCookies,
@@ -76,8 +76,9 @@ function toSessionProfile(user: UserRow): SessionProfileDto {
       jobTitle: user.job_title ?? null,
       roles: [
         {
-          id: numericId(user.role_id),
-          name: role?.name ?? '',
+          // The same id and name as `GET /roles`, so the app recognizes the user's own role.
+          id: roleNumericId(user.role_id),
+          name: roleApiName(user.role_id, role?.name ?? ''),
           isSystem: user.role_id === 'role-admin',
           warehouse: null,
           permissions: role?.permissions ?? [],

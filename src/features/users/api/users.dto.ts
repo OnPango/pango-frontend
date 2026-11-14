@@ -88,6 +88,13 @@ export interface RoleDto {
   updatedAt: string;
 }
 
+/** `POST /roles`. The name is unique in the organization, whatever the case. */
+export interface CreateRoleDto {
+  name: string;
+  description: string | null;
+  permissions: string[];
+}
+
 /** `PATCH /roles/:id`: `permissions` replaces every permission of the role. */
 export interface UpdateRoleDto {
   name?: string;

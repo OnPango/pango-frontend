@@ -1,11 +1,13 @@
 import { PERMISSIONS, type Permission } from '@/core/auth/user';
 import type {
+  CreateRoleInput,
   InviteUserInput,
   ManagedRole,
   ManagedUser,
   PendingInvitation,
   RoleAssignment,
   RoleAssignmentInput,
+  UpdateRoleDetailsInput,
   UpdateRolePermissionsInput,
   UpdateUserInput,
   WarehouseOption,
@@ -13,6 +15,7 @@ import type {
 import type {
   AddRoleAssignmentDto,
   CreateInvitationDto,
+  CreateRoleDto,
   PendingInvitationDto,
   RoleDto,
   UpdateRoleDto,
@@ -79,6 +82,17 @@ export const toManagedRole = (dto: RoleDto): ManagedRole => ({
 
 export const toUpdateRoleDto = (input: UpdateRolePermissionsInput): UpdateRoleDto => ({
   permissions: input.permissions,
+});
+
+export const toCreateRoleDto = (input: CreateRoleInput): CreateRoleDto => ({
+  name: input.name.trim(),
+  description: input.description?.trim() || null,
+  permissions: input.permissions,
+});
+
+export const toUpdateRoleDetailsDto = (input: UpdateRoleDetailsInput): UpdateRoleDto => ({
+  ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+  ...(input.description !== undefined ? { description: input.description?.trim() || null } : {}),
 });
 
 export const toUpdateUserDto = (input: UpdateUserInput): UpdateUserDto => ({
