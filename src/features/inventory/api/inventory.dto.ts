@@ -82,7 +82,15 @@ export interface CreateMovementDto {
   movementTypeId: number;
   warehouseId: number;
   documentRef?: string;
-  lines: { productId: number; quantity: number; lotCode?: string }[];
+  notes?: string;
+  lines: {
+    productId: number;
+    quantity: number;
+    lotCode?: string;
+    locationId?: number;
+    /** Only on adjustment lines, and required there. */
+    direction?: 'INCREASE' | 'DECREASE';
+  }[];
 }
 
 /** The answer of `POST /movements` (only what the screen reads). */
@@ -91,7 +99,27 @@ export interface MovementDto {
   number: string;
   movementType: { id: number; name: string; nature: MovementNatureDto };
   warehouse: { id: number; name: string };
-  lines: { product: { id: number }; quantity: number }[];
+  /** A line that removes stock has an origin location and no destination. */
+  lines: {
+    product: { id: number };
+    quantity: number;
+    originLocation: { id: number } | null;
+    destinationLocation: { id: number } | null;
+  }[];
+}
+
+/** `GET /products/:id/stock?warehouseId=`. */
+export interface WarehouseProductStockDto {
+  product: { id: number };
+  warehouse: { id: number };
+  onHand: number;
+  reserved: number;
+  available: number;
+  balances: {
+    location: { id: number; code: string };
+    lot: { id: number; code: string; expiryDate: string | null } | null;
+    onHand: number;
+  }[];
 }
 
 /** `GET /stock`: products with stock in a warehouse. */

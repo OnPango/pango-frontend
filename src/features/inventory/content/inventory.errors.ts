@@ -14,6 +14,8 @@ const MESSAGES: Record<string, string> = {
   MOVEMENT_TYPE_INVALID: 'El motivo elegido no existe.',
   MOVEMENT_TYPE_NOT_ALLOWED: 'Tus roles en este almacén no permiten registrar este motivo.',
   MOVEMENT_TYPE_NOT_SUPPORTED: 'Los traslados todavía no se pueden registrar.',
+  LINE_DIRECTION_INVALID: 'No se pudo saber si el ajuste suma o resta existencia.',
+  LOCATION_INVALID: 'La ubicación del almacén no existe o está inactiva.',
   WAREHOUSE_NOT_FOUND: 'El almacén no existe, está cerrado o no tienes acceso a él.',
   FORBIDDEN: 'No tienes permiso para esta operación en este almacén.',
 };

@@ -130,7 +130,11 @@ function MovementForm({
             label="Almacén"
             required
             placeholder={
-              warehouseOptions.length > 0 ? 'Elige el almacén' : 'No hay almacenes abiertos'
+              warehouses.isLoading
+                ? 'Cargando almacenes…'
+                : warehouseOptions.length > 0
+                  ? 'Elige el almacén'
+                  : 'No hay almacenes abiertos'
             }
             options={warehouseOptions}
             searchable

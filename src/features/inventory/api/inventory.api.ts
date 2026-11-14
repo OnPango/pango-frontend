@@ -3,12 +3,14 @@ import type {
   MovementType,
   ProductLot,
   ProductStock,
+  RegisterAdjustmentInput,
   RegisteredMovement,
   RegisterMovementInput,
   Replenishment,
   SetReplenishmentInput,
   StockProduct,
   WarehouseOption,
+  WarehouseProductStock,
   WarehouseStockRow,
 } from '../types/inventory.types';
 import type {
@@ -20,8 +22,10 @@ import type {
   ReplenishmentDto,
   StockPageDto,
   WarehouseDto,
+  WarehouseProductStockDto,
 } from './inventory.dto';
 import {
+  toCreateAdjustmentDto,
   toCreateMovementDto,
   toMovementType,
   toProductStock,
@@ -29,6 +33,7 @@ import {
   toReplenishment,
   toStockProduct,
   toWarehouseOption,
+  toWarehouseProductStock,
 } from './inventory.mappers';
 
 /** The most `GET /products` gives per page. */
@@ -86,6 +91,27 @@ export async function registerMovement(input: RegisterMovementInput): Promise<Re
     timeout: MOVEMENT_TIMEOUT_MS,
   });
   return toRegisteredMovement(data);
+}
+
+/** `POST /movements` with an adjustment type: the lines carry its direction. */
+export async function registerAdjustment(
+  input: RegisterAdjustmentInput,
+): Promise<RegisteredMovement> {
+  const { data } = await http.post<MovementDto>('/movements', toCreateAdjustmentDto(input), {
+    timeout: MOVEMENT_TIMEOUT_MS,
+  });
+  return toRegisteredMovement(data);
+}
+
+/** `GET /products/:id/stock?warehouseId=`: totals and the balances by location and lot. */
+export async function getWarehouseProductStock(
+  productId: string,
+  warehouseId: string,
+): Promise<WarehouseProductStock> {
+  const { data } = await http.get<WarehouseProductStockDto>(`/products/${productId}/stock`, {
+    params: { warehouseId: Number(warehouseId) },
+  });
+  return toWarehouseProductStock(data);
 }
 
 const replenishmentPath = (productId: string, warehouseId: string) =>
