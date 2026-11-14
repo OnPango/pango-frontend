@@ -24,6 +24,7 @@ export const requestsKeys = {
   lots: (productId: string, warehouseId: string) =>
     [...requestsKeys.all, 'lots', productId, warehouseId] as const,
   products: () => [...requestsKeys.all, 'products'] as const,
+  historyProducts: () => [...requestsKeys.all, 'products', 'all'] as const,
   warehouses: () => [...requestsKeys.all, 'warehouses'] as const,
   /** Under `['departments']`, so changes made in Áreas refresh it. */
   departments: () => ['departments', 'request-filter'] as const,
@@ -63,7 +64,20 @@ export function usePrefetchRequests(filters: RequestFilters, enabled: boolean) {
 }
 
 export function useRequestableProducts(enabled: boolean) {
-  return useQuery({ queryKey: requestsKeys.products(), queryFn: getRequestableProducts, enabled });
+  return useQuery({
+    queryKey: requestsKeys.products(),
+    queryFn: () => getRequestableProducts(),
+    enabled,
+  });
+}
+
+/** Every product, archived ones too: to filter the history (US-032). */
+export function useHistoryProducts(enabled: boolean) {
+  return useQuery({
+    queryKey: requestsKeys.historyProducts(),
+    queryFn: () => getRequestableProducts('ALL'),
+    enabled,
+  });
 }
 
 export function useOpenWarehouses(enabled: boolean) {
