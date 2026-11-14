@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { FiLayers } from 'react-icons/fi';
+import { FiChevronRight, FiLayers } from 'react-icons/fi';
 import { TbHash } from 'react-icons/tb';
 import { formatQuantity } from '@/shared/lib/units';
 import type { Column } from '@/shared/types/dataTable';
@@ -20,6 +20,7 @@ export function WarehouseStockTable({
   onOpenProduct,
   onRegister,
   onReplenish,
+  onShowLots,
 }: {
   rows: WarehouseStockRow[];
   warehouseName: string;
@@ -31,6 +32,8 @@ export function WarehouseStockTable({
   onRegister?: (kind: StockAction, row: WarehouseStockRow) => void;
   /** With `replenishment.manage`: edit the row's safety stock and reorder point. */
   onReplenish?: (row: WarehouseStockRow) => void;
+  /** The lots of a per-lot product with stock here, with their dates. */
+  onShowLots: (row: WarehouseStockRow) => void;
 }) {
   const { page, pageSize, totalItems, pageItems, setPage, setPageSize } = usePagination(rows, 25);
 
@@ -67,8 +70,20 @@ export function WarehouseStockTable({
         key: 'tracking',
         skeleton: 'badge',
         header: 'Seguimiento',
-        cell: ({ product }) =>
-          product.tracksLots ? (
+        cell: (row) =>
+          row.product.tracksLots && row.onHand > 0 ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onShowLots(row)}
+              aria-label={`Ver los lotes de ${row.product.name} en ${warehouseName}`}
+              className="gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium"
+            >
+              <FiLayers aria-hidden className="size-3.5" />
+              Por lote
+              <FiChevronRight aria-hidden className="size-3.5" />
+            </Button>
+          ) : row.product.tracksLots ? (
             <Badge icon={FiLayers} appearance="outline" className="rounded-lg font-medium">
               Por lote
             </Badge>
@@ -127,7 +142,7 @@ export function WarehouseStockTable({
         ),
       },
     ];
-  }, [onOpenProduct, onRegister, onReplenish, warehouseName]);
+  }, [onOpenProduct, onRegister, onReplenish, onShowLots, warehouseName]);
 
   return (
     <DataTable<WarehouseStockRow>

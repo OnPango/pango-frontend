@@ -1,7 +1,16 @@
 import { authorize, error } from '../guard';
 import { numericId } from '../ids';
 import type { MockRoutes } from '../server';
-import { enabledWarehouses, lotsInWarehouse, onHand, reservedOf, stockByWarehouse } from '../stock';
+import {
+  enabledWarehouses,
+  lotDatesOf,
+  lotsInWarehouse,
+  lotsOf,
+  onHand,
+  reservedOf,
+  setLotDates,
+  stockByWarehouse,
+} from '../stock';
 import {
   findCategoryRow,
   findProductRow,
@@ -13,7 +22,7 @@ import { findWarehouseRow } from './warehouses.handlers';
 
 /**
  * Stock queries of pango-core (`docs/stock.md`): a warehouse's stock, a product's stock in a
- * warehouse and its lots there. The mock has no lot dates and keeps everything in the warehouse's
+ * warehouse and its lots there, and a lot's dates. The mock keeps everything in the warehouse's
  * default location.
  */
 
@@ -100,8 +109,8 @@ export const stockRoutes: MockRoutes = {
         lot: {
           id: numericId(`${product.id}:${lot.code}`),
           code: lot.code,
-          manufactureDate: null,
-          expiryDate: null,
+          manufactureDate: lot.manufactureDate,
+          expiryDate: lot.expiryDate,
         },
         onHand: lot.onHand,
       })),
@@ -134,11 +143,50 @@ export const stockRoutes: MockRoutes = {
       data: lotsInWarehouse(org, product.id, warehouse.id).map((lot) => ({
         id: numericId(`${product.id}:${lot.code}`),
         code: lot.code,
-        manufactureDate: null,
-        expiryDate: null,
+        manufactureDate: lot.manufactureDate,
+        expiryDate: lot.expiryDate,
         onHand: lot.onHand,
         locations: [{ location, onHand: lot.onHand }],
       })),
     };
+  },
+
+  'PATCH /products/:id/lots/:lotId': ({ params, body }) => {
+    const auth = authorize('product.manage');
+    if (auth.error) return auth.error;
+    const org = auth.user.organization_id;
+    const product = findProductRow(org, Number(params.id));
+    const code = product
+      ? lotsOf(org, product.id).find(
+          (lot) => numericId(`${product.id}:${lot}`) === Number(params.lotId),
+        )
+      : undefined;
+    if (!product || code === undefined) return error(404, 'LOT_NOT_FOUND', 'Lot not found');
+
+    const input = (body ?? {}) as { manufactureDate?: unknown; expiryDate?: unknown };
+    const current = lotDatesOf(org, product.id, code);
+    const next = { ...current };
+    for (const field of ['manufactureDate', 'expiryDate'] as const) {
+      const value = input[field];
+      if (value === undefined) continue;
+      if (
+        value !== null &&
+        (typeof value !== 'string' ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+          Number.isNaN(Date.parse(value)))
+      ) {
+        return error(400, 'VALIDATION', `${field} must be a valid ISO 8601 date string`);
+      }
+      next[field] = value;
+    }
+    if (next.manufactureDate && next.expiryDate && next.expiryDate < next.manufactureDate) {
+      return error(
+        400,
+        'LOT_DATES_INVALID',
+        'The expiry date cannot be before the manufacture date',
+      );
+    }
+    setLotDates(org, product.id, code, next);
+    return { status: 200, data: { id: Number(params.lotId), code, ...next } };
   },
 };

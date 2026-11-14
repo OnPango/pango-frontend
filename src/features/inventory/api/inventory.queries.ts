@@ -10,6 +10,7 @@ import type {
   ProductStock,
   RegisteredMovement,
   SetReplenishmentInput,
+  UpdateLotDatesInput,
 } from '../types/inventory.types';
 import {
   getActiveProducts,
@@ -23,6 +24,7 @@ import {
   registerAdjustment,
   registerMovement,
   setReplenishment,
+  updateLotDates,
 } from './inventory.api';
 import { inventoryKeys } from './inventory.keys';
 
@@ -57,6 +59,20 @@ export function useProductLots(productId: string | null, warehouseId: string | n
     queryKey: inventoryKeys.lots(productId ?? '', warehouseId ?? ''),
     queryFn: () => getProductLots(productId ?? '', warehouseId ?? ''),
     enabled: productId !== null && warehouseId !== null,
+  });
+}
+
+/** A lot's dates: every list that shows or picks the product's lots reads them again. */
+export function useUpdateLotDates() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateLotDatesInput) => updateLotDates(input),
+    onSuccess: (_, { productId }) =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: inventoryKeys.productLots(productId) }),
+        queryClient.invalidateQueries({ queryKey: inventoryKeys.productStockIn(productId) }),
+        queryClient.invalidateQueries({ queryKey: inventoryKeys.requestLots(productId) }),
+      ]),
   });
 }
 

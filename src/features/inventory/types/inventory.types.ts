@@ -69,8 +69,20 @@ export interface ProductLot {
   id: string;
   code: string;
   /** `YYYY-MM-DD`. */
+  manufactureDate: string | null;
+  /** `YYYY-MM-DD`. */
   expiryDate: string | null;
   onHand: number;
+}
+
+/** `PATCH /products/:id/lots/:lotId`: both dates are sent; null clears one. */
+export interface UpdateLotDatesInput {
+  productId: string;
+  lotId: string;
+  /** `YYYY-MM-DD`. */
+  manufactureDate: string | null;
+  /** `YYYY-MM-DD`, not before the manufacture date. */
+  expiryDate: string | null;
 }
 
 export interface WarehouseOption {

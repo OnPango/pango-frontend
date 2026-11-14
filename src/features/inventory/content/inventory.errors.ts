@@ -8,6 +8,7 @@ const MESSAGES: Record<string, string> = {
   LOT_REQUIRED: 'Este producto se sigue por lote: escribe el código del lote.',
   LOT_NOT_ALLOWED: 'Este producto no se sigue por lote.',
   LOT_NOT_FOUND: 'Ese lote no existe para este producto.',
+  LOT_DATES_INVALID: 'El vencimiento no puede ser anterior a la fabricación.',
   PRODUCT_INVALID: 'El producto no existe o está archivado.',
   PRODUCT_NOT_FOUND: 'El producto ya no existe.',
   WAREHOUSE_INVALID: 'El almacén no existe o está cerrado.',

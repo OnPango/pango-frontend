@@ -33,9 +33,32 @@ export function applyStock(
 export const onHand = (org: string, productId: number, warehouseId: number, lot: string | null) =>
   balances.get(key(org, productId, warehouseId, lot ?? NO_LOT)) ?? 0;
 
-/** Lots of a product with stock in a warehouse, by code. */
+export interface LotDates {
+  /** `YYYY-MM-DD`. */
+  manufactureDate: string | null;
+  /** `YYYY-MM-DD`, not before the manufacture date. */
+  expiryDate: string | null;
+}
+
+/** Dates of the lots that have them (`PATCH /products/:id/lots/:lotId`), by `org|productId|lot`. */
+const lotDates = new Map<string, LotDates>();
+
+export const lotDatesOf = (org: string, productId: number, lot: string): LotDates =>
+  lotDates.get(`${org}|${productId}|${lot}`) ?? { manufactureDate: null, expiryDate: null };
+
+export function setLotDates(org: string, productId: number, lot: string, dates: LotDates) {
+  lotDates.set(`${org}|${productId}|${lot}`, dates);
+}
+
+/** Codes of every lot of a product, with or without stock. */
+export function lotsOf(org: string, productId: number): string[] {
+  const prefix = `${org}|${productId}|`;
+  return [...lots].filter((k) => k.startsWith(prefix)).map((k) => k.slice(prefix.length));
+}
+
+/** Lots of a product with stock in a warehouse, earliest expiry first (those without one last). */
 export function lotsInWarehouse(org: string, productId: number, warehouseId: number) {
-  const result: { code: string; onHand: number }[] = [];
+  const result: ({ code: string; onHand: number } & LotDates)[] = [];
   for (const [k, quantity] of balances) {
     const [o, p, w, lot] = k.split('|');
     if (
@@ -45,10 +68,14 @@ export function lotsInWarehouse(org: string, productId: number, warehouseId: num
       lot &&
       quantity !== 0
     ) {
-      result.push({ code: lot, onHand: quantity });
+      result.push({ code: lot, onHand: quantity, ...lotDatesOf(org, productId, lot) });
     }
   }
-  return result.sort((a, b) => a.code.localeCompare(b.code));
+  return result.sort(
+    (a, b) =>
+      (a.expiryDate ?? '9999').localeCompare(b.expiryDate ?? '9999') ||
+      a.code.localeCompare(b.code),
+  );
 }
 
 export const lotExists = (org: string, productId: number, lot: string) =>

@@ -9,6 +9,7 @@ import type {
   Replenishment,
   SetReplenishmentInput,
   StockProduct,
+  UpdateLotDatesInput,
   WarehouseOption,
   WarehouseProductStock,
   WarehouseStockRow,
@@ -185,7 +186,16 @@ export async function getProductLots(
   return data.map((lot) => ({
     id: String(lot.id),
     code: lot.code,
+    manufactureDate: lot.manufactureDate,
     expiryDate: lot.expiryDate,
     onHand: lot.onHand,
   }));
+}
+
+/** `PATCH /products/:id/lots/:lotId`: the lot's manufacture and expiry dates (`product.manage`). */
+export async function updateLotDates(input: UpdateLotDatesInput): Promise<void> {
+  await http.patch(`/products/${input.productId}/lots/${input.lotId}`, {
+    manufactureDate: input.manufactureDate,
+    expiryDate: input.expiryDate,
+  });
 }

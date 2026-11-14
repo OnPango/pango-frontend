@@ -19,6 +19,7 @@ export function ProductStockCard({
   onOpenWarehouse,
   onRegister,
   onReplenish,
+  onShowLots,
   historyHref,
 }: {
   stock: ProductStock;
@@ -29,6 +30,8 @@ export function ProductStockCard({
   onRegister?: (kind: StockAction, warehouseId: string) => void;
   /** With `replenishment.manage`: edit the warehouse's safety stock and reorder point. */
   onReplenish?: (warehouseId: string) => void;
+  /** The product's lots with stock in a warehouse, with their dates (per-lot products). */
+  onShowLots: (warehouseId: string) => void;
 }) {
   const { product } = stock;
   // The open alert of each row (it compares the reorder point with available stock).
@@ -87,6 +90,29 @@ export function ProductStockCard({
           );
         },
       },
+      ...(product.tracksLots
+        ? [
+            {
+              key: 'lots',
+              header: 'Lotes',
+              cell: (row: Row) =>
+                row.onHand > 0 ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onShowLots(row.warehouse.id)}
+                    aria-label={`Ver los lotes de ${product.name} en ${row.warehouse.name}`}
+                    className="gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium"
+                  >
+                    <FiLayers aria-hidden className="size-3.5" />
+                    Ver lotes
+                  </Button>
+                ) : (
+                  <span className="text-sm text-muted">—</span>
+                ),
+            },
+          ]
+        : []),
       {
         key: 'safetyStock',
         header: 'Stock de seguridad',
@@ -131,7 +157,7 @@ export function ProductStockCard({
         ),
       },
     ];
-  }, [onOpenWarehouse, onRegister, onReplenish, product, alerts]);
+  }, [onOpenWarehouse, onRegister, onReplenish, onShowLots, product, alerts]);
 
   return (
     <section
