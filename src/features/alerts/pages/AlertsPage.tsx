@@ -10,7 +10,7 @@ import { AlertDetailPanel } from '../components/AlertDetailPanel';
 import { AlertsTable } from '../components/AlertsTable';
 import { alertWarehouses, readsStockIn } from '../content/alert.permissions';
 import { alertsErrorMessage } from '../content/alerts.errors';
-import type { AlertStatus, Option, StockAlert } from '../types/alerts.types';
+import type { AlertSort, AlertStatus, Option, StockAlert } from '../types/alerts.types';
 
 const ALL = 'all';
 
@@ -21,7 +21,17 @@ const STATUS_OPTIONS: SelectOption[] = [
   { value: ALL, label: 'Todas' },
 ];
 
-/** CU-12 / US-044: the organization's replenishment alerts, most recent first. */
+const SORT_OPTIONS: SelectOption[] = [
+  { value: 'created', label: 'Más recientes', description: 'Las que se generaron último' },
+  {
+    value: 'updated',
+    label: 'Cambios recientes',
+    description: 'Incluye las que empeoraron o se resolvieron',
+  },
+  { value: 'severity', label: 'Más graves primero', description: 'Críticas, altas y medias' },
+];
+
+/** CU-12 / US-044: the organization's replenishment alerts, most recent first by default. */
 export default function AlertsPage() {
   const currentUser = useAuthStore((state) => state.user);
   const navigate = useNavigate();
@@ -30,12 +40,14 @@ export default function AlertsPage() {
 
   // Filters (CU-12 A1: by status or product; the API also takes the warehouse).
   const [status, setStatus] = useState<string>('open');
+  const [sort, setSort] = useState<AlertSort>('created');
   const [warehouseFilter, setWarehouseFilter] = useState<string>(ALL);
   const [productFilter, setProductFilter] = useState<string>(ALL);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const alerts = useAlerts({
     status: status === ALL ? null : (status as AlertStatus),
+    sort,
     warehouseId: warehouseFilter === ALL ? null : warehouseFilter,
     productId: productFilter === ALL ? null : productFilter,
     page,
@@ -95,7 +107,7 @@ export default function AlertsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Alertas"
-        subtitle="Se generan solas cuando el disponible de un producto en un almacén llega a su punto de reorden, y se resuelven cuando vuelve a superarlo."
+        subtitle="Se generan solas cuando el disponible de un producto en un almacén llega a su punto de reorden, se actualizan mientras siga bajo él y se resuelven cuando vuelve a superarlo."
       />
 
       <section aria-label="Filtros" className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -142,6 +154,16 @@ export default function AlertsPage() {
             className="w-full sm:w-72"
           />
         )}
+        <Select
+          aria-label="Ordenar alertas"
+          value={sort}
+          onChange={(value) => {
+            setSort((value || 'created') as AlertSort);
+            setPage(1);
+          }}
+          options={SORT_OPTIONS}
+          className="w-full sm:ml-auto sm:w-52"
+        />
       </section>
 
       <AlertsTable

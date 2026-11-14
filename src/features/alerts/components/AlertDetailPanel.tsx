@@ -7,7 +7,13 @@ import { Button } from '@/shared/ui/components/Button';
 import { Drawer } from '@/shared/ui/components/Drawer';
 import { Spinner } from '@/shared/ui/components/Spinner';
 import { useAlert, useCurrentStock } from '../api/alerts.queries';
-import { formatDate, SEVERITY_LABELS, SOURCE_LABELS, STATUS_LABELS } from '../content/alert.labels';
+import {
+  formatDate,
+  RESOLUTION_LABELS,
+  SEVERITY_LABELS,
+  SOURCE_LABELS,
+  STATUS_LABELS,
+} from '../content/alert.labels';
 import { alertsErrorMessage } from '../content/alerts.errors';
 import type { AlertSeverity, CurrentStock, StockAlert } from '../types/alerts.types';
 import { SeverityBadge } from './SeverityBadge';
@@ -28,8 +34,9 @@ function severityNow(stock: CurrentStock): AlertSeverity | null {
 }
 
 /**
- * Compares the alert with the stock now. The alert keeps the values it was raised with, so when
- * stock kept falling this is where the person learns it is worse than the alert says.
+ * Compares the alert with the stock now. An open alert follows the stock (pango-core refreshes it
+ * on every evaluation), so this mostly adds the on hand and reserved split; a resolved one keeps
+ * its last values, and this shows where things stand since.
  */
 function CurrentSituation({ alert, enabled }: { alert: StockAlert; enabled: boolean }) {
   const current = useCurrentStock(alert.product.id, alert.warehouse.id, enabled);
@@ -80,7 +87,7 @@ function CurrentSituation({ alert, enabled }: { alert: StockAlert; enabled: bool
         </dl>
         {worse ? (
           <Alert tone="danger">
-            Bajó desde que se generó la alerta: hoy sería{' '}
+            Bajó desde la última actualización de la alerta: hoy sería{' '}
             <strong>{SEVERITY_LABELS[now].label.toLowerCase()}</strong> (
             {SEVERITY_LABELS[now].long.toLowerCase()}).
           </Alert>
@@ -91,7 +98,7 @@ function CurrentSituation({ alert, enabled }: { alert: StockAlert; enabled: bool
         ) : null}
         {pointChanged && (
           <p className="text-xs text-muted">
-            El punto de reorden cambió desde que se generó la alerta.
+            El punto de reorden cambió desde la última actualización de la alerta.
           </p>
         )}
       </>
@@ -158,22 +165,29 @@ export function AlertDetailPanel({
             </Badge>
           </div>
 
-          <p className="text-sm text-fg">
-            El {formatDate(alert.createdAt, true)} el disponible llegó a{' '}
-            <strong className="tabular-nums">{amount(alert.available)}</strong>, en o bajo el punto
-            de reorden de <strong className="tabular-nums">{amount(alert.reorderPoint)}</strong> (
-            {SOURCE_LABELS[alert.source].long}).
-          </p>
+          <div className="space-y-1 text-sm text-fg">
+            <p>
+              Se generó el {formatDate(alert.createdAt, true)}, cuando el disponible llegó al punto
+              de reorden.
+            </p>
+            {alert.status === 'open' && alert.updatedAt !== alert.createdAt && (
+              <p className="text-xs text-muted">
+                Se actualizó el {formatDate(alert.updatedAt, true)}: sigue la existencia mientras
+                esté pendiente.
+              </p>
+            )}
+          </div>
           {alert.status === 'resolved' && alert.resolvedAt && (
             <Alert tone="success">
-              Se resolvió sola el {formatDate(alert.resolvedAt, true)}: el disponible volvió a
-              superar el punto de reorden.
+              {/* The time already ends in "p. m.": only a reason adds its own period. */}
+              Se resolvió el {formatDate(alert.resolvedAt, true)}
+              {alert.resolution ? `, porque ${RESOLUTION_LABELS[alert.resolution]}.` : ''}
             </Alert>
           )}
 
           <section aria-labelledby="alert-data">
             <h3 id="alert-data" className="text-sm font-bold text-fg">
-              Al generarse
+              {alert.status === 'open' ? 'Lo que marca la alerta' : 'Antes de resolverse'}
             </h3>
             <dl className="divide-y divide-line2">
               <Item label="Disponible">
