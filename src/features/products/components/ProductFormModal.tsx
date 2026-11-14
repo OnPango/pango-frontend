@@ -33,13 +33,14 @@ const TRACKING_OPTIONS = [
   {
     value: 'quantity',
     label: 'Solo cantidad',
-    description: 'Solo importa cuántas unidades hay. Para cosas baratas y de alta rotación.',
+    description:
+      'Solo importa cuántas unidades hay. Para lo que no vence ni hay que rastrear: tornillos, guantes, cintas.',
   },
   {
     value: 'lot',
     label: 'Por lote',
     description:
-      'Un código de lote cubre varias unidades. Cada entrada o salida pide el lote. Ideal para tornillos, guantes, cintas.',
+      'Las unidades que llegan juntas forman un lote, con su código y su vencimiento. Cada entrada y salida pide el lote. Para lo que vence o hay que rastrear: alimentos, medicamentos, químicos.',
   },
 ];
 
@@ -223,7 +224,7 @@ function ProductFormContent({
 
         <section aria-labelledby="product-tracking" className="space-y-3">
           <h3 id="product-tracking" className="text-sm font-bold text-fg">
-            Cómo se identifica cada unidad
+            Cómo se lleva la existencia
           </h3>
           <Controller
             control={control}

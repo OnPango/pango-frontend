@@ -53,8 +53,8 @@ const COLUMNS: Column<Product>[] = [
       <span className="inline-flex items-center">
         Seguimiento
         <HeaderTip label="¿Qué es el seguimiento?" title="Seguimiento">
-          Cómo se identifica cada unidad: <b>por lote</b> (un código cubre varias) o{' '}
-          <b>solo cantidad</b> (solo importa cuántas hay).
+          Cómo se lleva la existencia: <b>por lote</b> (las unidades que llegan juntas comparten
+          código y vencimiento) o <b>solo cantidad</b> (solo importa cuántas hay).
         </HeaderTip>
       </span>
     ),
