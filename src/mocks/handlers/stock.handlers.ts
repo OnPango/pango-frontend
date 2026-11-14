@@ -1,7 +1,7 @@
 import { authorize, error } from '../guard';
 import { numericId } from '../ids';
 import type { MockRoutes } from '../server';
-import { enabledWarehouses, lotsInWarehouse, reservedOf, stockByWarehouse } from '../stock';
+import { enabledWarehouses, lotsInWarehouse, onHand, reservedOf, stockByWarehouse } from '../stock';
 import {
   findCategoryRow,
   findProductRow,
@@ -12,8 +12,9 @@ import {
 import { findWarehouseRow } from './warehouses.handlers';
 
 /**
- * Stock queries of pango-core (`docs/stock.md`): a warehouse's stock and a product's lots in a
- * warehouse. The mock has no lot dates.
+ * Stock queries of pango-core (`docs/stock.md`): a warehouse's stock, a product's stock in a
+ * warehouse and its lots there. The mock has no lot dates and keeps everything in the warehouse's
+ * default location.
  */
 
 function stockProduct(org: string, row: NonNullable<ReturnType<typeof findProductRow>>) {
@@ -76,6 +77,44 @@ export const stockRoutes: MockRoutes = {
         total: items.length,
         page,
         pageSize,
+      },
+    };
+  },
+
+  'GET /products/:id/stock': ({ params, query }) => {
+    const auth = authorize('stock.read');
+    if (auth.error) return auth.error;
+    const org = auth.user.organization_id;
+    const warehouse = readableWarehouse(org, query.warehouseId);
+    if (!warehouse) return error(404, 'WAREHOUSE_NOT_FOUND', 'Warehouse not found');
+    const product = findProductRow(org, Number(params.id));
+    if (!product) return error(404, 'PRODUCT_NOT_FOUND', 'Product not found');
+    const location = { id: warehouse.defaultLocationId, code: 'DEFAULT' };
+    const total = stockByWarehouse(org, product.id).get(warehouse.id) ?? 0;
+    const reserved = reservedOf(org, product.id, warehouse.id);
+    const loose = onHand(org, product.id, warehouse.id, null);
+    const balances = [
+      ...(loose !== 0 ? [{ location, lot: null, onHand: loose }] : []),
+      ...lotsInWarehouse(org, product.id, warehouse.id).map((lot) => ({
+        location,
+        lot: {
+          id: numericId(`${product.id}:${lot.code}`),
+          code: lot.code,
+          manufactureDate: null,
+          expiryDate: null,
+        },
+        onHand: lot.onHand,
+      })),
+    ];
+    return {
+      status: 200,
+      data: {
+        product: stockProduct(org, product),
+        warehouse: { id: warehouse.id, code: warehouse.code, name: warehouse.name },
+        onHand: total,
+        reserved,
+        available: Number((total - reserved).toFixed(4)),
+        balances,
       },
     };
   },

@@ -206,10 +206,22 @@ export const movementsRoutes: MockRoutes = {
     if (typeof input.documentRef === 'string' && input.documentRef.trim().length > 40) {
       problems.push('documentRef must be shorter than or equal to 40 characters');
     }
+    if (typeof input.notes === 'string' && input.notes.trim().length > 2000) {
+      problems.push('notes must be shorter than or equal to 2000 characters');
+    }
     lines.forEach((line, index) => {
       const q = line.quantity;
       if (typeof q !== 'number' || q < 0.0001 || decimals(q) > 4) {
         problems.push(`lines.${index}.quantity must not be less than 0.0001`);
+      }
+      if (
+        line.direction !== undefined &&
+        line.direction !== 'INCREASE' &&
+        line.direction !== 'DECREASE'
+      ) {
+        problems.push(
+          `lines.${index}.direction must be one of the following values: INCREASE, DECREASE`,
+        );
       }
       if (typeof line.lotCode === 'string' && line.lotCode.trim().length > 40) {
         problems.push(`lines.${index}.lotCode must be shorter than or equal to 40 characters`);
