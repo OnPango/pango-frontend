@@ -58,7 +58,7 @@ export function FamilyCard({
   const more = matches.length - 2;
 
   return (
-    <article className="flex w-full flex-col overflow-hidden rounded-2xl border border-line2 bg-surface">
+    <article className="flex w-full flex-col overflow-hidden rounded-2xl border border-line2 bg-surface transition-transform duration-300 hover:scale-105">
       <FamilyPicture category={category} className="h-28" />
       <div className="flex flex-1 flex-col gap-3 p-5">
         <div className="flex items-start justify-between gap-3">
