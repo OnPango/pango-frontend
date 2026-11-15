@@ -1,5 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ProductCategory, UpdateProductInput } from '../types/products.types';
+import type {
+  ProductCategory,
+  UpdateCategoryInput,
+  UpdateProductInput,
+} from '../types/products.types';
 import {
   createCategory,
   createProduct,
@@ -7,6 +11,7 @@ import {
   getCategories,
   getProduct,
   getUnitsOfMeasure,
+  updateCategory,
   updateProduct,
 } from './products.api';
 import { productsKeys } from './products.keys';
@@ -73,6 +78,22 @@ export function useCreateCategory() {
         created,
       ]);
       void queryClient.invalidateQueries({ queryKey: productsKeys.categories() });
+    },
+  });
+}
+
+export function useUpdateCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateCategoryInput }) =>
+      updateCategory(id, input),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<ProductCategory[]>(productsKeys.categories(), (old) =>
+        old?.map((category) => (category.id === updated.id ? updated : category)),
+      );
+      void queryClient.invalidateQueries({ queryKey: productsKeys.categories() });
+      // Products show their family's name.
+      void queryClient.invalidateQueries({ queryKey: productsKeys.lists() });
     },
   });
 }

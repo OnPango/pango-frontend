@@ -123,6 +123,21 @@ const findUnit = (id: number) => units.find((unit) => unit.id === id);
 const findCategory = (organizationId: string, id: number) =>
   categories.find((row) => row.organizationId === organizationId && row.id === id);
 
+/** A sibling (same parent) already has the name, ignoring case. */
+const nameTaken = (
+  organizationId: string,
+  name: string,
+  parentId: number | null,
+  exceptId?: number,
+) =>
+  categories.some(
+    (row) =>
+      row.organizationId === organizationId &&
+      row.id !== exceptId &&
+      row.parentId === parentId &&
+      row.name.toLowerCase() === name.toLowerCase(),
+  );
+
 /** The family and every subfamily below it. */
 export function withDescendants(organizationId: string, id: number): Set<number> {
   const ids = new Set([id]);
@@ -263,30 +278,28 @@ export const catalogRoutes: MockRoutes = {
   'POST /categories': ({ body }) => {
     const auth = authorize('category.manage');
     if (auth.error) return auth.error;
-    const input = (body ?? {}) as { name?: unknown; parentId?: unknown };
+    const input = (body ?? {}) as { name?: unknown; parentId?: unknown; description?: unknown };
     const name = typeof input.name === 'string' ? input.name.trim() : '';
     if (!name || name.length > 80) {
       return error(400, 'VALIDATION', 'name should not be empty');
     }
+    const description =
+      typeof input.description === 'string' ? input.description.trim() || null : null;
     const parentId = typeof input.parentId === 'number' ? input.parentId : null;
     const organizationId = auth.user.organization_id;
     if (parentId !== null && !findCategory(organizationId, parentId)?.isActive) {
       return error(400, 'CATEGORY_PARENT_INVALID', 'Parent category not found or inactive');
     }
-    const taken = categories.some(
-      (row) =>
-        row.organizationId === organizationId &&
-        row.parentId === parentId &&
-        row.name.toLowerCase() === name.toLowerCase(),
-    );
-    if (taken) return error(409, 'CATEGORY_NAME_TAKEN', 'A sibling category already has this name');
+    if (nameTaken(organizationId, name, parentId)) {
+      return error(409, 'CATEGORY_NAME_TAKEN', 'A sibling category already has this name');
+    }
 
     const now = new Date().toISOString();
     const row: CategoryRow = {
       id: nextId(categories),
       organizationId,
       name,
-      description: null,
+      description,
       parentId,
       isActive: true,
       createdAt: now,
@@ -294,6 +307,74 @@ export const catalogRoutes: MockRoutes = {
     };
     categories.push(row);
     return { status: 201, data: toCategoryDto(row) };
+  },
+
+  'GET /categories/:id': ({ params }) => {
+    const auth = authorize('catalog.read');
+    if (auth.error) return auth.error;
+    const row = findCategory(auth.user.organization_id, Number(params.id));
+    if (!row) return error(404, 'CATEGORY_NOT_FOUND', 'Category not found');
+    return { status: 200, data: toCategoryDto(row) };
+  },
+
+  // The rules of `CategoriesService.update` in pango-core.
+  'PATCH /categories/:id': ({ params, body }) => {
+    const auth = authorize('category.manage');
+    if (auth.error) return auth.error;
+    const organizationId = auth.user.organization_id;
+    const row = findCategory(organizationId, Number(params.id));
+    if (!row) return error(404, 'CATEGORY_NOT_FOUND', 'Category not found');
+    const input = (body ?? {}) as Record<string, unknown>;
+    if (input.name !== undefined) {
+      const trimmed = typeof input.name === 'string' ? input.name.trim() : '';
+      if (!trimmed || trimmed.length > 80) {
+        return error(400, 'VALIDATION', 'name should not be empty');
+      }
+    }
+    const name = typeof input.name === 'string' ? input.name.trim() : row.name;
+    const parentId =
+      input.parentId === undefined
+        ? row.parentId
+        : typeof input.parentId === 'number'
+          ? input.parentId
+          : null;
+    const isActive = typeof input.isActive === 'boolean' ? input.isActive : row.isActive;
+
+    if (parentId !== row.parentId && parentId !== null) {
+      if (withDescendants(organizationId, row.id).has(parentId)) {
+        return error(400, 'CATEGORY_CYCLE', 'A category cannot move under itself or a descendant');
+      }
+    }
+    if (parentId !== null && isActive && (parentId !== row.parentId || !row.isActive)) {
+      if (!findCategory(organizationId, parentId)?.isActive) {
+        return error(400, 'CATEGORY_PARENT_INVALID', 'Parent category not found or inactive');
+      }
+    }
+    if (
+      (name !== row.name || parentId !== row.parentId) &&
+      nameTaken(organizationId, name, parentId, row.id)
+    ) {
+      return error(409, 'CATEGORY_NAME_TAKEN', 'A sibling category already has this name');
+    }
+    if (!isActive && row.isActive) {
+      const activeChildren = categories.some(
+        (child) =>
+          child.organizationId === organizationId && child.parentId === row.id && child.isActive,
+      );
+      if (activeChildren) {
+        return error(409, 'CATEGORY_HAS_ACTIVE_CHILDREN', 'Deactivate its subcategories first');
+      }
+    }
+
+    row.name = name;
+    row.parentId = parentId;
+    row.isActive = isActive;
+    if (input.description !== undefined) {
+      row.description =
+        typeof input.description === 'string' ? input.description.trim() || null : null;
+    }
+    row.updatedAt = new Date().toISOString();
+    return { status: 200, data: toCategoryDto(row) };
   },
 
   'GET /products': ({ query }) => {

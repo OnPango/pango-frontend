@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { FaBoxes, FaTruck, FaWarehouse } from 'react-icons/fa';
+import { FaBoxes, FaSitemap, FaTruck, FaWarehouse } from 'react-icons/fa';
 import { FaBoxArchive } from 'react-icons/fa6';
 import { FiUpload } from 'react-icons/fi';
 import { BsShieldFillCheck } from 'react-icons/bs';
@@ -60,6 +60,14 @@ export const APP_ROUTES: AppRoute[] = [
     section: 'operations',
     anyOf: ['catalog.read', 'product.manage'],
     Page: lazy(() => import('@/features/products/pages/ProductPage')),
+  },
+  {
+    path: '/families',
+    label: 'Familias',
+    icon: FaSitemap,
+    section: 'operations',
+    anyOf: ['catalog.read', 'category.manage'],
+    Page: lazy(() => import('@/features/products/pages/FamiliesPage')),
   },
   {
     path: '/warehouses',

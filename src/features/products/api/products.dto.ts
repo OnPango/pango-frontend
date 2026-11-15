@@ -102,3 +102,6 @@ export interface CreateCategoryDto {
   parentId?: number | null;
   description?: string | null;
 }
+
+/** `PATCH /categories/:id`: rename, move (`parentId: null` = top level) or (de)activate. */
+export type UpdateCategoryDto = Partial<CreateCategoryDto> & { isActive?: boolean };

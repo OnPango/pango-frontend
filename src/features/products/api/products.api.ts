@@ -8,6 +8,7 @@ import type {
   ProductFilters,
   ProductPage,
   UnitOfMeasure,
+  UpdateCategoryInput,
   UpdateProductInput,
 } from '../types/products.types';
 import type {
@@ -25,6 +26,7 @@ import {
   toProductCategory,
   toProductDetail,
   toUnitOfMeasure,
+  toUpdateCategoryDto,
   toUpdateProductDto,
 } from './products.mappers';
 
@@ -89,9 +91,18 @@ export async function getCategories(): Promise<ProductCategory[]> {
   return data.map(toProductCategory);
 }
 
-/** `POST /categories`: a top-level family. */
+/** `POST /categories`: a family, at the top level or under `parentId`. */
 export async function createCategory(input: CreateCategoryInput): Promise<ProductCategory> {
   const { data } = await http.post<CategoryDto>('/categories', toCreateCategoryDto(input));
+  return toProductCategory(data);
+}
+
+/** `PATCH /categories/:id`: rename, move or (de)activate a family. */
+export async function updateCategory(
+  id: string,
+  input: UpdateCategoryInput,
+): Promise<ProductCategory> {
+  const { data } = await http.patch<CategoryDto>(`/categories/${id}`, toUpdateCategoryDto(input));
   return toProductCategory(data);
 }
 

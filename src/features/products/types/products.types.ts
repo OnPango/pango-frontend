@@ -10,8 +10,10 @@ export interface UnitOfMeasure {
 export interface ProductCategory {
   id: string;
   name: string;
+  description: string | null;
   parentId: string | null;
   isActive: boolean;
+  /** Products directly in this family, not in its subfamilies. */
   productCount: number;
 }
 
@@ -81,4 +83,15 @@ export type UpdateProductInput = Partial<CreateProductInput>;
 
 export interface CreateCategoryInput {
   name: string;
+  /** The family above; null or absent: a top-level family. */
+  parentId?: string | null;
+  description?: string | null;
+}
+
+/** `PATCH /categories/:id`: only what changed. `parentId: null` moves it to the top level. */
+export interface UpdateCategoryInput {
+  name?: string;
+  parentId?: string | null;
+  description?: string | null;
+  isActive?: boolean;
 }
