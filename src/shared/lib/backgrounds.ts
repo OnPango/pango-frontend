@@ -10,10 +10,10 @@ export const BACKGROUNDS: Background[] = [
   { light: 'olas' },
   { light: 'escamas_claro', dark: 'escamas_oscuro' },
   { light: 'terrazo' },
-  { light: 'madera_arena', dark: 'madera_tinta' },
-  { light: 'piedra' },
   { light: 'ramas' },
+  { light: 'corteza_clara', dark: 'corteza_oscura' },
   { light: 'surcos' },
+  { light: 'madera_arena', dark: 'madera_tinta' },
   { light: 'musgo_claro', dark: 'musgo_oscuro' },
   { light: 'madera_espiga' },
   { light: 'plano_claro', dark: 'plano_oscuro' },
@@ -21,6 +21,7 @@ export const BACKGROUNDS: Background[] = [
   { light: 'arena' },
   { light: 'madera_musgo' },
   { light: 'madera_anillos' },
+  { light: 'piedra' },
 ];
 
 export const getBackgroundUrl = (name: string) => asset(`backgrounds/pango_${name}.svg`);
