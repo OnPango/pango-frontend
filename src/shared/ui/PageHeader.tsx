@@ -26,7 +26,7 @@ export function PageHeader({
   actionText,
   className,
   background,
-  imageOpacity = 'opacity-5',
+  imageOpacity = 'opacity-10',
 }: PageHeaderProps) {
   const theme = useThemeStore((state) => state.resolved);
 
@@ -38,12 +38,7 @@ export function PageHeader({
     : getBackgroundByIndex(randomIndex, theme);
 
   return (
-    <div
-      className={cn(
-        'relative flex flex-col gap-4 overflow-hidden rounded-2xl bg-primary/5 p-8',
-        className,
-      )}
-    >
+    <div className={cn('relative flex flex-col gap-4 overflow-hidden rounded-2xl p-8', className)}>
       <img
         src={src}
         alt=""
@@ -56,7 +51,7 @@ export function PageHeader({
           dimmed && 'brightness-75',
         )}
       />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-primary/15" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-primary/10" />
       <h2 className="relative z-10 text-3xl font-bold lg:text-4xl">{title}</h2>
       {subtitle && <p className="relative z-10 text-lg font-light">{subtitle}</p>}
       {onAction && (
