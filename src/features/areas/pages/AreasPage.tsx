@@ -3,16 +3,20 @@ import { FiPlus, FiSearch } from 'react-icons/fi';
 import { MdEdit } from 'react-icons/md';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
+import { useListView } from '@/shared/hooks/useListView';
 import type { Column } from '@/shared/types/dataTable';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Badge } from '@/shared/ui/components/Badge';
 import { Button } from '@/shared/ui/components/Button';
+import { CardGrid } from '@/shared/ui/components/CardGrid';
 import { DataTable } from '@/shared/ui/components/DataTable';
 import { Select } from '@/shared/ui/components/form/select/Select';
 import type { SelectOption } from '@/shared/ui/components/form/select/select.types';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
+import { ViewModeToggle } from '@/shared/ui/components/ViewModeToggle';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { useDepartments } from '../api/areas.queries';
+import { DepartmentCard } from '../components/DepartmentCard';
 import { DepartmentFormModal } from '../components/DepartmentFormModal';
 import { DepartmentStatusDialog } from '../components/DepartmentStatusDialog';
 import { areasErrorMessage } from '../content/areas.errors';
@@ -40,6 +44,7 @@ export default function AreasPage() {
   const [formFor, setFormFor] = useState<'new' | string | null>(null);
   const [statusId, setStatusId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const { view, setView } = useListView('pango.areas.view');
 
   const byId = (id: string | null) =>
     departments?.find((department) => department.id === id) ?? null;
@@ -136,6 +141,17 @@ export default function AreasPage() {
       : []),
   ];
 
+  const loadError = error
+    ? areasErrorMessage(error, 'No se pudieron cargar las áreas.')
+    : undefined;
+  const emptyMessage = search.trim()
+    ? 'Ningún área coincide con la búsqueda.'
+    : status === 'inactive'
+      ? 'No hay áreas inactivas.'
+      : canManage
+        ? 'Aún no hay áreas. Crea la primera: sin área, nadie puede pedir productos.'
+        : 'Aún no hay áreas.';
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -161,7 +177,7 @@ export default function AreasPage() {
 
       <section
         aria-label="Búsqueda y filtros"
-        className="flex flex-col gap-3 sm:flex-row sm:items-center"
+        className="flex flex-col gap-3 lg:flex-row lg:items-center"
       >
         <TextBox
           type="search"
@@ -172,32 +188,60 @@ export default function AreasPage() {
           leadingIcon={FiSearch}
           containerClassName="flex-1"
         />
-        <Select
-          aria-label="Filtrar por estado"
-          value={status}
-          onChange={(value) => setStatus(value as DepartmentStatusFilter)}
-          options={STATUS_OPTIONS}
-          className="w-full sm:w-44"
-        />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Select
+            aria-label="Filtrar por estado"
+            value={status}
+            onChange={(value) => setStatus(value as DepartmentStatusFilter)}
+            options={STATUS_OPTIONS}
+            className="w-full sm:w-44"
+          />
+          <ViewModeToggle legend="Ver las áreas como" value={view} onChange={setView} />
+        </div>
       </section>
 
-      <DataTable<Department>
-        caption="Áreas de la organización"
-        columns={columns}
-        rows={visible}
-        getRowKey={(department) => department.id}
-        isLoading={isLoading}
-        error={error ? areasErrorMessage(error, 'No se pudieron cargar las áreas.') : undefined}
-        emptyMessage={
-          search.trim()
-            ? 'Ningún área coincide con la búsqueda.'
-            : status === 'inactive'
-              ? 'No hay áreas inactivas.'
-              : canManage
-                ? 'Aún no hay áreas. Crea la primera: sin área, nadie puede pedir productos.'
-                : 'Aún no hay áreas.'
-        }
-      />
+      {view === 'table' ? (
+        <DataTable<Department>
+          caption="Áreas de la organización"
+          columns={columns}
+          rows={visible}
+          getRowKey={(department) => department.id}
+          isLoading={isLoading}
+          error={loadError}
+          emptyMessage={emptyMessage}
+        />
+      ) : (
+        <CardGrid<Department>
+          ariaLabel="Áreas"
+          items={visible}
+          getItemKey={(department) => department.id}
+          isLoading={isLoading}
+          skeletonClassName="h-44"
+          error={loadError}
+          emptyMessage={emptyMessage}
+          renderItem={(department) => (
+            <DepartmentCard
+              department={department}
+              onEdit={
+                canManage
+                  ? (item) => {
+                      setNotice(null);
+                      setFormFor(item.id);
+                    }
+                  : undefined
+              }
+              onToggleStatus={
+                canManage
+                  ? (item) => {
+                      setNotice(null);
+                      setStatusId(item.id);
+                    }
+                  : undefined
+              }
+            />
+          )}
+        />
+      )}
 
       <DepartmentFormModal
         isOpen={formFor === 'new' || editing !== null}
