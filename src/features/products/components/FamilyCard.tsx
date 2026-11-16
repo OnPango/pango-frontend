@@ -1,9 +1,7 @@
 import { FiArrowRight } from 'react-icons/fi';
-import { useThemeStore } from '@/core/theme/theme.store';
-import { cn } from '@/shared/lib/cn';
 import { Badge } from '@/shared/ui/components/Badge';
 import { Button } from '@/shared/ui/components/Button';
-import { familyBackground } from '../content/familyBackgrounds';
+import { CardPatternBanner, EntityCard } from '@/shared/ui/components/EntityCard';
 import type { ProductCategory } from '../types/products.types';
 
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -16,22 +14,8 @@ export function FamilyPicture({
   category: ProductCategory;
   className?: string;
 }) {
-  const theme = useThemeStore((state) => state.resolved);
-  const { src, dimmed } = familyBackground(category.id, theme);
   return (
-    <div className={cn('overflow-hidden bg-canvas', className)}>
-      <img
-        src={src}
-        alt=""
-        loading="lazy"
-        decoding="async"
-        className={cn(
-          'size-full object-cover',
-          dimmed && 'brightness-75',
-          !category.isActive && 'opacity-60 grayscale',
-        )}
-      />
-    </div>
+    <CardPatternBanner seed={category.id} isActive={category.isActive} className={className} />
   );
 }
 
@@ -58,47 +42,47 @@ export function FamilyCard({
   const more = matches.length - 2;
 
   return (
-    <article className="flex w-full flex-col overflow-hidden rounded-2xl border border-line2 bg-surface transition-transform duration-300 hover:scale-105">
-      <FamilyPicture category={category} className="h-28" />
-      <div className="flex flex-1 flex-col gap-3 p-5">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="min-w-0 text-lg leading-tight font-bold wrap-break-word text-fg">
-            {category.name}
-          </h3>
-          <Badge tone={category.isActive ? 'success' : 'neutral'} dot className="shrink-0">
-            {category.isActive ? 'Activa' : 'Inactiva'}
-          </Badge>
-        </div>
-        <p className="line-clamp-2 min-h-10 text-sm text-muted">
-          {category.description ?? 'Sin descripción.'}
-        </p>
-        <p className="text-sm text-fg/90">
-          <span className="font-semibold tabular-nums">
-            {count(productCount, 'producto', 'productos')}
-          </span>
-          <span aria-hidden className="mx-2 text-muted">
-            ·
-          </span>
-          {subfamilyCount > 0
-            ? count(subfamilyCount, 'subfamilia', 'subfamilias')
-            : 'Sin subfamilias'}
-        </p>
-        {matches.length > 0 && (
-          <p className="text-xs text-muted">
-            Coincide en: {shown}
-            {more > 0 ? ` y ${more} más` : ''}
-          </p>
-        )}
+    <EntityCard
+      patternSeed={category.id}
+      isActive={category.isActive}
+      title={category.name}
+      badge={
+        <Badge tone={category.isActive ? 'success' : 'neutral'} dot>
+          {category.isActive ? 'Activa' : 'Inactiva'}
+        </Badge>
+      }
+      footer={
         <Button
           variant="outline"
           size="sm"
           onClick={() => onOpen(category)}
           aria-label={`Ver el detalle de ${category.name}`}
-          className="mt-auto gap-2 self-start"
+          className="gap-2"
         >
           Ver detalle <FiArrowRight aria-hidden className="size-4" />
         </Button>
-      </div>
-    </article>
+      }
+    >
+      <p className="line-clamp-2 min-h-10 text-sm text-muted">
+        {category.description ?? 'Sin descripción.'}
+      </p>
+      <p className="text-sm text-fg/90">
+        <span className="font-semibold tabular-nums">
+          {count(productCount, 'producto', 'productos')}
+        </span>
+        <span aria-hidden className="mx-2 text-muted">
+          ·
+        </span>
+        {subfamilyCount > 0
+          ? count(subfamilyCount, 'subfamilia', 'subfamilias')
+          : 'Sin subfamilias'}
+      </p>
+      {matches.length > 0 && (
+        <p className="text-xs text-muted">
+          Coincide en: {shown}
+          {more > 0 ? ` y ${more} más` : ''}
+        </p>
+      )}
+    </EntityCard>
   );
 }
