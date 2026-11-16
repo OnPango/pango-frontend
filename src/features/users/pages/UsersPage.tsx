@@ -3,11 +3,14 @@ import { FiPlus, FiSearch } from 'react-icons/fi';
 import { hasAnyPermission } from '@/core/auth/permissions';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { getApiErrorMessage } from '@/core/api/errors';
+import { useListView } from '@/shared/hooks/useListView';
 import { Alert } from '@/shared/ui/components/Alert';
+import { CardGrid } from '@/shared/ui/components/CardGrid';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { Select } from '@/shared/ui/components/form/select/Select';
 import type { SelectOption } from '@/shared/ui/components/form/select/select.types';
 import { usePagination } from '@/shared/ui/components/pagination/usePagination';
+import { ViewModeToggle } from '@/shared/ui/components/ViewModeToggle';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import {
   useInvitations,
@@ -22,6 +25,7 @@ import {
   useWarehouses,
 } from '../api/users.queries';
 import { InviteModal } from '../components/InviteModal';
+import { UserCard } from '../components/UserCard';
 import { UserModal, type UserChanges } from '../components/UserModal';
 import { UsersTable } from '../components/UsersTable';
 import { roleLabel } from '../content/roleLabels';
@@ -72,6 +76,7 @@ export default function UsersPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busyInvitationId, setBusyInvitationId] = useState<string | null>(null);
+  const { view, setView } = useListView('pango.users.view');
 
   const roleOptions = useMemo<SelectOption[]>(
     () => [
@@ -201,6 +206,14 @@ export default function UsersPage() {
     });
   };
 
+  const loadError = queryError
+    ? usersErrorMessage(queryError, 'No se pudieron cargar los usuarios.')
+    : undefined;
+  const emptyMessage =
+    search || selectedRole !== 'all' || selectedDepartment !== 'all' || selectedStatus !== 'all'
+      ? 'No se encontraron usuarios con los filtros seleccionados.'
+      : 'No hay usuarios registrados.';
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -225,7 +238,7 @@ export default function UsersPage() {
           containerClassName="flex-1"
         />
 
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           <Select
             aria-label="Filtrar por rol"
             value={selectedRole}
@@ -247,6 +260,7 @@ export default function UsersPage() {
             options={STATUS_OPTIONS}
             className="w-full sm:w-44"
           />
+          <ViewModeToggle legend="Ver las personas como" value={view} onChange={setView} />
         </div>
       </div>
 
@@ -256,37 +270,60 @@ export default function UsersPage() {
         </Alert>
       )}
 
-      <UsersTable
-        items={pageItems}
-        currentUserId={currentUser?.id}
-        warehouses={warehouses}
-        canManage={canManage}
-        isLoading={isLoading || invitationsLoading}
-        error={
-          queryError
-            ? usersErrorMessage(queryError, 'No se pudieron cargar los usuarios.')
-            : undefined
-        }
-        emptyMessage={
-          search ||
-          selectedRole !== 'all' ||
-          selectedDepartment !== 'all' ||
-          selectedStatus !== 'all'
-            ? 'No se encontraron usuarios con los filtros seleccionados.'
-            : 'No hay usuarios registrados.'
-        }
-        page={page}
-        pageSize={pageSize}
-        totalItems={totalItems}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-        onEdit={handleOpenEdit}
-        onToggleStatus={handleToggleStatus}
-        onResendInvitation={handleResend}
-        onRevokeInvitation={handleRevoke}
-        togglingUserId={setUserActive.isPending ? setUserActive.variables.id : null}
-        busyInvitationId={busyInvitationId}
-      />
+      {view === 'table' ? (
+        <UsersTable
+          items={pageItems}
+          currentUserId={currentUser?.id}
+          warehouses={warehouses}
+          canManage={canManage}
+          isLoading={isLoading || invitationsLoading}
+          error={loadError}
+          emptyMessage={emptyMessage}
+          page={page}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          onEdit={handleOpenEdit}
+          onToggleStatus={handleToggleStatus}
+          onResendInvitation={handleResend}
+          onRevokeInvitation={handleRevoke}
+          togglingUserId={setUserActive.isPending ? setUserActive.variables.id : null}
+          busyInvitationId={busyInvitationId}
+        />
+      ) : (
+        <CardGrid<UserListItem>
+          ariaLabel="Usuarios e invitaciones"
+          items={pageItems}
+          getItemKey={(item) => item.id}
+          isLoading={isLoading || invitationsLoading}
+          skeletonClassName="h-52"
+          error={loadError}
+          emptyMessage={emptyMessage}
+          pagination={{
+            page,
+            pageSize,
+            totalItems,
+            onPageChange: setPage,
+            pageSizeOptions: [5, 10, 20],
+            onPageSizeChange: setPageSize,
+          }}
+          renderItem={(item) => (
+            <UserCard
+              item={item}
+              currentUserId={currentUser?.id}
+              warehouses={warehouses}
+              canManage={canManage}
+              onEdit={handleOpenEdit}
+              onToggleStatus={handleToggleStatus}
+              onResendInvitation={handleResend}
+              onRevokeInvitation={handleRevoke}
+              togglingUserId={setUserActive.isPending ? setUserActive.variables.id : null}
+              busyInvitationId={busyInvitationId}
+            />
+          )}
+        />
+      )}
 
       <InviteModal
         isOpen={isInviteOpen}
