@@ -7,6 +7,7 @@ import type {
   ProductFilters,
   ProductStatusFilter,
   UnitOfMeasure,
+  UpdateCategoryInput,
   UpdateProductInput,
 } from '../types/products.types';
 import type {
@@ -18,6 +19,7 @@ import type {
   ProductDetailDto,
   ProductDto,
   UnitOfMeasureDto,
+  UpdateCategoryDto,
   UpdateProductDto,
 } from './products.dto';
 
@@ -32,6 +34,7 @@ export const toUnitOfMeasure = (dto: UnitOfMeasureDto): UnitOfMeasure => ({
 export const toProductCategory = (dto: CategoryDto): ProductCategory => ({
   id: String(dto.id),
   name: dto.name,
+  description: dto.description,
   parentId: dto.parentId === null ? null : String(dto.parentId),
   isActive: dto.isActive,
   productCount: dto.productCount,
@@ -90,9 +93,23 @@ export const toCreateProductDto = (input: CreateProductInput): CreateProductDto 
   tracksLots: input.tracksLots,
 });
 
+const toParentId = (id: string | null | undefined) => (id ? Number(id) : null);
+
 export const toCreateCategoryDto = (input: CreateCategoryInput): CreateCategoryDto => ({
   name: input.name.trim(),
+  ...(input.parentId ? { parentId: Number(input.parentId) } : {}),
+  ...(input.description?.trim() ? { description: input.description.trim() } : {}),
 });
+
+/** Only the fields present in `input`; an empty description clears it. */
+export function toUpdateCategoryDto(input: UpdateCategoryInput): UpdateCategoryDto {
+  const dto: UpdateCategoryDto = {};
+  if (input.name !== undefined) dto.name = input.name.trim();
+  if (input.parentId !== undefined) dto.parentId = toParentId(input.parentId);
+  if (input.description !== undefined) dto.description = input.description?.trim() || null;
+  if (input.isActive !== undefined) dto.isActive = input.isActive;
+  return dto;
+}
 
 /** Only the fields present in `input`, so the API leaves the others untouched. */
 export function toUpdateProductDto(input: UpdateProductInput): UpdateProductDto {
