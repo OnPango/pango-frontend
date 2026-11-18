@@ -13,7 +13,7 @@ export function Sidebar() {
       id={SIDEBAR_ID}
       className={cn(
         'hidden shrink-0 bg-sidebar text-sidebar-fg transition-[width] duration-500 lg:block',
-        isCollapsed ? 'w-18' : 'w-60 border-r border-line2',
+        isCollapsed ? 'w-18' : 'w-55 border-r border-line2',
       )}
     >
       <SidebarContent isCollapsed={isCollapsed} />
