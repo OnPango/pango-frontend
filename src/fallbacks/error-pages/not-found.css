@@ -1,0 +1,155 @@
+/* The 404 picture: a trail, a sign, leaves and pebbles, and Pango rolling in to stop at the sign. */
+.nf-scene {
+  --nf-code: #e5dccb;
+  --nf-trail: #e6dac4;
+  --nf-pebble: #d8c9ae;
+  --nf-pebble-dark: #4a4a44;
+  --nf-leaf: #2f4a3b;
+  --nf-post: #8a3b20;
+  --nf-sign: #c4552f;
+  --nf-sign-x: #f6f1e7;
+  --nf-shadow: rgb(60 40 20 / 0.12);
+  position: relative;
+  width: min(100%, 40rem);
+  aspect-ratio: 640 / 300;
+}
+:where(.dark) .nf-scene {
+  --nf-code: color-mix(in srgb, var(--fg) 7%, transparent);
+  --nf-trail: color-mix(in srgb, var(--fg) 8%, transparent);
+  --nf-pebble: color-mix(in srgb, var(--fg) 14%, transparent);
+  --nf-pebble-dark: color-mix(in srgb, var(--fg) 30%, transparent);
+  --nf-leaf: #5ca083;
+  --nf-post: #7d3218;
+  --nf-sign: #b04a26;
+  --nf-sign-x: #f6f1e7;
+  --nf-shadow: rgb(0 0 0 / 0.35);
+}
+
+.nf-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.nf-code {
+  fill: var(--nf-code);
+  font-size: 250px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.nf-trail {
+  fill: none;
+  stroke: var(--nf-trail);
+  stroke-width: 16;
+  stroke-linecap: round;
+}
+.nf-pebble {
+  fill: var(--nf-pebble);
+}
+.nf-pebble-dark {
+  fill: var(--nf-pebble-dark);
+}
+.nf-leaf {
+  fill: var(--nf-leaf);
+}
+.nf-post {
+  fill: var(--nf-post);
+}
+.nf-sign-face {
+  fill: var(--nf-sign);
+}
+.nf-sign-x {
+  fill: none;
+  stroke: var(--nf-sign-x);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.nf-shadow {
+  fill: var(--nf-shadow);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nf-shadow-in 1.4s cubic-bezier(0.2, 0.7, 0.3, 1) 0.2s both;
+}
+
+/* When Pango stops, the sign shakes once, like a head saying no: this way leads nowhere. */
+.nf-sign,
+.nf-post {
+  transform-box: view-box;
+  transform-origin: 560px 216px;
+  animation: nf-sign-shake 0.9s ease-out 1.45s both;
+}
+
+/*
+ * Pango rolls in without sliding: it travels 1.8 of its widths, so it turns 1.8 / π of a full turn
+ * (206°). Then it rocks gently on the spot, looking at the sign.
+ */
+.nf-pango {
+  position: absolute;
+  left: 28.1%;
+  bottom: 12.7%;
+  width: 17.5%;
+  animation: nf-roll-in 1.4s cubic-bezier(0.2, 0.7, 0.3, 1) 0.2s both;
+}
+.nf-ball {
+  display: block;
+  width: 100%;
+  height: auto;
+  animation: nf-rock 3.2s ease-in-out 1.6s infinite alternate;
+}
+
+@keyframes nf-roll-in {
+  from {
+    opacity: 0;
+    transform: translateX(-180%) rotate(-206deg);
+  }
+  15% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) rotate(0deg);
+  }
+}
+@keyframes nf-shadow-in {
+  from {
+    opacity: 0;
+    transform: translateX(-180%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes nf-rock {
+  from {
+    transform: rotate(-3deg);
+  }
+  to {
+    transform: rotate(4deg);
+  }
+}
+@keyframes nf-sign-shake {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(5deg);
+  }
+  50% {
+    transform: rotate(-3deg);
+  }
+  75% {
+    transform: rotate(1.5deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* Without motion, Pango is already there, facing the sign. */
+@media (prefers-reduced-motion: reduce) {
+  .nf-scene * {
+    animation: none !important;
+  }
+}

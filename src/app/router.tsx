@@ -41,7 +41,6 @@ export const router = createBrowserRouter(
       // Last-resort boundary for what the page routes do not catch (login, layout).
       errorElement: <RouteErrorPage />,
       children: [
-        { path: '*', element: <NotFoundPage /> },
         {
           element: <RequireGuest loadingFallback={<SessionCheck />} />,
           children: [
@@ -57,7 +56,9 @@ export const router = createBrowserRouter(
           children: [
             {
               element: <AppLayout navSections={NAV_SECTIONS} headerActions={<AlertsBell />} />,
-              children: APP_ROUTES.map(toRoute),
+              // An unknown address is answered inside the app, with the header and the menu at hand.
+              // Signed out, it goes through the login first and comes back here.
+              children: [...APP_ROUTES.map(toRoute), { path: '*', element: <NotFoundPage /> }],
             },
           ],
         },

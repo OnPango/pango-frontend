@@ -1,9 +1,9 @@
 export const content = {
   notFound: {
-    code: '404',
+    // The "404" is drawn in its picture (`NotFoundScene`).
     eyebrow: 'Error 404',
-    title: 'No encontramos esa página',
-    description: 'La dirección que buscas no existe o fue movida.',
+    title: 'Este camino no existe',
+    description: 'Parece que Pango llegó hasta aquí, pero la página que buscas no está disponible.',
   },
   forbidden: {
     code: '403',
@@ -26,7 +26,7 @@ export const content = {
       'No pudimos cargar esta sección porque la aplicación cambió desde que la abriste. Recarga la página para continuar.',
   },
   actions: {
-    home: 'Ir al inicio',
+    home: 'Volver al inicio',
     back: 'Volver',
     retry: 'Reintentar',
     reload: 'Recargar la página',
