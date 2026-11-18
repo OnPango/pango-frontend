@@ -50,6 +50,9 @@ export function PangolinLoader({
   }, [slowMessage, slowAfterMs]);
 
   const { ball, stage, turn, text } = SIZES[size];
+  // The ball sits on the ground (8px up); above it there is room for the kicked leaves.
+  const height = Math.round(ball * 1.65);
+  const sky = height - ball - 8;
   const style = {
     '--pd': ball,
     '--pw': stage,
@@ -67,8 +70,10 @@ export function PangolinLoader({
       )}
     >
       <div
-        className="pango-stage max-w-full"
-        style={{ width: stage, height: Math.round(ball * 1.65) }}
+        className="pango-stage pointer-events-none max-w-full"
+        // The empty sky reaches up over what is above, so only the ball and the ground count when
+        // the loader is centered: otherwise the ball and the message would sit low.
+        style={{ width: stage, height, marginTop: -sky }}
       >
         <div className="pango-ground" />
         <div className="pango-pass">
