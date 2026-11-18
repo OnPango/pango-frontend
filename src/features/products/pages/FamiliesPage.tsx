@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FiGrid, FiList, FiPlus, FiSearch } from 'react-icons/fi';
+import { FiPlus, FiSearch } from 'react-icons/fi';
 import { MdEdit } from 'react-icons/md';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/auth.store';
@@ -8,12 +8,12 @@ import type { Column } from '@/shared/types/dataTable';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Badge } from '@/shared/ui/components/Badge';
 import { Button } from '@/shared/ui/components/Button';
+import { CardGrid } from '@/shared/ui/components/CardGrid';
 import { DataTable } from '@/shared/ui/components/DataTable';
-import { SegmentedControl, type SegmentOption } from '@/shared/ui/components/form/SegmentedControl';
 import { Select } from '@/shared/ui/components/form/select/Select';
 import type { SelectOption } from '@/shared/ui/components/form/select/select.types';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
-import { Skeleton } from '@/shared/ui/components/Skeleton';
+import { ViewModeToggle } from '@/shared/ui/components/ViewModeToggle';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { useCategories } from '../api/products.queries';
 import { CategoryFormModal } from '../components/CategoryFormModal';
@@ -22,7 +22,7 @@ import { FamilyCard, type FamilyCardProps } from '../components/FamilyCard';
 import { FamilyDetailPanel } from '../components/FamilyDetailPanel';
 import { categoryPaths, categoryTree, withDescendants } from '../content/catalog.labels';
 import { productsErrorMessage } from '../content/products.errors';
-import { useFamiliesView, type FamiliesView } from '../hooks/useFamiliesView';
+import { useFamiliesView } from '../hooks/useFamiliesView';
 import type { ProductCategory } from '../types/products.types';
 
 type StatusFilter = 'active' | 'inactive' | 'all';
@@ -31,11 +31,6 @@ const STATUS_OPTIONS: SelectOption[] = [
   { value: 'all', label: 'Todos los estados' },
   { value: 'active', label: 'Activas' },
   { value: 'inactive', label: 'Inactivas' },
-];
-
-const VIEWS: SegmentOption<FamiliesView>[] = [
-  { value: 'table', label: 'Tabla', icon: FiList },
-  { value: 'cards', label: 'Tarjetas', icon: FiGrid },
 ];
 
 const plain = (text: string) =>
@@ -310,12 +305,7 @@ export default function FamiliesPage() {
             options={STATUS_OPTIONS}
             className="w-full sm:w-44"
           />
-          <SegmentedControl<FamiliesView>
-            legend="Ver las familias como"
-            options={VIEWS}
-            value={view}
-            onChange={setView}
-          />
+          <ViewModeToggle legend="Ver las familias como" value={view} onChange={setView} />
         </div>
       </section>
 
@@ -329,36 +319,26 @@ export default function FamiliesPage() {
           error={loadError}
           emptyMessage={emptyMessage}
         />
-      ) : loadError ? (
-        <Alert tone="danger">{loadError}</Alert>
-      ) : isLoading ? (
-        <div
-          aria-busy="true"
-          aria-label="Cargando familias"
-          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
-        >
-          {[0, 1, 2].map((card) => (
-            <Skeleton key={card} className="h-72 rounded-2xl" />
-          ))}
-        </div>
-      ) : cards.length === 0 ? (
-        <p className="rounded-2xl border border-line2 bg-surface px-4 py-8 text-center text-sm text-muted">
-          {emptyMessage}
-        </p>
       ) : (
-        <ul aria-label="Familias principales" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {cards.map((card) => (
-            <li key={card.category.id} className="flex">
-              <FamilyCard
-                {...card}
-                onOpen={(category) => {
-                  setNotice(null);
-                  setDetailId(category.id);
-                }}
-              />
-            </li>
-          ))}
-        </ul>
+        <CardGrid
+          ariaLabel="Familias principales"
+          items={cards}
+          getItemKey={(card) => card.category.id}
+          isLoading={isLoading}
+          skeletonCount={3}
+          skeletonClassName="h-72"
+          error={loadError}
+          emptyMessage={emptyMessage}
+          renderItem={(card) => (
+            <FamilyCard
+              {...card}
+              onOpen={(category) => {
+                setNotice(null);
+                setDetailId(category.id);
+              }}
+            />
+          )}
+        />
       )}
 
       {detail && (
