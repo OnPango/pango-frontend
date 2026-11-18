@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router-dom';
 import { isClientError } from '@/core/api/errors';
 import { useAuthStore } from '@/core/auth/auth.store';
+import { BootScreen } from '@/shared/boot/BootScreen';
 import { router } from './router';
 
 const queryClient = new QueryClient({
@@ -31,6 +32,7 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
+      <BootScreen />
     </QueryClientProvider>
   );
 }

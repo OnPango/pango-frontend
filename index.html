@@ -20,6 +20,15 @@
         } catch (e) {}
       })();
     </script>
+    <!-- The canvas color before the styles load, so the boot screen does not follow a white flash. -->
+    <style>
+      html {
+        background: #f6f1e7;
+      }
+      html.dark {
+        background: #1a1a1a;
+      }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

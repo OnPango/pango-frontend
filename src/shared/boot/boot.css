@@ -1,0 +1,44 @@
+/* The boot screen fades out over the screen that is ready underneath. */
+.boot-screen {
+  transition: opacity 0.4s ease;
+}
+.boot-screen-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---- The progress: a leaf per step, filled once the step is done; the current one breathes. ---- */
+.boot-progress {
+  --boot-leaf-off: #e4d8c4;
+  --boot-leaf-on: #2f4a3b;
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.25rem;
+}
+:where(.dark) .boot-progress {
+  --boot-leaf-off: color-mix(in srgb, var(--fg) 14%, transparent);
+  --boot-leaf-on: #5ca083;
+}
+.boot-leaf {
+  width: 1.3rem;
+  color: var(--boot-leaf-off);
+  transition: color 0.4s ease;
+}
+.boot-leaf-done {
+  color: var(--boot-leaf-on);
+}
+.boot-leaf-now {
+  animation: boot-leaf-now 0.9s ease-in-out infinite alternate;
+}
+@keyframes boot-leaf-now {
+  to {
+    color: color-mix(in srgb, var(--boot-leaf-on) 55%, var(--boot-leaf-off));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-leaf-now {
+    animation: none !important;
+    color: color-mix(in srgb, var(--boot-leaf-on) 40%, var(--boot-leaf-off));
+  }
+}

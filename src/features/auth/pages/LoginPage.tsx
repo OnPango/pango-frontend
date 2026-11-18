@@ -1,4 +1,5 @@
 import { buildMainUrl, getCurrentTenant, WORKSPACE_DOMAIN } from '@/core/tenant/tenant';
+import { BootStep } from '@/shared/boot/BootStep';
 import { Spinner } from '@/shared/ui/components/Spinner';
 import { useWorkspace, workspaceState } from '../api/useWorkspace';
 import { AuthCard, AuthPageShell } from '../components/AuthPageShell';
@@ -50,12 +51,20 @@ function TenantLogin({ tenant }: { tenant: string }) {
   const state = workspaceState(workspace.error, workspace.isSuccess);
 
   if (workspace.isPending) {
+    // On the way in it is a step of the boot screen; the card is for a lookup after the start.
     return (
-      <AuthCard eyebrow="BIENVENIDO A PANGO" title={<h2>Buscando tu espacio…</h2>}>
-        <p className="flex items-center justify-center gap-2 text-sm text-muted" role="status">
-          <Spinner className="size-4" /> {tenant}.{WORKSPACE_DOMAIN}
-        </p>
-      </AuthCard>
+      <BootStep
+        id="workspace"
+        message="Pango está buscando tu espacio"
+        detail={`${tenant}.${WORKSPACE_DOMAIN}`}
+        fallback={
+          <AuthCard eyebrow="BIENVENIDO A PANGO" title={<h2>Buscando tu espacio…</h2>}>
+            <p className="flex items-center justify-center gap-2 text-sm text-muted" role="status">
+              <Spinner className="size-4" /> {tenant}.{WORKSPACE_DOMAIN}
+            </p>
+          </AuthCard>
+        }
+      />
     );
   }
 

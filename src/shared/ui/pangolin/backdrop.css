@@ -151,16 +151,16 @@
   animation: pbd-flutter 3.2s ease-in-out infinite alternate;
 }
 .pbd-drift-1 {
-  top: 24%;
+  top: 16%;
 }
 .pbd-drift-2 {
-  top: 62%;
+  top: 78%;
   width: 1.2vmax;
   animation-duration: 33s;
   animation-delay: -14s;
 }
 .pbd-drift-3 {
-  top: 80%;
+  top: 90%;
   animation-duration: 29s;
   animation-delay: -23s;
 }
