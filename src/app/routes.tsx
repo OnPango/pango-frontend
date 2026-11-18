@@ -1,13 +1,13 @@
 import { lazy } from 'react';
-import { FaBoxes, FaSitemap, FaTruck, FaWarehouse } from 'react-icons/fa';
+import { FaBoxes, FaSitemap, /*FaTruck,*/ FaWarehouse } from 'react-icons/fa';
 import { FaBoxArchive } from 'react-icons/fa6';
-import { FiUpload } from 'react-icons/fi';
+//import { FiUpload } from 'react-icons/fi';
 import { BsShieldFillCheck } from 'react-icons/bs';
-import { GoGraph, GoHomeFill } from 'react-icons/go';
+import { /*GoGraph,*/ GoHomeFill } from 'react-icons/go';
 import { HiBellAlert, HiUserGroup, HiUsers } from 'react-icons/hi2';
 import { HiOutlineSwitchHorizontal } from 'react-icons/hi';
 import { RiGitPullRequestFill } from 'react-icons/ri';
-import { RxActivityLog } from 'react-icons/rx';
+//import { RxActivityLog } from 'react-icons/rx';
 
 import type { IconType } from 'react-icons';
 import type { LazyPage } from './load';
@@ -35,9 +35,6 @@ export interface AppRoute {
   anyOf: Permission[];
   Page: LazyPage;
 }
-
-const placeholder = (name: string): LazyPage =>
-  lazy(() => Promise.resolve({ default: () => <div>{name}</div> }));
 
 /**
  * The only place that says which screens exist: the router builds its routes from it, the menu
