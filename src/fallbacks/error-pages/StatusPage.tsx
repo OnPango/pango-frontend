@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { asset } from '@/shared/lib/asset';
+import { PangoBackdrop } from '@/shared/ui/components/PangoBackdrop';
 
 interface StatusPageProps {
   /** Large faded code behind the content ("404"). Purely decorative. */
@@ -26,7 +27,10 @@ export function StatusPage({
   children,
 }: StatusPageProps) {
   return (
-    <section className="relative flex h-full min-h-96 flex-col items-center justify-center gap-6 overflow-hidden p-6 text-center">
+    <section className="relative isolate flex h-full min-h-96 flex-col items-center justify-center gap-6 overflow-hidden p-6 text-center">
+      {/* The same scenery as the loading screens; the logo is already in the app's header. */}
+      <PangoBackdrop brand={false} delayMs={0} />
+
       {code && (
         <span
           aria-hidden="true"

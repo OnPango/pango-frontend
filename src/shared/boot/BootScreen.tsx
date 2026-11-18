@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { cn } from '@/shared/lib/cn';
-import { LoadingBackdrop } from '@/shared/ui/components/LoadingBackdrop';
+import { PangoBackdrop } from '@/shared/ui/components/PangoBackdrop';
 import { PangolinLoader } from '@/shared/ui/components/PangolinLoader';
 import { Leaf } from '@/shared/ui/pangolin/leaves';
 import { useBootStore } from './boot.store';
@@ -53,7 +53,7 @@ export function BootScreen() {
         phase === 'done' && 'boot-screen-leaving',
       )}
     >
-      <LoadingBackdrop />
+      <PangoBackdrop />
       <PangolinLoader
         size="screen"
         className="relative"

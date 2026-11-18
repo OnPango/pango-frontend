@@ -101,15 +101,15 @@ export const APP_ROUTES: AppRoute[] = [
     anyOf: ['movement.read'],
     Page: lazy(() => import('@/features/movements/pages/MovementsPage')),
   },
-  {
-    path: '/import-history',
-    label: 'Importar historial',
-    icon: FiUpload,
-    section: 'data',
-    // The backend has no import permission yet: admin-only until it does.
-    anyOf: ['settings.manage'],
-    Page: placeholder('Import History'),
-  },
+  // {
+  //   path: '/import-history',
+  //   label: 'Importar historial',
+  //   icon: FiUpload,
+  //   section: 'data',
+  //   // The backend has no import permission yet: admin-only until it does.
+  //   anyOf: ['settings.manage'],
+  //   Page: placeholder('Import History'),
+  // },
   {
     path: '/users',
     label: 'Usuarios',
@@ -134,31 +134,31 @@ export const APP_ROUTES: AppRoute[] = [
     anyOf: ['role.read', 'role.manage'],
     Page: lazy(() => import('@/features/users/pages/RolesPermissionsPage')),
   },
-  {
-    path: '/logbook',
-    label: 'Bitácora',
-    icon: RxActivityLog,
-    section: 'admin',
-    // The backend has no audit permission yet: open to everyone for now.
-    anyOf: [],
-    Page: placeholder('Bitacora'),
-  },
-  {
-    path: '/suppliers',
-    label: 'Proveedores',
-    icon: FaTruck,
-    section: 'supply',
-    anyOf: ['supplier.manage'],
-    Page: lazy(() => import('@/features/suppliers/pages/SuppliersPage')),
-  },
-  {
-    path: '/forecast',
-    label: 'Predicción',
-    icon: GoGraph,
-    section: 'supply',
-    anyOf: ['forecast.read', 'forecast.run'],
-    Page: lazy(() => import('@/features/forecast/pages/ForecastPage')),
-  },
+  // {
+  //   path: '/logbook',
+  //   label: 'Bitácora',
+  //   icon: RxActivityLog,
+  //   section: 'admin',
+  //   // The backend has no audit permission yet: open to everyone for now.
+  //   anyOf: [],
+  //   Page: placeholder('Bitacora'),
+  // },
+  // {
+  //   path: '/suppliers',
+  //   label: 'Proveedores',
+  //   icon: FaTruck,
+  //   section: 'supply',
+  //   anyOf: ['supplier.manage'],
+  //   Page: lazy(() => import('@/features/suppliers/pages/SuppliersPage')),
+  // },
+  // {
+  //   path: '/forecast',
+  //   label: 'Predicción',
+  //   icon: GoGraph,
+  //   section: 'supply',
+  //   anyOf: ['forecast.read', 'forecast.run'],
+  //   Page: lazy(() => import('@/features/forecast/pages/ForecastPage')),
+  // },
   {
     path: '/alerts',
     label: 'Alertas',

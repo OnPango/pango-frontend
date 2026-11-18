@@ -1,12 +1,14 @@
 /*
- * The loading backdrop: soft blobs in the corners that slowly change shape, a thin curve, leaves
- * swaying, and a few leaves drifting across from right to left. Place it in a `relative` container.
+ * The backdrop of the loading and error screens: irregular patches of sand and copper in the
+ * corners that slowly drift, thin lines, leaves swaying on them, and a few leaves drifting across
+ * from right to left. Place it in a `relative` container.
  */
 .pbd {
-  --pbd-sand: #ebe2d1;
+  --pbd-sand: #ece3d2;
   --pbd-copper: #c4552f;
   --pbd-copper-deep: #a9431f;
   --pbd-line: #d6c09d;
+  --pbd-pebble: #dccfb8;
   --pbd-leaf: #2f4a3b;
   position: absolute;
   inset: 0;
@@ -20,6 +22,7 @@
   --pbd-copper: #9c4122;
   --pbd-copper-deep: #7d3218;
   --pbd-line: color-mix(in srgb, var(--fg) 16%, transparent);
+  --pbd-pebble: color-mix(in srgb, var(--fg) 10%, transparent);
   --pbd-leaf: #5ca083;
 }
 @keyframes pbd-appear {
@@ -31,101 +34,102 @@
   }
 }
 
-/* ---- Blobs: the border radius morphs, so the shape breathes. ---- */
-.pbd-blob {
+/* ---- The corner pictures, each pinned to its corner. ---- */
+.pbd-corner {
   position: absolute;
-  aspect-ratio: 1;
-  background: var(--pbd-sand);
-  border-radius: 58% 42% 46% 54% / 52% 44% 56% 48%;
-  animation: pbd-morph 18s ease-in-out infinite alternate;
+  overflow: visible;
+  color: var(--pbd-leaf);
 }
 .pbd-top-right {
-  width: 36vmax;
-  top: -15vmax;
-  right: -12vmax;
+  top: 0;
+  right: 0;
+  width: max(11vmax, 90px);
 }
 .pbd-bottom-left {
-  width: 46vmax;
-  bottom: -22vmax;
-  left: -20vmax;
-  animation-duration: 22s;
-  animation-delay: -7s;
-}
-.pbd-copper {
-  width: 30vmax;
-  bottom: -15vmax;
-  left: -13vmax;
-  overflow: hidden;
-  background: var(--pbd-copper);
-  animation-duration: 15s;
-  animation-delay: -4s;
-}
-/* The deeper copper at its foot. */
-.pbd-copper::after {
-  content: '';
-  position: absolute;
-  inset: 52% -10% -10% 10%;
-  border-radius: 50% 50% 0 0;
-  background: var(--pbd-copper-deep);
+  bottom: 0;
+  left: 0;
+  width: max(30vmax, 220px);
 }
 .pbd-bottom-right {
-  width: 28vmax;
-  bottom: -15vmax;
-  right: -10vmax;
-  animation-duration: 20s;
-  animation-delay: -12s;
-}
-@keyframes pbd-morph {
-  0% {
-    border-radius: 58% 42% 46% 54% / 52% 44% 56% 48%;
-    transform: rotate(0deg) scale(1);
-  }
-  50% {
-    border-radius: 44% 56% 62% 38% / 40% 58% 42% 60%;
-    transform: rotate(8deg) scale(1.05);
-  }
-  100% {
-    border-radius: 52% 48% 36% 64% / 60% 46% 54% 40%;
-    transform: rotate(-6deg) scale(0.97);
-  }
-}
-
-/* ---- The thin curve in the bottom right corner, swaying slowly. ---- */
-.pbd-curve {
-  position: absolute;
   right: 0;
   bottom: 0;
-  width: 24vmax;
-  height: 22vmax;
-  color: var(--pbd-line);
-  transform-origin: 100% 100%;
-  animation: pbd-sway-curve 14s ease-in-out infinite alternate;
+  width: max(24vmax, 170px);
 }
-@keyframes pbd-sway-curve {
+
+.pbd-sand {
+  fill: var(--pbd-sand);
+}
+.pbd-copper {
+  fill: var(--pbd-copper);
+}
+.pbd-copper-deep {
+  fill: var(--pbd-copper-deep);
+}
+.pbd-pebble {
+  fill: var(--pbd-pebble);
+}
+.pbd-line {
+  fill: none;
+  stroke: var(--pbd-line);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  transform-box: view-box;
+  animation: pbd-sway-line 14s ease-in-out infinite alternate;
+}
+.pbd-line-left {
+  transform-origin: 0 100%;
+}
+.pbd-line-right {
+  transform-origin: 100% 100%;
+  animation-duration: 17s;
+  animation-direction: alternate-reverse;
+}
+@keyframes pbd-sway-line {
   to {
-    transform: rotate(-5deg) scale(1.04);
+    transform: rotate(-3deg) scale(1.03);
   }
 }
 
-/* ---- Leaves resting on the blobs, swaying from their stem. ---- */
+/* The patches drift and lean slowly from the corner they grow out of, each at its own pace. */
+.pbd-shape {
+  transform-box: fill-box;
+  animation: pbd-drift-shape 19s ease-in-out infinite alternate;
+}
+.pbd-top-right .pbd-shape {
+  transform-origin: 100% 0;
+}
+.pbd-bottom-left .pbd-shape {
+  transform-origin: 0 100%;
+}
+.pbd-bottom-right .pbd-shape {
+  transform-origin: 100% 100%;
+}
+.pbd-copper-hill {
+  animation-duration: 15s;
+  animation-delay: -6s;
+  animation-direction: alternate-reverse;
+}
+.pbd-sand-late {
+  animation-duration: 22s;
+  animation-delay: -9s;
+}
+@keyframes pbd-drift-shape {
+  0% {
+    transform: rotate(0deg) scale(1, 1);
+  }
+  50% {
+    transform: rotate(2.5deg) scale(1.05, 0.97);
+  }
+  100% {
+    transform: rotate(-2deg) scale(0.97, 1.05);
+  }
+}
+
+/* ---- Leaves resting on the patches, swaying from their stem. ---- */
 .pbd-leaf {
-  position: absolute;
-  color: var(--pbd-leaf);
+  transform-box: fill-box;
   transform-origin: 8% 92%;
   animation: pbd-sway 5s ease-in-out infinite alternate;
-}
-.pbd-leaf-top {
-  top: 13vmax;
-  right: 0.5vmax;
-  width: 5vmax;
-  rotate: 150deg;
-}
-.pbd-leaf-left {
-  bottom: 15vmax;
-  left: 6vmax;
-  width: 3.2vmax;
-  rotate: 200deg;
-  animation-delay: -2s;
 }
 @keyframes pbd-sway {
   from {
