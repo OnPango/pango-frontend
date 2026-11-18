@@ -3,12 +3,16 @@ import { FiPlus, FiSearch } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
+import { useListView } from '@/shared/hooks/useListView';
 import { Alert } from '@/shared/ui/components/Alert';
+import { CardGrid } from '@/shared/ui/components/CardGrid';
 import { Select } from '@/shared/ui/components/form/select/Select';
 import type { SelectOption } from '@/shared/ui/components/form/select/select.types';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
+import { ViewModeToggle } from '@/shared/ui/components/ViewModeToggle';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { useWarehouses } from '../api/warehouses.queries';
+import { WarehouseCard } from '../components/WarehouseCard';
 import { WarehouseDetailPanel } from '../components/WarehouseDetailPanel';
 import { WarehouseFormModal } from '../components/WarehouseFormModal';
 import { WarehouseStatusDialog } from '../components/WarehouseStatusDialog';
@@ -49,6 +53,7 @@ export default function WarehousesPage() {
   const [formFor, setFormFor] = useState<'new' | string | null>(null);
   const [statusId, setStatusId] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const { view, setView } = useListView('pango.warehouses.view');
 
   const byId = (id: string | null) => warehouses?.find((warehouse) => warehouse.id === id) ?? null;
   const opened = byId(openId);
@@ -83,6 +88,9 @@ export default function WarehousesPage() {
     setStatusId(null);
   };
 
+  const loadError = error
+    ? warehousesErrorMessage(error, 'No se pudieron cargar los almacenes.')
+    : undefined;
   const emptyMessage = isFiltered
     ? 'Ningún almacén coincide con la búsqueda.'
     : status === 'inactive'
@@ -148,7 +156,7 @@ export default function WarehousesPage() {
           leadingIcon={FiSearch}
           containerClassName="flex-1"
         />
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <Select
             aria-label="Filtrar por tipo"
             value={type}
@@ -163,20 +171,38 @@ export default function WarehousesPage() {
             options={STATUS_OPTIONS}
             className="w-full sm:w-44"
           />
+          <ViewModeToggle legend="Ver los almacenes como" value={view} onChange={setView} />
         </div>
       </section>
 
-      <WarehousesTable
-        warehouses={visible}
-        isLoading={isLoading}
-        error={
-          error ? warehousesErrorMessage(error, 'No se pudieron cargar los almacenes.') : undefined
-        }
-        emptyMessage={emptyMessage}
-        onOpen={handleOpen}
-        onEdit={canManage ? handleEdit : undefined}
-        onToggleStatus={canManage ? handleToggleStatus : undefined}
-      />
+      {view === 'table' ? (
+        <WarehousesTable
+          warehouses={visible}
+          isLoading={isLoading}
+          error={loadError}
+          emptyMessage={emptyMessage}
+          onOpen={handleOpen}
+          onEdit={canManage ? handleEdit : undefined}
+          onToggleStatus={canManage ? handleToggleStatus : undefined}
+        />
+      ) : (
+        <CardGrid<Warehouse>
+          ariaLabel="Almacenes"
+          items={visible}
+          getItemKey={(warehouse) => warehouse.id}
+          isLoading={isLoading}
+          error={loadError}
+          emptyMessage={emptyMessage}
+          renderItem={(warehouse) => (
+            <WarehouseCard
+              warehouse={warehouse}
+              onOpen={handleOpen}
+              onEdit={canManage ? handleEdit : undefined}
+              onToggleStatus={canManage ? handleToggleStatus : undefined}
+            />
+          )}
+        />
+      )}
 
       {opened && (
         <WarehouseDetailPanel

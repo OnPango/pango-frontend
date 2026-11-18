@@ -160,11 +160,8 @@ export function ProductStockCard({
   }, [onOpenWarehouse, onRegister, onReplenish, onShowLots, product, alerts]);
 
   return (
-    <section
-      aria-labelledby="stock-title"
-      className="space-y-5 rounded-2xl border border-line2 bg-surface p-6"
-    >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <section aria-labelledby="stock-title" className="space-y-5 rounded-2xl">
+      <div className="flex flex-col gap-4 rounded-2xl bg-sidebar-fg/10 p-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h3 id="stock-title" className="truncate text-xl font-bold text-fg">
             {product.name}

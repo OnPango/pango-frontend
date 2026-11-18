@@ -2,19 +2,23 @@ import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import { FiPlus, FiSearch } from 'react-icons/fi';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
+import { useListView } from '@/shared/hooks/useListView';
 import { Alert } from '@/shared/ui/components/Alert';
+import { CardGrid } from '@/shared/ui/components/CardGrid';
 import { Select } from '@/shared/ui/components/form/select/Select';
 import type { SelectOption } from '@/shared/ui/components/form/select/select.types';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
+import { ViewModeToggle } from '@/shared/ui/components/ViewModeToggle';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { useCatalog, useCategories, useUnitsOfMeasure } from '../api/products.queries';
+import { ProductCard } from '../components/ProductCard';
 import { ProductDetailPanel } from '../components/ProductDetailPanel';
 import { ProductFormModal } from '../components/ProductFormModal';
 import { ProductsTable } from '../components/ProductsTable';
 import { categoryPaths, toCategorySelectOptions } from '../content/catalog.labels';
 import { productsErrorMessage } from '../content/products.errors';
 import { filterProducts } from '../content/productSearch';
-import { ALL_CATEGORIES, useProductFilters } from '../hooks/useProductFilters';
+import { ALL_CATEGORIES, PAGE_SIZES, useProductFilters } from '../hooks/useProductFilters';
 import type { Product, ProductStatusFilter } from '../types/products.types';
 
 const STATUS_OPTIONS: SelectOption[] = [
@@ -50,6 +54,7 @@ export default function ProductPage() {
   // The panel keeps an id, not a copy: after an edit it shows the product as the list has it now.
   const [openId, setOpenId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const { view, setView } = useListView('pango.products.view');
 
   const { data: catalog, isLoading, isFetching, error } = useCatalog();
   const { data: categories = [] } = useCategories();
@@ -93,6 +98,15 @@ export default function ProductPage() {
     setEditing(product);
   }, []);
 
+  const loadError = error
+    ? productsErrorMessage(error, 'No se pudieron cargar los productos.')
+    : undefined;
+  const emptyMessage = isFiltered
+    ? 'Ningún producto coincide con la búsqueda.'
+    : status === 'inactive'
+      ? 'No hay productos archivados.'
+      : 'Aún no hay productos. Registra el primero con «Nuevo producto».';
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -129,7 +143,7 @@ export default function ProductPage() {
           leadingIcon={FiSearch}
           containerClassName="flex-1"
         />
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <Select
             aria-label="Filtrar por familia"
             value={categoryId}
@@ -147,30 +161,50 @@ export default function ProductPage() {
             options={STATUS_OPTIONS}
             className="w-full sm:w-44"
           />
+          <ViewModeToggle legend="Ver los productos como" value={view} onChange={setView} />
         </div>
       </section>
 
-      <ProductsTable
-        products={pageItems}
-        isLoading={isLoading}
-        error={
-          error ? productsErrorMessage(error, 'No se pudieron cargar los productos.') : undefined
-        }
-        emptyMessage={
-          isFiltered
-            ? 'Ningún producto coincide con la búsqueda.'
-            : status === 'inactive'
-              ? 'No hay productos archivados.'
-              : 'Aún no hay productos. Registra el primero con «Nuevo producto».'
-        }
-        page={currentPage}
-        pageSize={pageSize}
-        totalItems={matches.length}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-        onOpen={handleOpen}
-        onEdit={canManage ? handleEdit : undefined}
-      />
+      {view === 'table' ? (
+        <ProductsTable
+          products={pageItems}
+          isLoading={isLoading}
+          error={loadError}
+          emptyMessage={emptyMessage}
+          page={currentPage}
+          pageSize={pageSize}
+          totalItems={matches.length}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          onOpen={handleOpen}
+          onEdit={canManage ? handleEdit : undefined}
+        />
+      ) : (
+        <CardGrid<Product>
+          ariaLabel="Productos"
+          items={pageItems}
+          getItemKey={(product) => product.id}
+          isLoading={isLoading}
+          error={loadError}
+          emptyMessage={emptyMessage}
+          pagination={{
+            page: currentPage,
+            pageSize,
+            totalItems: matches.length,
+            onPageChange: setPage,
+            pageSizeOptions: [...PAGE_SIZES],
+            onPageSizeChange: setPageSize,
+          }}
+          renderItem={(product) => (
+            <ProductCard
+              product={product}
+              familyPath={paths.get(product.category.id) ?? product.category.name}
+              onOpen={handleOpen}
+              onEdit={canManage ? handleEdit : undefined}
+            />
+          )}
+        />
+      )}
       {isFetching && !isLoading && (
         <p role="status" className="sr-only">
           Actualizando productos…
