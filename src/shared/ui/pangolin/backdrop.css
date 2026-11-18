@@ -1,0 +1,213 @@
+/*
+ * The loading backdrop: soft blobs in the corners that slowly change shape, a thin curve, leaves
+ * swaying, and a few leaves drifting across from right to left. Place it in a `relative` container.
+ */
+.pbd {
+  --pbd-sand: #ebe2d1;
+  --pbd-copper: #c4552f;
+  --pbd-copper-deep: #a9431f;
+  --pbd-line: #d6c09d;
+  --pbd-leaf: #2f4a3b;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* Like the loader: a quick load never flashes it. */
+  animation: pbd-appear 0.5s ease-out var(--pbd-delay, 300ms) both;
+}
+:where(.dark) .pbd {
+  --pbd-sand: color-mix(in srgb, var(--fg) 5%, transparent);
+  --pbd-copper: #9c4122;
+  --pbd-copper-deep: #7d3218;
+  --pbd-line: color-mix(in srgb, var(--fg) 16%, transparent);
+  --pbd-leaf: #5ca083;
+}
+@keyframes pbd-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---- Blobs: the border radius morphs, so the shape breathes. ---- */
+.pbd-blob {
+  position: absolute;
+  aspect-ratio: 1;
+  background: var(--pbd-sand);
+  border-radius: 58% 42% 46% 54% / 52% 44% 56% 48%;
+  animation: pbd-morph 18s ease-in-out infinite alternate;
+}
+.pbd-top-right {
+  width: 36vmax;
+  top: -15vmax;
+  right: -12vmax;
+}
+.pbd-bottom-left {
+  width: 46vmax;
+  bottom: -22vmax;
+  left: -20vmax;
+  animation-duration: 22s;
+  animation-delay: -7s;
+}
+.pbd-copper {
+  width: 30vmax;
+  bottom: -15vmax;
+  left: -13vmax;
+  overflow: hidden;
+  background: var(--pbd-copper);
+  animation-duration: 15s;
+  animation-delay: -4s;
+}
+/* The deeper copper at its foot. */
+.pbd-copper::after {
+  content: '';
+  position: absolute;
+  inset: 52% -10% -10% 10%;
+  border-radius: 50% 50% 0 0;
+  background: var(--pbd-copper-deep);
+}
+.pbd-bottom-right {
+  width: 28vmax;
+  bottom: -15vmax;
+  right: -10vmax;
+  animation-duration: 20s;
+  animation-delay: -12s;
+}
+@keyframes pbd-morph {
+  0% {
+    border-radius: 58% 42% 46% 54% / 52% 44% 56% 48%;
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    border-radius: 44% 56% 62% 38% / 40% 58% 42% 60%;
+    transform: rotate(8deg) scale(1.05);
+  }
+  100% {
+    border-radius: 52% 48% 36% 64% / 60% 46% 54% 40%;
+    transform: rotate(-6deg) scale(0.97);
+  }
+}
+
+/* ---- The thin curve in the bottom right corner, swaying slowly. ---- */
+.pbd-curve {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 24vmax;
+  height: 22vmax;
+  color: var(--pbd-line);
+  transform-origin: 100% 100%;
+  animation: pbd-sway-curve 14s ease-in-out infinite alternate;
+}
+@keyframes pbd-sway-curve {
+  to {
+    transform: rotate(-5deg) scale(1.04);
+  }
+}
+
+/* ---- Leaves resting on the blobs, swaying from their stem. ---- */
+.pbd-leaf {
+  position: absolute;
+  color: var(--pbd-leaf);
+  transform-origin: 8% 92%;
+  animation: pbd-sway 5s ease-in-out infinite alternate;
+}
+.pbd-leaf-top {
+  top: 13vmax;
+  right: 0.5vmax;
+  width: 5vmax;
+  rotate: 150deg;
+}
+.pbd-leaf-left {
+  bottom: 15vmax;
+  left: 6vmax;
+  width: 3.2vmax;
+  rotate: 200deg;
+  animation-delay: -2s;
+}
+@keyframes pbd-sway {
+  from {
+    transform: rotate(-7deg);
+  }
+  to {
+    transform: rotate(7deg);
+  }
+}
+
+/* ---- Leaves drifting across, right to left, fluttering. ---- */
+.pbd-drift {
+  position: absolute;
+  left: 0;
+  width: 1.6vmax;
+  min-width: 14px;
+  color: var(--pbd-leaf);
+  opacity: 0.45;
+  animation: pbd-drift 26s linear infinite;
+}
+.pbd-drift > * {
+  display: block;
+  animation: pbd-flutter 3.2s ease-in-out infinite alternate;
+}
+.pbd-drift-1 {
+  top: 24%;
+}
+.pbd-drift-2 {
+  top: 62%;
+  width: 1.2vmax;
+  animation-duration: 33s;
+  animation-delay: -14s;
+}
+.pbd-drift-3 {
+  top: 80%;
+  animation-duration: 29s;
+  animation-delay: -23s;
+}
+@keyframes pbd-drift {
+  from {
+    transform: translateX(105vw);
+  }
+  to {
+    transform: translateX(-5vw);
+  }
+}
+@keyframes pbd-flutter {
+  from {
+    transform: translateY(-1.2vmax) rotate(-25deg);
+  }
+  to {
+    transform: translateY(1.2vmax) rotate(35deg);
+  }
+}
+
+/* ---- The brand, top left. ---- */
+.pbd-brand {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+}
+.pbd-brand img {
+  height: 2.25rem;
+  width: auto;
+}
+@media (min-width: 40rem) {
+  .pbd-brand {
+    top: 2.5rem;
+    left: 3rem;
+  }
+  .pbd-brand img {
+    height: 2.75rem;
+  }
+}
+
+/* Without motion it is a still picture, and the drifting leaves stay out of it. */
+@media (prefers-reduced-motion: reduce) {
+  .pbd,
+  .pbd * {
+    animation: none !important;
+  }
+  .pbd-drift {
+    display: none;
+  }
+}
