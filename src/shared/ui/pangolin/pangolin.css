@@ -211,6 +211,17 @@
   }
 }
 
+/* ---- The next message of a progress fades in, rising a little. ---- */
+.pango-text-in {
+  animation: pango-text-in 0.4s ease-out both;
+}
+@keyframes pango-text-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
 /*
  * Without motion it is a still picture: the ball between two sprouts, no dust and no flying leaves.
  * The global rule would run each animation once and leave it on its last frame, so they are off here.
