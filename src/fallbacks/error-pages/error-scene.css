@@ -1,0 +1,379 @@
+/*
+ * The error pictures (`ErrorScene`): the big faded code, a trail, leaves and pebbles, what each page
+ * draws (the 404's sign, the 403's fence), and Pango rolling in.
+ */
+.es-scene {
+  --es-code: #e5dccb;
+  --es-trail: #e6dac4;
+  --es-pebble: #d8c9ae;
+  --es-pebble-dark: #4a4a44;
+  --es-leaf: #2f4a3b;
+  --es-leaf-soft: #7f9a86;
+  --es-wood: #b07a4f;
+  --es-wood-dark: #8a3b20;
+  --es-signal: #c4552f;
+  --es-on-signal: #f6f1e7;
+  --es-metal: #6f6a62;
+  --es-ravine: #ddcfb5;
+  --es-spark: #d9a441;
+  --es-shadow: rgb(60 40 20 / 0.12);
+  position: relative;
+  width: min(100%, 40rem);
+  aspect-ratio: 640 / 300;
+}
+:where(.dark) .es-scene {
+  --es-code: color-mix(in srgb, var(--fg) 7%, transparent);
+  --es-trail: color-mix(in srgb, var(--fg) 8%, var(--canvas));
+  --es-pebble: color-mix(in srgb, var(--fg) 14%, transparent);
+  --es-pebble-dark: color-mix(in srgb, var(--fg) 30%, transparent);
+  --es-leaf: #5ca083;
+  --es-leaf-soft: #3f6b58;
+  --es-wood: #8c5f3d;
+  --es-wood-dark: #6b2c17;
+  --es-signal: #b04a26;
+  --es-metal: #a59f95;
+  --es-ravine: rgb(0 0 0 / 0.3);
+  --es-spark: #e0b45a;
+  --es-shadow: rgb(0 0 0 / 0.35);
+}
+
+.es-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.es-code {
+  fill: var(--es-code);
+  font-size: 250px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.es-trail {
+  fill: none;
+  stroke: var(--es-trail);
+  stroke-width: 16;
+  stroke-linecap: round;
+}
+.es-pebble {
+  fill: var(--es-pebble);
+}
+.es-pebble-dark {
+  fill: var(--es-pebble-dark);
+}
+.es-leaf {
+  fill: var(--es-leaf);
+}
+.es-leaf-soft {
+  fill: var(--es-leaf-soft);
+}
+.es-wood {
+  fill: var(--es-wood);
+}
+.es-wood-dark {
+  fill: var(--es-wood-dark);
+}
+.es-signal {
+  fill: var(--es-signal);
+}
+.es-on-signal {
+  fill: none;
+  stroke: var(--es-on-signal);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.es-on-signal-fill {
+  fill: var(--es-on-signal);
+}
+.es-metal {
+  fill: none;
+  stroke: var(--es-metal);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.es-ravine {
+  fill: var(--es-ravine);
+}
+.es-trail-old {
+  fill: none;
+  stroke-width: 16;
+  stroke-linecap: round;
+}
+.es-trail-stop {
+  stop-color: var(--es-trail);
+}
+.es-metal-fill {
+  fill: var(--es-metal);
+}
+.es-spark {
+  fill: var(--es-spark);
+}
+.es-rope {
+  fill: none;
+  stroke: var(--es-wood-dark);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.es-rope-thin {
+  stroke-width: 1.5;
+}
+
+/* ---- Pango rolling in. The ball sits on the ground (y = 262) and is 112 / 640 of the width. ---- */
+.es-pango {
+  position: absolute;
+  bottom: 12.7%;
+  width: 17.5%;
+}
+.es-ball {
+  display: block;
+  width: 100%;
+  height: auto;
+  animation: es-rock 3.2s ease-in-out 1.8s infinite alternate;
+}
+.es-shadow {
+  fill: var(--es-shadow);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/*
+ * Rolling without sliding: travelling 1.8 of its widths, it turns 1.8 / π of a full turn (206°).
+ * `stop`: it rolls in and settles.
+ */
+.es-arrive-stop .es-pango {
+  animation: es-roll-stop 1.4s cubic-bezier(0.2, 0.7, 0.3, 1) 0.2s both;
+}
+.es-arrive-stop .es-shadow {
+  animation: es-shadow-stop 1.4s cubic-bezier(0.2, 0.7, 0.3, 1) 0.2s both;
+}
+@keyframes es-roll-stop {
+  from {
+    opacity: 0;
+    transform: translateX(-180%) rotate(-206deg);
+  }
+  15% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) rotate(0deg);
+  }
+}
+@keyframes es-shadow-stop {
+  from {
+    opacity: 0;
+    transform: translateX(-180%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/*
+ * `bump`: it rolls a fifth of its width past its rest (turning 23°), knocks into what is ahead
+ * and rolls back. The knock is at 70% of 1.5 s, plus the 0.2 s delay: about 1.25 s in.
+ */
+.es-arrive-bump .es-pango {
+  animation: es-roll-bump 1.5s linear 0.2s both;
+}
+.es-arrive-bump .es-shadow {
+  animation: es-shadow-bump 1.5s linear 0.2s both;
+}
+@keyframes es-roll-bump {
+  from {
+    opacity: 0;
+    transform: translateX(-180%) rotate(-206deg);
+    animation-timing-function: cubic-bezier(0.3, 0.5, 0.6, 1);
+  }
+  12% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+    transform: translateX(20%) rotate(23deg);
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.4, 1);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) rotate(0deg);
+  }
+}
+@keyframes es-shadow-bump {
+  from {
+    opacity: 0;
+    transform: translateX(-180%);
+    animation-timing-function: cubic-bezier(0.3, 0.5, 0.6, 1);
+  }
+  70% {
+    opacity: 1;
+    transform: translateX(20%);
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.4, 1);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Once there, Pango rocks gently on the spot, looking at what stopped it. */
+@keyframes es-rock {
+  from {
+    transform: rotate(-3deg);
+  }
+  to {
+    transform: rotate(4deg);
+  }
+}
+
+/* ---- 404: the sign shakes once when Pango stops, like a head saying no. ---- */
+.es-dead-end {
+  transform-box: view-box;
+  transform-origin: 560px 216px;
+  animation: es-shake 0.9s ease-out 1.45s both;
+}
+@keyframes es-shake {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(5deg);
+  }
+  50% {
+    transform: rotate(-3deg);
+  }
+  75% {
+    transform: rotate(1.5deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* ---- 403: the gate rattles and the padlock swings when Pango knocks into it. ---- */
+.es-gate {
+  transform-box: view-box;
+  transform-origin: 404px 262px;
+  animation: es-rattle 0.5s ease-out 1.25s both;
+}
+@keyframes es-rattle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(1.6deg);
+  }
+  60% {
+    transform: rotate(-0.8deg);
+  }
+}
+.es-padlock {
+  transform-box: view-box;
+  transform-origin: 472px 197px;
+  animation: es-swing 1.8s ease-out 1.25s both;
+}
+@keyframes es-swing {
+  0% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(16deg);
+  }
+  35% {
+    transform: rotate(-11deg);
+  }
+  55% {
+    transform: rotate(6deg);
+  }
+  75% {
+    transform: rotate(-3deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* ---- 500: when Pango reaches the edge, a plank gives way and the loose one keeps swinging. ---- */
+.es-falling-plank {
+  transform-box: view-box;
+  transform-origin: 524px 278px;
+  animation: es-fall 0.8s cubic-bezier(0.5, 0, 1, 0.6) 1.3s both;
+}
+@keyframes es-fall {
+  from {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: translate(6px, 24px) rotate(-70deg);
+  }
+}
+.es-loose-plank {
+  transform-box: view-box;
+  transform-origin: 436px 280px;
+  animation: es-dangle 1.7s ease-in-out 1.25s infinite alternate both;
+}
+@keyframes es-dangle {
+  from {
+    transform: rotate(-12deg);
+  }
+  to {
+    transform: rotate(9deg);
+  }
+}
+
+/* ---- New version: when Pango stops, the sign turns to the new trail, which sparkles. ---- */
+.es-turn-sign {
+  transform-box: view-box;
+  transform-origin: 372px 186px;
+  transform: rotate(-22deg);
+  animation: es-turn 0.9s ease-out 1.5s both;
+}
+@keyframes es-turn {
+  0% {
+    transform: rotate(8deg);
+  }
+  60% {
+    transform: rotate(-28deg);
+  }
+  80% {
+    transform: rotate(-19deg);
+  }
+  100% {
+    transform: rotate(-22deg);
+  }
+}
+.es-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: es-twinkle 1.4s ease-in-out infinite alternate both;
+}
+.es-spark-1 {
+  animation-delay: 1.9s;
+}
+.es-spark-2 {
+  animation-delay: 2.3s;
+}
+.es-spark-3 {
+  animation-delay: 2.1s;
+}
+@keyframes es-twinkle {
+  from {
+    opacity: 0;
+    transform: scale(0.3) rotate(0deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
+  }
+}
+
+/* Without motion, Pango is already there and nothing moves. */
+@media (prefers-reduced-motion: reduce) {
+  .es-scene * {
+    animation: none !important;
+  }
+}

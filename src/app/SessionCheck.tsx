@@ -1,5 +1,5 @@
 import { BootStep } from '@/shared/boot/BootStep';
-import { LoadingBackdrop } from '@/shared/ui/components/LoadingBackdrop';
+import { PangoBackdrop } from '@/shared/ui/components/PangoBackdrop';
 import { PangolinLoader } from '@/shared/ui/components/PangolinLoader';
 
 const MESSAGE = 'Pango está verificando tu sesión';
@@ -15,7 +15,7 @@ export function SessionCheck() {
       message={MESSAGE}
       fallback={
         <div className="relative isolate flex min-h-dvh w-full items-center justify-center overflow-hidden bg-canvas px-4">
-          <LoadingBackdrop />
+          <PangoBackdrop />
           <PangolinLoader
             size="screen"
             className="relative"

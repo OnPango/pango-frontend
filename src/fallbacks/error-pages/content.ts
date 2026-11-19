@@ -1,32 +1,32 @@
 export const content = {
   notFound: {
-    code: '404',
+    // The "404" is drawn in its picture (`NotFoundScene`).
     eyebrow: 'Error 404',
-    title: 'No encontramos esa página',
-    description: 'La dirección que buscas no existe o fue movida.',
+    title: 'Este camino no existe',
+    description: 'Parece que Pango llegó hasta aquí, pero la página que buscas no está disponible.',
   },
   forbidden: {
-    code: '403',
+    // The "403" is drawn in its picture (`ForbiddenScene`).
     eyebrow: 'Error 403',
-    title: 'No tienes acceso a esta sección',
+    title: 'Esta zona está cercada',
     description:
-      'Tu rol no incluye el permiso necesario. Si crees que es un error, contacta al administrador de tu organización.',
+      'Pango llegó hasta la cerca, pero tu rol no tiene permiso para entrar aquí. Si lo necesitas, pide acceso al administrador de tu organización.',
   },
   unexpected: {
-    code: '500',
-    eyebrow: 'Error inesperado',
-    title: 'Algo salió mal',
+    // The "500" is drawn in its picture (`UnexpectedScene`).
+    eyebrow: 'Error 500',
+    title: 'Algo se rompió en el camino',
     description:
-      'Ocurrió un problema al mostrar esta página. Puedes reintentar o volver al inicio.',
+      'Pango no pudo cruzar porque algo falló de nuestro lado. Reintenta en un momento o vuelve al inicio.',
   },
   outdated: {
     eyebrow: 'Nueva versión',
-    title: 'Pango se actualizó',
+    title: 'Hay un camino nuevo',
     description:
-      'No pudimos cargar esta sección porque la aplicación cambió desde que la abriste. Recarga la página para continuar.',
+      'Pango se actualizó mientras tenías esta página abierta. Recarga la página para seguir por el camino nuevo.',
   },
   actions: {
-    home: 'Ir al inicio',
+    home: 'Volver al inicio',
     back: 'Volver',
     retry: 'Reintentar',
     reload: 'Recargar la página',

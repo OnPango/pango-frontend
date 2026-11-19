@@ -1,9 +1,12 @@
+import { FiHome, FiRotateCw } from 'react-icons/fi';
 import { isRouteErrorResponse, useNavigate, useRouteError } from 'react-router-dom';
 import { Button } from '@/shared/ui/components/Button';
 import { content } from './content';
 import { ForbiddenPage } from './ForbiddenPage';
 import { NotFoundPage } from './NotFoundPage';
+import { OutdatedScene } from './OutdatedScene';
 import { StatusPage } from './StatusPage';
+import { UnexpectedScene } from './UnexpectedScene';
 
 /**
  * A lazy page chunk that no longer exists: the app was redeployed while this tab was open.
@@ -31,7 +34,13 @@ export function RouteErrorPage() {
     return (
       <StatusPage
         {...content.outdated}
-        actions={<Button onClick={() => navigate(0)}>{content.actions.reload}</Button>}
+        hideEyebrow
+        illustration={<OutdatedScene />}
+        actions={
+          <Button size="lg" className="gap-2" onClick={() => navigate(0)}>
+            <FiRotateCw aria-hidden="true" /> {content.actions.reload}
+          </Button>
+        }
       />
     );
   }
@@ -39,12 +48,16 @@ export function RouteErrorPage() {
   return (
     <StatusPage
       {...content.unexpected}
+      hideEyebrow
+      illustration={<UnexpectedScene />}
       actions={
         <>
-          <Button variant="outline" onClick={() => navigate(0)}>
-            {content.actions.retry}
+          <Button variant="outline" size="lg" className="gap-2" onClick={() => navigate(0)}>
+            <FiRotateCw aria-hidden="true" /> {content.actions.retry}
           </Button>
-          <Button onClick={() => navigate('/')}>{content.actions.home}</Button>
+          <Button size="lg" className="gap-2" onClick={() => navigate('/')}>
+            <FiHome aria-hidden="true" /> {content.actions.home}
+          </Button>
         </>
       }
     >

@@ -8,6 +8,7 @@ export interface Background {
 export const BACKGROUNDS: Background[] = [
   { light: 'hojas' },
   { light: 'olas' },
+  // { light: 'pango_agua_espuma' },
   { light: 'escamas_claro', dark: 'escamas_oscuro' },
   { light: 'terrazo' },
   { light: 'ramas' },

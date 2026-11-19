@@ -1,13 +1,13 @@
 import { lazy } from 'react';
-import { FaBoxes, FaSitemap, FaTruck, FaWarehouse } from 'react-icons/fa';
+import { FaBoxes, FaSitemap, /*FaTruck,*/ FaWarehouse } from 'react-icons/fa';
 import { FaBoxArchive } from 'react-icons/fa6';
-import { FiUpload } from 'react-icons/fi';
+//import { FiUpload } from 'react-icons/fi';
 import { BsShieldFillCheck } from 'react-icons/bs';
-import { GoGraph, GoHomeFill } from 'react-icons/go';
+import { /*GoGraph,*/ GoHomeFill } from 'react-icons/go';
 import { HiBellAlert, HiUserGroup, HiUsers } from 'react-icons/hi2';
 import { HiOutlineSwitchHorizontal } from 'react-icons/hi';
 import { RiGitPullRequestFill } from 'react-icons/ri';
-import { RxActivityLog } from 'react-icons/rx';
+//import { RxActivityLog } from 'react-icons/rx';
 
 import type { IconType } from 'react-icons';
 import type { LazyPage } from './load';
@@ -35,9 +35,6 @@ export interface AppRoute {
   anyOf: Permission[];
   Page: LazyPage;
 }
-
-const placeholder = (name: string): LazyPage =>
-  lazy(() => Promise.resolve({ default: () => <div>{name}</div> }));
 
 /**
  * The only place that says which screens exist: the router builds its routes from it, the menu
@@ -101,15 +98,15 @@ export const APP_ROUTES: AppRoute[] = [
     anyOf: ['movement.read'],
     Page: lazy(() => import('@/features/movements/pages/MovementsPage')),
   },
-  {
-    path: '/import-history',
-    label: 'Importar historial',
-    icon: FiUpload,
-    section: 'data',
-    // The backend has no import permission yet: admin-only until it does.
-    anyOf: ['settings.manage'],
-    Page: placeholder('Import History'),
-  },
+  // {
+  //   path: '/import-history',
+  //   label: 'Importar historial',
+  //   icon: FiUpload,
+  //   section: 'data',
+  //   // The backend has no import permission yet: admin-only until it does.
+  //   anyOf: ['settings.manage'],
+  //   Page: placeholder('Import History'),
+  // },
   {
     path: '/users',
     label: 'Usuarios',
@@ -134,31 +131,31 @@ export const APP_ROUTES: AppRoute[] = [
     anyOf: ['role.read', 'role.manage'],
     Page: lazy(() => import('@/features/users/pages/RolesPermissionsPage')),
   },
-  {
-    path: '/logbook',
-    label: 'Bitácora',
-    icon: RxActivityLog,
-    section: 'admin',
-    // The backend has no audit permission yet: open to everyone for now.
-    anyOf: [],
-    Page: placeholder('Bitacora'),
-  },
-  {
-    path: '/suppliers',
-    label: 'Proveedores',
-    icon: FaTruck,
-    section: 'supply',
-    anyOf: ['supplier.manage'],
-    Page: lazy(() => import('@/features/suppliers/pages/SuppliersPage')),
-  },
-  {
-    path: '/forecast',
-    label: 'Predicción',
-    icon: GoGraph,
-    section: 'supply',
-    anyOf: ['forecast.read', 'forecast.run'],
-    Page: lazy(() => import('@/features/forecast/pages/ForecastPage')),
-  },
+  // {
+  //   path: '/logbook',
+  //   label: 'Bitácora',
+  //   icon: RxActivityLog,
+  //   section: 'admin',
+  //   // The backend has no audit permission yet: open to everyone for now.
+  //   anyOf: [],
+  //   Page: placeholder('Bitacora'),
+  // },
+  // {
+  //   path: '/suppliers',
+  //   label: 'Proveedores',
+  //   icon: FaTruck,
+  //   section: 'supply',
+  //   anyOf: ['supplier.manage'],
+  //   Page: lazy(() => import('@/features/suppliers/pages/SuppliersPage')),
+  // },
+  // {
+  //   path: '/forecast',
+  //   label: 'Predicción',
+  //   icon: GoGraph,
+  //   section: 'supply',
+  //   anyOf: ['forecast.read', 'forecast.run'],
+  //   Page: lazy(() => import('@/features/forecast/pages/ForecastPage')),
+  // },
   {
     path: '/alerts',
     label: 'Alertas',

@@ -1,11 +1,17 @@
 import type { ReactNode } from 'react';
 import { asset } from '@/shared/lib/asset';
+import { cn } from '@/shared/lib/cn';
+import { PangoBackdrop } from '@/shared/ui/components/PangoBackdrop';
 
 interface StatusPageProps {
   /** Large faded code behind the content ("404"). Purely decorative. */
   code?: string;
   /** Small label above the title; this is what screen readers get instead of the decorative code. */
   eyebrow: string;
+  /** Keep the eyebrow for screen readers only, when the picture already shows the code. */
+  hideEyebrow?: boolean;
+  /** The picture above the text. Defaults to Pango peeking. */
+  illustration?: ReactNode;
   title: string;
   description: string;
   actions?: ReactNode;
@@ -20,13 +26,18 @@ interface StatusPageProps {
 export function StatusPage({
   code,
   eyebrow,
+  hideEyebrow = false,
+  illustration,
   title,
   description,
   actions,
   children,
 }: StatusPageProps) {
   return (
-    <section className="relative flex h-full min-h-96 flex-col items-center justify-center gap-6 overflow-hidden p-6 text-center">
+    <section className="relative isolate flex h-full min-h-96 flex-col items-center justify-center gap-6 overflow-hidden p-6 text-center">
+      {/* The same scenery as the loading screens; the logo is already in the app's header. */}
+      <PangoBackdrop brand={false} delayMs={0} />
+
       {code && (
         <span
           aria-hidden="true"
@@ -36,10 +47,19 @@ export function StatusPage({
         </span>
       )}
 
-      <img src={asset('img/pangolin.png')} alt="" width="150" height="150" className="relative" />
+      {illustration ?? (
+        <img src={asset('img/pangolin.png')} alt="" width="150" height="150" className="relative" />
+      )}
 
       <div className="relative flex max-w-xl flex-col gap-2">
-        <p className="text-sm font-semibold tracking-widest text-primary uppercase">{eyebrow}</p>
+        <p
+          className={cn(
+            'text-sm font-semibold tracking-widest text-primary uppercase',
+            hideEyebrow && 'sr-only',
+          )}
+        >
+          {eyebrow}
+        </p>
         <h1 className="text-3xl font-bold md:text-5xl">{title}</h1>
         <p className="text-muted md:text-lg">{description}</p>
       </div>
