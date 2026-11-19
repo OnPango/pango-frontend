@@ -36,8 +36,8 @@ export function SceneLeaf({
 }
 
 interface ErrorSceneProps {
-  /** The big faded code behind the picture. */
-  code: string;
+  /** The big faded code behind the picture. Without it, the page draws its own backdrop. */
+  code?: string;
   /** Where Pango comes to rest: the center of the ball, in the picture's units. */
   pangoX: number;
   /**
@@ -57,9 +57,11 @@ export function ErrorScene({ code, pangoX, arrival, children }: ErrorSceneProps)
   return (
     <div className={`es-scene es-arrive-${arrival}`} aria-hidden="true">
       <svg viewBox="0 0 640 300" focusable="false" className="es-art">
-        <text x="320" y="236" textAnchor="middle" className="es-code font-display">
-          {code}
-        </text>
+        {code && (
+          <text x="320" y="236" textAnchor="middle" className="es-code font-display">
+            {code}
+          </text>
+        )}
         {children}
         <ellipse className="es-shadow" cx={pangoX} cy="262" rx={BALL / 2} ry="6" />
       </svg>

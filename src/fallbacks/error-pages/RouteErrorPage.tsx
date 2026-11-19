@@ -4,6 +4,7 @@ import { Button } from '@/shared/ui/components/Button';
 import { content } from './content';
 import { ForbiddenPage } from './ForbiddenPage';
 import { NotFoundPage } from './NotFoundPage';
+import { OutdatedScene } from './OutdatedScene';
 import { StatusPage } from './StatusPage';
 import { UnexpectedScene } from './UnexpectedScene';
 
@@ -33,7 +34,13 @@ export function RouteErrorPage() {
     return (
       <StatusPage
         {...content.outdated}
-        actions={<Button onClick={() => navigate(0)}>{content.actions.reload}</Button>}
+        hideEyebrow
+        illustration={<OutdatedScene />}
+        actions={
+          <Button size="lg" className="gap-2" onClick={() => navigate(0)}>
+            <FiRotateCw aria-hidden="true" /> {content.actions.reload}
+          </Button>
+        }
       />
     );
   }

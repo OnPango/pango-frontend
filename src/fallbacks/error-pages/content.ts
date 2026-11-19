@@ -21,9 +21,9 @@ export const content = {
   },
   outdated: {
     eyebrow: 'Nueva versión',
-    title: 'Pango se actualizó',
+    title: 'Hay un camino nuevo',
     description:
-      'No pudimos cargar esta sección porque la aplicación cambió desde que la abriste. Recarga la página para continuar.',
+      'Pango se actualizó mientras tenías esta página abierta. Recarga la página para seguir por el camino nuevo.',
   },
   actions: {
     home: 'Volver al inicio',

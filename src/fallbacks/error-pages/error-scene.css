@@ -15,6 +15,7 @@
   --es-on-signal: #f6f1e7;
   --es-metal: #6f6a62;
   --es-ravine: #ddcfb5;
+  --es-spark: #d9a441;
   --es-shadow: rgb(60 40 20 / 0.12);
   position: relative;
   width: min(100%, 40rem);
@@ -22,7 +23,7 @@
 }
 :where(.dark) .es-scene {
   --es-code: color-mix(in srgb, var(--fg) 7%, transparent);
-  --es-trail: color-mix(in srgb, var(--fg) 8%, transparent);
+  --es-trail: color-mix(in srgb, var(--fg) 8%, var(--canvas));
   --es-pebble: color-mix(in srgb, var(--fg) 14%, transparent);
   --es-pebble-dark: color-mix(in srgb, var(--fg) 30%, transparent);
   --es-leaf: #5ca083;
@@ -32,6 +33,7 @@
   --es-signal: #b04a26;
   --es-metal: #a59f95;
   --es-ravine: rgb(0 0 0 / 0.3);
+  --es-spark: #e0b45a;
   --es-shadow: rgb(0 0 0 / 0.35);
 }
 
@@ -92,6 +94,20 @@
 }
 .es-ravine {
   fill: var(--es-ravine);
+}
+.es-trail-old {
+  fill: none;
+  stroke-width: 16;
+  stroke-linecap: round;
+}
+.es-trail-stop {
+  stop-color: var(--es-trail);
+}
+.es-metal-fill {
+  fill: var(--es-metal);
+}
+.es-spark {
+  fill: var(--es-spark);
 }
 .es-rope {
   fill: none;
@@ -306,6 +322,52 @@
   }
   to {
     transform: rotate(9deg);
+  }
+}
+
+/* ---- New version: when Pango stops, the sign turns to the new trail, which sparkles. ---- */
+.es-turn-sign {
+  transform-box: view-box;
+  transform-origin: 372px 186px;
+  transform: rotate(-22deg);
+  animation: es-turn 0.9s ease-out 1.5s both;
+}
+@keyframes es-turn {
+  0% {
+    transform: rotate(8deg);
+  }
+  60% {
+    transform: rotate(-28deg);
+  }
+  80% {
+    transform: rotate(-19deg);
+  }
+  100% {
+    transform: rotate(-22deg);
+  }
+}
+.es-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: es-twinkle 1.4s ease-in-out infinite alternate both;
+}
+.es-spark-1 {
+  animation-delay: 1.9s;
+}
+.es-spark-2 {
+  animation-delay: 2.3s;
+}
+.es-spark-3 {
+  animation-delay: 2.1s;
+}
+@keyframes es-twinkle {
+  from {
+    opacity: 0;
+    transform: scale(0.3) rotate(0deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
   }
 }
 
