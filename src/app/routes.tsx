@@ -3,7 +3,7 @@ import { FaBoxes, FaSitemap, /*FaTruck,*/ FaWarehouse } from 'react-icons/fa';
 import { FaBoxArchive } from 'react-icons/fa6';
 //import { FiUpload } from 'react-icons/fi';
 import { BsShieldFillCheck } from 'react-icons/bs';
-import { /*GoGraph,*/ GoHomeFill } from 'react-icons/go';
+import { GoGraph, GoHomeFill } from 'react-icons/go';
 import { HiBellAlert, HiUserGroup, HiUsers } from 'react-icons/hi2';
 import { HiOutlineSwitchHorizontal } from 'react-icons/hi';
 import { RiGitPullRequestFill } from 'react-icons/ri';
@@ -148,14 +148,14 @@ export const APP_ROUTES: AppRoute[] = [
   //   anyOf: ['supplier.manage'],
   //   Page: lazy(() => import('@/features/suppliers/pages/SuppliersPage')),
   // },
-  // {
-  //   path: '/forecast',
-  //   label: 'Predicción',
-  //   icon: GoGraph,
-  //   section: 'supply',
-  //   anyOf: ['forecast.read', 'forecast.run'],
-  //   Page: lazy(() => import('@/features/forecast/pages/ForecastPage')),
-  // },
+  {
+    path: '/forecast',
+    label: 'Predicción',
+    icon: GoGraph,
+    section: 'supply',
+    anyOf: ['forecast.read', 'forecast.run'],
+    Page: lazy(() => import('@/features/forecast/pages/ForecastPage')),
+  },
   {
     path: '/alerts',
     label: 'Alertas',
