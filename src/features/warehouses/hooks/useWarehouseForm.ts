@@ -31,6 +31,7 @@ const toInput = (values: WarehouseFormValues): CreateWarehouseInput => ({
   code: values.code.trim(),
   type: values.type,
   address: values.address.trim() || null,
+  holdsStock: values.holdsStock,
 });
 
 /** The fields of `next` that differ from `saved`, so an edit only sends what changed. */

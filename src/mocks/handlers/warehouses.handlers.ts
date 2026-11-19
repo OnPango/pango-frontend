@@ -18,6 +18,7 @@ interface WarehouseRow {
   type: WarehouseType;
   address: string | null;
   defaultLocationId: number;
+  holdsStock: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -41,6 +42,7 @@ const seed = (
   type,
   address,
   defaultLocationId: 100 + id,
+  holdsStock: true,
   isActive,
   createdAt: SEED_DATE,
   updatedAt: SEED_DATE,
@@ -59,6 +61,7 @@ const toDto = (row: WarehouseRow) => ({
   type: row.type,
   address: row.address,
   defaultLocation: { id: row.defaultLocationId, code: 'DEFAULT' },
+  holdsStock: row.holdsStock,
   isActive: row.isActive,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
@@ -102,6 +105,9 @@ function validate(body: Record<string, unknown>, partial: boolean): string[] {
     if (typeof address !== 'string') problems.push('address must be a string');
     else if (address.trim().length > 200)
       problems.push('address must be shorter than or equal to 200 characters');
+  }
+  if (body.holdsStock !== undefined && typeof body.holdsStock !== 'boolean') {
+    problems.push('holdsStock must be a boolean value');
   }
   return problems;
 }
@@ -159,6 +165,7 @@ export const warehousesRoutes: MockRoutes = {
       type: input.type as WarehouseType,
       address: typeof input.address === 'string' ? input.address.trim() || null : null,
       defaultLocationId: 100 + id,
+      holdsStock: input.holdsStock !== false,
       isActive: true,
       createdAt: now,
       updatedAt: now,
@@ -195,6 +202,7 @@ export const warehousesRoutes: MockRoutes = {
     if (input.address !== undefined) {
       row.address = typeof input.address === 'string' ? input.address.trim() || null : null;
     }
+    if (typeof input.holdsStock === 'boolean') row.holdsStock = input.holdsStock;
     if (typeof input.isActive === 'boolean') row.isActive = input.isActive;
     row.updatedAt = new Date().toISOString();
     return { status: 200, data: toDto(row) };

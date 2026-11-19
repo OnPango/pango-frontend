@@ -13,6 +13,7 @@ export interface WarehouseDto {
   type: WarehouseTypeDto;
   address: string | null;
   defaultLocation: { id: number; code: string } | null;
+  holdsStock: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -23,6 +24,8 @@ export interface CreateWarehouseDto {
   name: string;
   type: WarehouseTypeDto;
   address?: string | null;
+  /** Defaults to true. */
+  holdsStock?: boolean;
 }
 
 export type UpdateWarehouseDto = Partial<CreateWarehouseDto> & { isActive?: boolean };

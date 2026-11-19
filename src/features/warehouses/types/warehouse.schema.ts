@@ -7,6 +7,7 @@ export const warehouseSchema = z.object({
   code: z.string().trim().min(1, 'Escribe el código del almacén.').max(20, 'Máximo 20 caracteres.'),
   type: z.enum(['warehouse', 'store']),
   address: z.string().trim().max(200, 'Máximo 200 caracteres.'),
+  holdsStock: z.boolean(),
 });
 
 export type WarehouseFormValues = z.infer<typeof warehouseSchema>;
@@ -16,6 +17,7 @@ export const EMPTY_WAREHOUSE_FORM: WarehouseFormValues = {
   code: '',
   type: 'warehouse',
   address: '',
+  holdsStock: true,
 };
 
 export const toWarehouseFormValues = (warehouse: Warehouse): WarehouseFormValues => ({
@@ -23,4 +25,5 @@ export const toWarehouseFormValues = (warehouse: Warehouse): WarehouseFormValues
   code: warehouse.code,
   type: warehouse.type,
   address: warehouse.address ?? '',
+  holdsStock: warehouse.holdsStock,
 });

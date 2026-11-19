@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Controller, useWatch } from 'react-hook-form';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Button } from '@/shared/ui/components/Button';
+import { Checkbox } from '@/shared/ui/components/form/Checkbox';
 import { RadioGroup } from '@/shared/ui/components/form/RadioGroup';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { Modal } from '@/shared/ui/components/Modal';
@@ -133,6 +134,11 @@ function WarehouseFormContent({
           placeholder="Ej. Cra 50 # 80-20, Barranquilla"
           error={errors.address?.message}
           {...register('address')}
+        />
+        <Checkbox
+          label="Guarda inventario propio"
+          description="Desmárcalo si aquí nunca hay existencias, por ejemplo si vende sobre pedido. Sus productos quedan fuera del pronóstico de demanda."
+          {...register('holdsStock')}
         />
 
         {!isEdit && (

@@ -69,6 +69,13 @@ export function WarehouseDetailPanel({
             <WarehouseStatusBadge isActive={warehouse.isActive} />
           </Item>
           <Item label="Código">{warehouse.code}</Item>
+          <Item label="Inventario">
+            {warehouse.holdsStock ? (
+              'Guarda inventario propio'
+            ) : (
+              <span className="text-muted">Sin inventario propio · fuera del pronóstico</span>
+            )}
+          </Item>
           <Item label="Dirección">
             {warehouse.address ?? <span className="text-muted">Sin dirección</span>}
           </Item>

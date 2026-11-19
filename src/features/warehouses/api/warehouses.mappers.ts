@@ -29,6 +29,7 @@ export const toWarehouse = (dto: WarehouseDto): Warehouse => ({
   defaultLocation: dto.defaultLocation
     ? { id: String(dto.defaultLocation.id), code: dto.defaultLocation.code }
     : null,
+  holdsStock: dto.holdsStock,
   isActive: dto.isActive,
   createdAt: dto.createdAt,
 });
@@ -38,6 +39,7 @@ export const toCreateWarehouseDto = (input: CreateWarehouseInput): CreateWarehou
   name: input.name.trim(),
   type: TYPE_TO_DTO[input.type],
   address: input.address?.trim() || null,
+  holdsStock: input.holdsStock,
 });
 
 /** Only the fields present in `input`, so the API leaves the others untouched. */
@@ -47,6 +49,7 @@ export function toUpdateWarehouseDto(input: UpdateWarehouseInput): UpdateWarehou
   if (input.name !== undefined) dto.name = input.name.trim();
   if (input.type !== undefined) dto.type = TYPE_TO_DTO[input.type];
   if (input.address !== undefined) dto.address = input.address?.trim() || null;
+  if (input.holdsStock !== undefined) dto.holdsStock = input.holdsStock;
   if (input.isActive !== undefined) dto.isActive = input.isActive;
   return dto;
 }
