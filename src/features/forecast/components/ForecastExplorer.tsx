@@ -6,11 +6,11 @@ import { Select } from '@/shared/ui/components/form/select/Select';
 import type { SelectOption } from '@/shared/ui/components/form/select/select.types';
 import { Skeleton } from '@/shared/ui/components/Skeleton';
 import { useDemand, useProductForecasts } from '../api/forecast.queries';
-import { weeksAgo } from '../content/forecast.labels';
+import { formatInstantDay, formatWeek, isCurrentWeek, weeksAgo } from '../content/forecast.labels';
 import { forecastErrorMessage } from '../content/forecast.errors';
-import type { Option } from '../types/forecast.types';
+import type { DemandPeriod, Forecast, Option } from '../types/forecast.types';
 import { DemandForecastChart } from './DemandForecastChart';
-import { ForecastSummary } from './ForecastSummary';
+import { ForecastSummary, type ForecastCheck } from './ForecastSummary';
 
 type Range = '12' | '26' | '52';
 
@@ -28,7 +28,24 @@ interface ForecastExplorerProps {
   warehouseId: string;
   onProductChange: (id: string) => void;
   onWarehouseChange: (id: string) => void;
+  /** An earlier forecast chosen to look back at (CU-10 A2); empty for the current one. */
+  forecastId: string;
+  onForecastChange: (id: string) => void;
   canRun: boolean;
+}
+
+/** The weeks of `forecast` that have already closed, against the demand they actually had. */
+function checkAgainst(forecast: Forecast, history: DemandPeriod[]): ForecastCheck | null {
+  const actualByWeek = new Map(history.map((period) => [period.start, period.quantity]));
+  const closed = forecast.periods.filter(
+    (period) => !isCurrentWeek(period.start) && actualByWeek.has(period.start),
+  );
+  if (closed.length === 0) return null;
+  return {
+    weeks: closed.length,
+    actual: closed.reduce((sum, period) => sum + (actualByWeek.get(period.start) ?? 0), 0),
+    estimated: Math.round(closed.reduce((sum, period) => sum + period.estimate, 0) * 10) / 10,
+  };
 }
 
 /** US-37 and US-38: the weekly demand of a product in a warehouse and its forecast after it. */
@@ -40,28 +57,49 @@ export function ForecastExplorer({
   warehouseId,
   onProductChange,
   onWarehouseChange,
+  forecastId,
+  onForecastChange,
   canRun,
 }: ForecastExplorerProps) {
   const [range, setRange] = useState<Range>('26');
-  const from = useMemo(() => weeksAgo(Number(range)), [range]);
-  const demand = useDemand(productId, warehouseId, from);
   const forecasts = useProductForecasts(productId, warehouseId);
+  const latest = forecasts.data?.[0];
+  const current = forecasts.data?.find((f) => f.status === 'ok' && f.isCurrent);
+  const successful = useMemo(
+    () => (forecasts.data ?? []).filter((f) => f.status === 'ok'),
+    [forecasts.data],
+  );
+  const shown = successful.find((f) => f.id === forecastId) ?? current;
+
+  // The history reaches back to the forecast on the chart, to set it against what happened.
+  const shownStart = shown?.periods[0]?.start;
+  const rangeStart = weeksAgo(Number(range));
+  const from = shownStart && shownStart < rangeStart ? shownStart : rangeStart;
+  const demand = useDemand(productId, warehouseId, from);
 
   const productOptions = useMemo<SelectOption[]>(
     () => products.map((p) => ({ value: p.id, label: `${p.name} · ${p.sku}` })),
     [products],
   );
-  const latest = forecasts.data?.[0];
-  const current = forecasts.data?.find((f) => f.status === 'ok' && f.isCurrent);
   const series = demand.data;
+  const check = shown && series && shown !== current ? checkAgainst(shown, series.periods) : null;
+  const forecastOptions = useMemo<SelectOption[]>(
+    () =>
+      successful.map((f) => ({
+        value: f.id,
+        label: `${formatInstantDay(f.createdAt)}${f.isCurrent ? ' · vigente' : ''}`,
+        description: `Ejecución #${f.runId} · desde la semana del ${formatWeek(f.periods[0]?.start ?? f.historyEnd)}`,
+      })),
+    [successful],
+  );
   const productName = products.find((p) => p.id === productId)?.name ?? '';
   const warehouseName = warehouses.find((w) => w.id === warehouseId)?.name ?? '';
 
   const summary =
     series && series.periods.length > 0
       ? `Demanda semanal de ${productName} en ${warehouseName}: ${formatQuantity(series.total, series.product.unit)} en ${series.periods.length} semanas` +
-        (current?.total
-          ? `. Pronóstico de las próximas ${current.periods.length} semanas: ${formatQuantity(current.total.estimate, series.product.unit)}.`
+        (shown?.total
+          ? `. Pronóstico de ${shown.periods.length} semanas: ${formatQuantity(shown.total.estimate, series.product.unit)}.`
           : '.')
       : '';
 
@@ -136,7 +174,7 @@ export function ForecastExplorer({
               <div className={demand.isPlaceholderData ? 'opacity-60 transition-opacity' : ''}>
                 <DemandForecastChart
                   history={series.periods}
-                  forecast={current?.periods ?? []}
+                  forecast={shown?.periods ?? []}
                   unit={series.product.unit}
                   summary={summary}
                 />
@@ -151,12 +189,25 @@ export function ForecastExplorer({
                 {forecastErrorMessage(forecasts.error, 'No se pudieron cargar los pronósticos.')}
               </Alert>
             ) : (
-              <ForecastSummary
-                latest={latest}
-                current={current}
-                unit={series.product.unit}
-                canRun={canRun}
-              />
+              <div className="space-y-3">
+                {successful.length > 1 && (
+                  <Select
+                    label="Pronóstico"
+                    value={shown?.id ?? ''}
+                    onChange={(value) => onForecastChange(value === current?.id ? '' : value)}
+                    options={forecastOptions}
+                    hint="Los anteriores se comparan con lo que pasó después."
+                  />
+                )}
+                <ForecastSummary
+                  latest={latest}
+                  current={current}
+                  shown={shown}
+                  check={check}
+                  unit={series.product.unit}
+                  canRun={canRun}
+                />
+              </div>
             )}
           </aside>
         </div>

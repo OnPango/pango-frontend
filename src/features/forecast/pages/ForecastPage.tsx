@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { FiBox } from 'react-icons/fi';
+import { MdWarehouse } from 'react-icons/md';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
 import { Alert } from '@/shared/ui/components/Alert';
+import { SegmentedControl } from '@/shared/ui/components/form/SegmentedControl';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import {
   useForecastProducts,
@@ -13,12 +16,23 @@ import {
 import { ForecastExplorer } from '../components/ForecastExplorer';
 import { ForecastRunsTable } from '../components/ForecastRunsTable';
 import { RunForecastModal } from '../components/RunForecastModal';
+import { WarehouseForecastView } from '../components/WarehouseForecastView';
 import { formatInstant } from '../content/forecast.labels';
 import { forecastErrorMessage } from '../content/forecast.errors';
 import { forecastWarehouses } from '../content/forecast.permissions';
 import type { Option } from '../types/forecast.types';
 
-/** CU-10: demand history and forecast per product (US-37, US-38), and the forecast runs. */
+type ForecastView = 'warehouse' | 'product';
+
+const VIEWS = [
+  { value: 'warehouse' as const, label: 'Por almacén', icon: MdWarehouse },
+  { value: 'product' as const, label: 'Por producto', icon: FiBox },
+];
+
+/**
+ * CU-10: the forecast of every product of a warehouse; the demand history and the forecasts of one
+ * product (US-37, US-38, A1 and A2); and the forecast runs.
+ */
 export default function ForecastPage() {
   const user = useAuthStore((state) => state.user);
   const canRead = hasAnyPermission(user, ['forecast.read']);
@@ -31,16 +45,20 @@ export default function ForecastPage() {
   const warehouses: Option[] = reading === 'all' ? (everyWarehouse.data ?? []) : reading;
   const products = useForecastProducts(canRead && canReadCatalog);
 
-  // The product and warehouse open in the explorer live in the address, to share or come back.
+  // What is open lives in the address, to share it or come back to it.
   const [searchParams, setSearchParams] = useSearchParams();
+  const view: ForecastView = searchParams.get('view') === 'product' ? 'product' : 'warehouse';
   const productId = searchParams.get('product') ?? '';
   const warehouseId = searchParams.get('warehouse') ?? warehouses[0]?.id ?? '';
-  const setParam = (key: string, value: string) =>
+  const forecastId = searchParams.get('forecast') ?? '';
+  const setParams = (values: Record<string, string>) =>
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
-        if (value) next.set(key, value);
-        else next.delete(key);
+        for (const [key, value] of Object.entries(values)) {
+          if (value) next.set(key, value);
+          else next.delete(key);
+        }
         return next;
       },
       { replace: true },
@@ -71,24 +89,42 @@ export default function ForecastPage() {
         </Alert>
       )}
 
-      {canRead &&
-        (canReadCatalog ? (
-          <ForecastExplorer
-            products={products.data ?? []}
-            productsLoading={products.isLoading}
-            warehouses={warehouses}
-            productId={productId}
-            warehouseId={warehouseId}
-            onProductChange={(id) => setParam('product', id)}
-            onWarehouseChange={(id) => setParam('warehouse', id)}
-            canRun={canRun}
+      {canRead && (
+        <>
+          <SegmentedControl<ForecastView>
+            legend="Ver el pronóstico"
+            options={VIEWS}
+            value={view}
+            onChange={(next) => setParams({ view: next })}
           />
-        ) : (
-          <Alert tone="info">
-            Para ver la demanda y el pronóstico de un producto necesitas permiso para consultar el
-            catálogo.
-          </Alert>
-        ))}
+          {view === 'warehouse' ? (
+            <WarehouseForecastView
+              warehouses={warehouses}
+              warehouseId={warehouseId}
+              onWarehouseChange={(id) => setParams({ warehouse: id, forecast: '' })}
+              onOpenProduct={(id) => setParams({ view: 'product', product: id, forecast: '' })}
+            />
+          ) : canReadCatalog ? (
+            <ForecastExplorer
+              products={products.data ?? []}
+              productsLoading={products.isLoading}
+              warehouses={warehouses}
+              productId={productId}
+              warehouseId={warehouseId}
+              onProductChange={(id) => setParams({ product: id, forecast: '' })}
+              onWarehouseChange={(id) => setParams({ warehouse: id, forecast: '' })}
+              forecastId={forecastId}
+              onForecastChange={(id) => setParams({ forecast: id })}
+              canRun={canRun}
+            />
+          ) : (
+            <Alert tone="info">
+              Para ver la demanda y el pronóstico de un producto necesitas permiso para consultar el
+              catálogo.
+            </Alert>
+          )}
+        </>
+      )}
 
       {canRead && (
         <section aria-labelledby="forecast-runs" className="space-y-3">

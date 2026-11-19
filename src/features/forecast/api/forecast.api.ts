@@ -6,6 +6,8 @@ import type {
   ForecastRunPage,
   Option,
   StartRunInput,
+  WarehouseForecastFilters,
+  WarehouseForecastPage,
 } from '../types/forecast.types';
 import type {
   DemandSeriesDto,
@@ -14,8 +16,16 @@ import type {
   ForecastRunPageDto,
   ProductPageDto,
   WarehouseDto,
+  WarehouseForecastPageDto,
 } from './forecast.dto';
-import { toDemandSeries, toForecast, toForecastRun, toStartRunDto } from './forecast.mappers';
+import {
+  toDemandSeries,
+  toForecast,
+  toForecastRun,
+  toStartRunDto,
+  toWarehouseForecastPage,
+  toWarehouseForecastQuery,
+} from './forecast.mappers';
 
 /**
  * `GET /products/:id/demand`, weekly like the forecast, from `from` (`YYYY-MM-DD`) to today.
@@ -44,6 +54,20 @@ export async function getProductForecasts(
     params: { warehouseId, page: 1, pageSize: RECENT_FORECASTS },
   });
   return data.items.map(toForecast);
+}
+
+/**
+ * `GET /warehouses/:id/forecasts`: where the forecast of every product of a warehouse stands.
+ * Proposed to pango-core and not implemented there yet; only the mock answers it for now.
+ */
+export async function getWarehouseForecasts(
+  filters: WarehouseForecastFilters,
+): Promise<WarehouseForecastPage> {
+  const { data } = await http.get<WarehouseForecastPageDto>(
+    `/warehouses/${filters.warehouseId}/forecasts`,
+    { params: toWarehouseForecastQuery(filters) },
+  );
+  return toWarehouseForecastPage(data);
 }
 
 /** `GET /forecast-runs`, most recent first. */

@@ -113,3 +113,24 @@ export function isCurrentWeek(start: string, today = new Date()): boolean {
   const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
   return todayUtc < end.getTime();
 }
+
+/** Short reasons, for a table cell. */
+const REASONS_SHORT: Record<string, string> = {
+  inactive: 'Producto o almacén inactivo',
+  sold_to_order: 'Se vende sobre pedido',
+  non_stock_warehouse: 'Almacén sin inventario propio',
+  no_active_warehouse: 'Sin almacén activo',
+  history_only: 'Solo historial',
+};
+
+export const reasonShort = (reason: string | null) =>
+  (reason && REASONS_SHORT[reason]) || 'Omitido por el servicio';
+
+export const seriesErrorShort = (code: string | undefined) =>
+  code === 'INSUFFICIENT_HISTORY' ? 'Historia insuficiente' : 'El servicio no pudo pronosticarlo';
+
+/** "16 nov 2026", the day of an instant in the user's time zone. */
+export const formatInstantDay = (iso: string) =>
+  new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
+    .format(new Date(iso))
+    .replace('.', '');

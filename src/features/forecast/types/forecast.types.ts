@@ -98,3 +98,33 @@ export interface StartRunInput {
   warehouseId: string | null;
   productId: string | null;
 }
+
+/** One product enabled in a warehouse and where its forecast stands there. */
+export interface WarehouseForecastRow {
+  product: ForecastProduct;
+  /** The latest successful forecast, which a later error does not replace. */
+  current: Forecast | null;
+  /** The newest result, whatever its status; null when the product was never forecast here. */
+  latest: Forecast | null;
+}
+
+/** `none`: never forecast in the warehouse. The other statuses are the latest result's. */
+export type WarehouseForecastStatus = ForecastStatus | 'none';
+
+export type WarehouseForecastSort = 'name' | 'estimate';
+
+export interface WarehouseForecastFilters {
+  warehouseId: string;
+  search: string;
+  status: WarehouseForecastStatus | null;
+  sort: WarehouseForecastSort;
+  page: number;
+  pageSize: number;
+}
+
+export interface WarehouseForecastPage {
+  items: WarehouseForecastRow[];
+  total: number;
+  /** Every product of the warehouse, whatever the filters. */
+  summary: Record<WarehouseForecastStatus, number> & { products: number };
+}

@@ -4,22 +4,28 @@ import type {
   ForecastRun,
   RunStatus,
   StartRunInput,
+  WarehouseForecastFilters,
+  WarehouseForecastPage,
 } from '../types/forecast.types';
 import type {
   DemandSeriesDto,
   ForecastDto,
   ForecastRunDto,
   StartForecastRunDto,
+  WarehouseForecastPageDto,
+  WarehouseForecastQueryDto,
 } from './forecast.dto';
 
+const toProduct = (dto: DemandSeriesDto['product']) => ({
+  id: String(dto.id),
+  sku: dto.sku,
+  name: dto.name,
+  // The API sends the stock unit's code only; its name is only a fallback for unknown codes.
+  unit: { code: dto.unit, name: dto.unit },
+});
+
 export const toDemandSeries = (dto: DemandSeriesDto): DemandSeries => ({
-  product: {
-    id: String(dto.product.id),
-    sku: dto.product.sku,
-    name: dto.product.name,
-    // The API sends the stock unit's code only; its name is only a fallback for unknown codes.
-    unit: { code: dto.product.unit, name: dto.product.unit },
-  },
+  product: toProduct(dto.product),
   periods: dto.periods.map((period) => ({ start: period.periodStart, quantity: period.quantity })),
   total: dto.total,
   noHistory: dto.notice === 'NO_HISTORY',
@@ -76,4 +82,40 @@ export function toStartRunDto(input: StartRunInput): StartForecastRunDto {
   if (input.warehouseId) dto.warehouseId = Number(input.warehouseId);
   if (input.productId) dto.productId = Number(input.productId);
   return dto;
+}
+
+export const toWarehouseForecastPage = (dto: WarehouseForecastPageDto): WarehouseForecastPage => ({
+  items: dto.items.map((item) => ({
+    product: toProduct(item.product),
+    current: item.current && toForecast(item.current),
+    latest: item.latest && toForecast(item.latest),
+  })),
+  total: dto.total,
+  summary: {
+    products: dto.summary.products,
+    ok: dto.summary.ok,
+    no_forecast: dto.summary.noForecast,
+    error: dto.summary.error,
+    none: dto.summary.none,
+  },
+});
+
+const STATUS_TO_DTO = {
+  ok: 'OK',
+  no_forecast: 'NO_FORECAST',
+  error: 'ERROR',
+  none: 'NONE',
+} as const;
+
+export function toWarehouseForecastQuery(
+  filters: WarehouseForecastFilters,
+): WarehouseForecastQueryDto {
+  const query: WarehouseForecastQueryDto = {
+    sort: filters.sort === 'estimate' ? 'ESTIMATE' : 'NAME',
+    page: filters.page,
+    pageSize: filters.pageSize,
+  };
+  if (filters.search.trim()) query.search = filters.search.trim();
+  if (filters.status) query.status = STATUS_TO_DTO[filters.status];
+  return query;
 }

@@ -1,15 +1,18 @@
 import { authorize, error } from '../guard';
 import { numericId } from '../ids';
 import type { MockRoutes } from '../server';
-import { enabledWarehouses } from '../stock';
 import { findProductRow, findUnitRow, productsOf } from './catalog.handlers';
-import { findWarehouseRow } from './warehouses.handlers';
+import { activeWarehousesOf, findWarehouseRow } from './warehouses.handlers';
 
 /**
- * Demand history and forecast runs (`docs/demand.md`, `docs/forecasting.md`). The demand is
- * synthetic but stable per product and warehouse; a run "takes" a few seconds and then forecasts
- * every series from it, as the Python service would.
+ * Demand history and forecast runs (`docs/demand.md`, `docs/forecasting.md`), and the proposed
+ * `GET /warehouses/:id/forecasts`. The demand is synthetic but stable per product and warehouse,
+ * and every active product counts as enabled in every active warehouse, so the lists have rows. A
+ * run "takes" a few seconds and then forecasts every series, as the Python service would.
  */
+
+/** Enabled pairs: every active product in every active warehouse. */
+const warehouseIdsOf = (org: string) => activeWarehousesOf(org).map((row) => row.id);
 
 const DAY = 86_400_000;
 const HORIZON = 4;
@@ -133,6 +136,10 @@ function forecastSeries(run: RunRow, productId: number, warehouseId: number, at:
   if (!product?.isActive) {
     return { ...base, status: 'NO_FORECAST' as const, reason: 'inactive' };
   }
+  // The drill in the store is sold to order: the service declines it there.
+  if (productId === 8 && warehouseId === 2) {
+    return { ...base, status: 'NO_FORECAST' as const, reason: 'sold_to_order' };
+  }
   const history = [...weeklyDemand(productId, warehouseId)]
     .filter(([week]) => week + 6 * DAY <= run.historyEnd)
     .map(([, quantity]) => quantity);
@@ -206,48 +213,46 @@ function seriesOf(org: string, warehouseId?: number, productId?: number) {
   return productsOf(org)
     .filter((product) => product.isActive && (!productId || product.id === productId))
     .flatMap((product) =>
-      enabledWarehouses(org, product.id)
+      warehouseIdsOf(org)
         .filter((id) => !warehouseId || id === warehouseId)
         .map((id) => ({ productId: product.id, warehouseId: id })),
     );
 }
 
-/** Two runs to start with: one that failed three weeks ago, and this week's. */
+/**
+ * Three runs to start with: one five weeks ago (its weeks have closed, to compare them with what
+ * happened), one that failed three weeks ago, and this week's. The tape (product 7) was enabled
+ * later: it was never forecast.
+ */
 function seed(org: string) {
   if (seeded.has(org)) return;
   seeded.add(org);
-  const failedAt = mondayOf(todayUtc()) - 20 * DAY + 13 * 3_600_000;
-  runs.push({
-    id: runs.length + 1,
-    org,
-    status: 'FAILED',
-    historyEnd: mondayOf(failedAt) - DAY,
-    startedBy: null,
-    series: seriesOf(org),
-    seriesOk: 0,
-    seriesError: 0,
-    seriesNoForecast: 0,
-    errorMessage: 'Forecasting service unreachable: connect ECONNREFUSED 127.0.0.1:8000',
-    startedAt: failedAt,
-    finishedAt: failedAt + 2 * 60_000,
-  });
-  const startedAt = mondayOf(todayUtc()) + 12 * 3_600_000;
-  const run: RunRow = {
-    id: runs.length + 1,
-    org,
-    status: 'RUNNING',
-    historyEnd: lastCompleteSunday(),
-    startedBy: null,
-    series: seriesOf(org),
-    seriesOk: 0,
-    seriesError: 0,
-    seriesNoForecast: 0,
-    errorMessage: null,
-    startedAt,
-    finishedAt: null,
+  const thisMonday = mondayOf(todayUtc());
+  const run = (startedAt: number, status: RunStatus, errorMessage: string | null = null) => {
+    const row: RunRow = {
+      id: runs.length + 1,
+      org,
+      status,
+      historyEnd: mondayOf(startedAt) - DAY,
+      startedBy: null,
+      series: seriesOf(org).filter((pair) => pair.productId !== 7),
+      seriesOk: 0,
+      seriesError: 0,
+      seriesNoForecast: 0,
+      errorMessage,
+      startedAt,
+      finishedAt: status === 'FAILED' ? startedAt + 2 * 60_000 : null,
+    };
+    runs.push(row);
+    if (status === 'RUNNING') finish(row, startedAt + 3 * 60_000 + 20_000);
   };
-  runs.push(run);
-  finish(run, startedAt + 3 * 60_000 + 20_000);
+  run(thisMonday - 35 * DAY + 9 * 3_600_000, 'RUNNING');
+  run(
+    thisMonday - 20 * DAY + 13 * 3_600_000,
+    'FAILED',
+    'Forecasting service unreachable: connect ECONNREFUSED 127.0.0.1:8000',
+  );
+  run(thisMonday + 12 * 3_600_000, 'RUNNING');
 }
 
 /** Runs "take" `RUN_MS`: once that has passed, they finish when someone looks. */
@@ -310,14 +315,83 @@ function paginate<T>(items: T[], query: Record<string, string | undefined>) {
   };
 }
 
+const STATUS_FILTERS = ['OK', 'NO_FORECAST', 'ERROR', 'NONE'];
+
 export const forecastingRoutes: MockRoutes = {
+  'GET /warehouses/:id/forecasts': ({ params, query }) => {
+    const auth = authorize('forecast.read');
+    if (auth.error) return auth.error;
+    const org = auth.user.organization_id;
+    settle(org);
+    const warehouse = findWarehouseRow(org, Number(params.id));
+    if (!warehouse || !warehouse.isActive) {
+      return error(404, 'WAREHOUSE_NOT_FOUND', 'Warehouse not found');
+    }
+    if (query.status && !STATUS_FILTERS.includes(query.status)) {
+      return error(400, 'VALIDATION_ERROR', `status must be one of: ${STATUS_FILTERS.join(', ')}`);
+    }
+    const ofPair = (productId: number) =>
+      forecasts
+        .filter(
+          (row) =>
+            row.org === org && row.productId === productId && row.warehouseId === warehouse.id,
+        )
+        .sort((a, b) => b.createdAt - a.createdAt || b.id - a.id);
+    const all = productsOf(org)
+      .filter((product) => product.isActive)
+      .map((product) => {
+        const results = ofPair(product.id);
+        const latest = results[0] ?? null;
+        const current = results.find((row) => row.isCurrent) ?? null;
+        return { product, latest, current, status: latest?.status ?? 'NONE' };
+      });
+    const count = (status: string) => all.filter((row) => row.status === status).length;
+    const words = (query.search ?? '').toLowerCase().split(/\s+/).filter(Boolean);
+    const list = all
+      .filter((row) => !query.status || row.status === query.status)
+      .filter((row) => {
+        const haystack = `${row.product.sku} ${row.product.name}`.toLowerCase();
+        return words.every((word) => haystack.includes(word));
+      })
+      .sort((a, b) =>
+        query.sort === 'ESTIMATE'
+          ? (b.current?.total?.estimate ?? -1) - (a.current?.total?.estimate ?? -1) ||
+            a.product.name.localeCompare(b.product.name)
+          : a.product.name.localeCompare(b.product.name),
+      )
+      .map(({ product, latest, current }) => ({
+        product: {
+          id: product.id,
+          sku: product.sku,
+          name: product.name,
+          unit: findUnitRow(product.stockUnitId)?.code ?? 'EA',
+        },
+        current: current && forecastDto(current),
+        latest: latest && forecastDto(latest),
+      }));
+    return {
+      status: 200,
+      data: {
+        warehouse: { id: warehouse.id, name: warehouse.name },
+        ...paginate(list, query),
+        summary: {
+          products: all.length,
+          ok: count('OK'),
+          noForecast: count('NO_FORECAST'),
+          error: count('ERROR'),
+          none: count('NONE'),
+        },
+      },
+    };
+  },
+
   'GET /products/:id/demand': ({ params, query }) => {
     const auth = authorize('forecast.read');
     if (auth.error) return auth.error;
     const org = auth.user.organization_id;
     const product = findProductRow(org, Number(params.id));
     if (!product) return error(404, 'PRODUCT_NOT_FOUND', 'Product not found');
-    let warehouseIds = enabledWarehouses(org, product.id);
+    let warehouseIds = warehouseIdsOf(org);
     let warehouse: { id: number; name: string } | null = null;
     if (query.warehouseId) {
       const row = findWarehouseRow(org, Number(query.warehouseId));

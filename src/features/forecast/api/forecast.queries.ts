@@ -1,12 +1,13 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
-import type { StartRunInput } from '../types/forecast.types';
+import type { StartRunInput, WarehouseForecastFilters } from '../types/forecast.types';
 import {
   getDemand,
   getForecastProducts,
   getForecastRuns,
   getForecastWarehouses,
   getProductForecasts,
+  getWarehouseForecasts,
   startForecastRun,
 } from './forecast.api';
 
@@ -15,12 +16,14 @@ export const forecastKeys = {
   runs: () => [...forecastKeys.all, 'runs'] as const,
   runPage: (page: number, pageSize: number) => [...forecastKeys.runs(), page, pageSize] as const,
   latestRun: () => [...forecastKeys.runs(), 'latest'] as const,
-  /** Everything about one product: refreshed when a run finishes. */
-  product: () => [...forecastKeys.all, 'product'] as const,
+  /** Demand and forecast results: refreshed when a run finishes. */
+  results: () => [...forecastKeys.all, 'results'] as const,
   demand: (productId: string, warehouseId: string, from: string) =>
-    [...forecastKeys.product(), 'demand', productId, warehouseId, from] as const,
+    [...forecastKeys.results(), 'demand', productId, warehouseId, from] as const,
   forecasts: (productId: string, warehouseId: string) =>
-    [...forecastKeys.product(), 'forecasts', productId, warehouseId] as const,
+    [...forecastKeys.results(), 'forecasts', productId, warehouseId] as const,
+  warehouse: (filters: WarehouseForecastFilters) =>
+    [...forecastKeys.results(), 'warehouse', filters] as const,
   warehouses: () => [...forecastKeys.all, 'warehouses'] as const,
   products: () => [...forecastKeys.all, 'products'] as const,
 };
@@ -42,6 +45,15 @@ export function useProductForecasts(productId: string, warehouseId: string) {
   });
 }
 
+export function useWarehouseForecasts(filters: WarehouseForecastFilters) {
+  return useQuery({
+    queryKey: forecastKeys.warehouse(filters),
+    queryFn: () => getWarehouseForecasts(filters),
+    enabled: filters.warehouseId !== '',
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useForecastRuns(page: number, pageSize: number, enabled: boolean) {
   return useQuery({
     queryKey: forecastKeys.runPage(page, pageSize),
@@ -56,7 +68,7 @@ const RUN_POLL_MS = 4000;
 
 /**
  * The most recent run, polled while it runs. When it changes, the run list is read again; when it
- * finishes, so are the open product's demand and forecasts.
+ * finishes, so are the forecast results on screen.
  */
 export function useLatestRun(enabled: boolean) {
   const queryClient = useQueryClient();
@@ -80,7 +92,7 @@ export function useLatestRun(enabled: boolean) {
       predicate: (q) => q.queryKey[2] !== 'latest',
     });
     if (before.running && !running) {
-      void queryClient.invalidateQueries({ queryKey: forecastKeys.product() });
+      void queryClient.invalidateQueries({ queryKey: forecastKeys.results() });
     }
   }, [signature, run?.status, queryClient]);
 

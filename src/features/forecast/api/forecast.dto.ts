@@ -98,3 +98,28 @@ export interface ProductPageDto {
   items: { id: number; sku: string; name: string; isActive: boolean }[];
   total: number;
 }
+
+/**
+ * `GET /warehouses/:id/forecasts` (proposed to pango-core, not implemented yet): one item per
+ * active product enabled in the warehouse, with its current and latest forecast there.
+ */
+export interface WarehouseForecastPageDto {
+  warehouse: RefDto;
+  items: {
+    product: { id: number; sku: string; name: string; unit: string };
+    current: ForecastDto | null;
+    latest: ForecastDto | null;
+  }[];
+  total: number;
+  page: number;
+  pageSize: number;
+  summary: { products: number; ok: number; noForecast: number; error: number; none: number };
+}
+
+export interface WarehouseForecastQueryDto {
+  search?: string;
+  status?: 'OK' | 'NO_FORECAST' | 'ERROR' | 'NONE';
+  sort?: 'NAME' | 'ESTIMATE';
+  page: number;
+  pageSize: number;
+}
