@@ -3,6 +3,10 @@ name: Commit convention
 # Rejects pull requests whose commits (or title) do not follow Conventional Commits:
 #   <type>(<optional scope>)<!>: <description>
 # Merge commits are ignored. No third-party actions: it is a plain git + bash check.
+#
+# Into `main` only the title is checked: a release brings commits that were already checked on
+# their way into `dev` (and a few older ones from before this check existed, which cannot be
+# reworded without rewriting `dev`'s history).
 
 on:
   pull_request:
@@ -21,6 +25,7 @@ jobs:
       TYPES: feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert
       MAX_SUBJECT: 100
       PR_TITLE: ${{ github.event.pull_request.title }}
+      BASE_REF: ${{ github.event.pull_request.base.ref }}
       BASE_SHA: ${{ github.event.pull_request.base.sha }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
@@ -48,10 +53,14 @@ jobs:
 
           check "PR title" "$PR_TITLE"
 
-          while IFS= read -r subject; do
-            [[ -z "$subject" ]] && continue
-            check "commit" "$subject"
-          done < <(git log --no-merges --format=%s "${BASE_SHA}..${HEAD_SHA}")
+          if [[ "$BASE_REF" == "main" ]]; then
+            echo "Release into main: only the PR title is checked."
+          else
+            while IFS= read -r subject; do
+              [[ -z "$subject" ]] && continue
+              check "commit" "$subject"
+            done < <(git log --no-merges --format=%s "${BASE_SHA}..${HEAD_SHA}")
+          fi
 
           if (( failed )); then
             {
@@ -63,4 +72,4 @@ jobs:
             exit 1
           fi
 
-          echo "All commits and the PR title follow Conventional Commits."
+          echo "The PR title and the commits checked follow Conventional Commits."
