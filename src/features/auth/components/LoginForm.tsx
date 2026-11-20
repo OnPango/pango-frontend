@@ -121,8 +121,8 @@ export function LoginForm({
             Iniciar sesión
           </Button>
           <div className="flex items-center justify-center gap-2 text-muted">
-            <div className="h-px w-full bg-muted/40 m-3"></div>
-            <div className="h-px w-full bg-muted/40 m-3"></div>
+            <div className="m-3 h-px w-full bg-muted/40"></div>
+            <div className="m-3 h-px w-full bg-muted/40"></div>
           </div>
           <p className="text-center text-sm text-muted">
             ¿Aún no tienes cuenta?{' '}
