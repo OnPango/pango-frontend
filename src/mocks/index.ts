@@ -4,6 +4,7 @@ import { alertsRoutes } from './handlers/alerts.handlers';
 import { authRoutes } from './handlers/auth.handlers';
 import { catalogRoutes } from './handlers/catalog.handlers';
 import { departmentsRoutes } from './handlers/departments.handlers';
+import { forecastingRoutes } from './handlers/forecasting.handlers';
 import { movementsRoutes } from './handlers/movements.handlers';
 import { organizationsRoutes } from './handlers/organizations.handlers';
 import { replenishmentRoutes } from './handlers/replenishment.handlers';
@@ -33,6 +34,7 @@ export function enableMocking(): void {
     ...departmentsRoutes,
     ...stockRequestsRoutes,
     ...alertsRoutes,
+    ...forecastingRoutes,
   });
   http.defaults.adapter = adapter;
   authHttp.defaults.adapter = adapter;

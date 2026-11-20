@@ -64,6 +64,10 @@ const toDto = (row: WarehouseRow) => ({
   updatedAt: row.updatedAt,
 });
 
+/** For other mocks: the active warehouses of the organization. */
+export const activeWarehousesOf = (organizationId: string) =>
+  warehouses.filter((row) => row.organizationId === organizationId && row.isActive);
+
 /** For other mocks: a warehouse of the organization by its numeric id. */
 export const findWarehouseRow = (organizationId: string, id: number) =>
   warehouses.find((row) => row.organizationId === organizationId && row.id === id);
