@@ -1,0 +1,66 @@
+name: Commit convention
+
+# Rejects pull requests whose commits (or title) do not follow Conventional Commits:
+#   <type>(<optional scope>)<!>: <description>
+# Merge commits are ignored. No third-party actions: it is a plain git + bash check.
+
+on:
+  pull_request:
+    branches: [main, dev]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  commits:
+    name: Conventional Commits
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TYPES: feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert
+      MAX_SUBJECT: 100
+      PR_TITLE: ${{ github.event.pull_request.title }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit messages and PR title
+        shell: bash
+        run: |
+          pattern="^(${TYPES})(\([a-z0-9._/-]+\))?!?: [^ ].*$"
+          failed=0
+
+          check() {
+            local label="$1" subject="$2"
+            if [[ ! "$subject" =~ $pattern ]]; then
+              echo "::error title=Invalid ${label}::\"${subject}\" does not match <type>(scope): description"
+              failed=1
+            elif (( ${#subject} > MAX_SUBJECT )); then
+              echo "::error title=${label} too long::\"${subject}\" is over ${MAX_SUBJECT} characters"
+              failed=1
+            fi
+          }
+
+          check "PR title" "$PR_TITLE"
+
+          while IFS= read -r subject; do
+            [[ -z "$subject" ]] && continue
+            check "commit" "$subject"
+          done < <(git log --no-merges --format=%s "${BASE_SHA}..${HEAD_SHA}")
+
+          if (( failed )); then
+            {
+              echo "Expected: <type>(<optional scope>): <description>"
+              echo "Types: ${TYPES//|/, }"
+              echo "Examples: feat(auth): add organization registration"
+              echo "          fix(layout)!: drop the legacy sidebar prop"
+            } >&2
+            exit 1
+          fi
+
+          echo "All commits and the PR title follow Conventional Commits."

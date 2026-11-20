@@ -174,6 +174,14 @@ export default defineConfig([
 
   // Dependency rules per layer
   { files: ['src/core/**/*.{ts,tsx}'], rules: coreRules },
+  // Inside core, the HTTP client is the lowest level: auth plugs into it, never the reverse.
+  {
+    files: ['src/core/api/**/*.{ts,tsx}'],
+    rules: forbid(
+      ['@/app/**', '@/features/**', '@/shared/**', '@/core/auth/**'],
+      'core/api must not import from core/auth: the session is injected with configureHttpAuth.',
+    ),
+  },
   { files: ['src/shared/**/*.{ts,tsx}'], rules: sharedRules },
   ...FEATURES.map((name) => ({
     files: [`src/features/${name}/**/*.{ts,tsx}`],

@@ -2,6 +2,17 @@
 @import './theme.css';
 
 @layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   body {
     @apply bg-canvas font-body text-fg antialiased transition-colors duration-300;
   }
@@ -13,4 +24,292 @@
   ::selection {
     @apply bg-primary/30;
   }
+}
+
+/*
+ * Scrollbars: one thin, discreet line with no arrow buttons, identical in every browser.
+ * - Chromium / Safari / WebKit: the ::-webkit-scrollbar pseudo-elements draw it. (Chromium 121+ ignores
+ *   them once `scrollbar-width` or `scrollbar-color` is set, so those are applied only where the
+ *   pseudo-elements do not exist.)
+ * - Firefox: the standard `scrollbar-width` / `scrollbar-color` properties approximate it.
+ */
+@supports selector(::-webkit-scrollbar) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--line2);
+    background-clip: content-box;
+    border: 2px solid transparent;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover,
+  ::-webkit-scrollbar-thumb:active {
+    background-color: var(--muted);
+  }
+}
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line2) transparent;
+  }
+}
+
+/*
+ * Motion tokens (`animate-*` utilities). `prefers-reduced-motion` switches them all off below.
+ *
+ * fade-up and the slides use `backwards`, not `both`: they end on the element's natural state
+ * (opacity 1, no transform), so nothing needs to be held after they finish. Holding it (`forwards`)
+ * keeps the element a stacking context for good, and a dropdown list inside it would be trapped
+ * under the blocks that come after it.
+ */
+@theme {
+  --animate-fade-up: fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  --animate-slide-in-right: slide-in-right 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  --animate-slide-in-left: slide-in-left 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  --animate-pop-in: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-drift: drift 16s ease-in-out infinite alternate;
+  --animate-draw: draw 0.7s ease-out 0.2s both;
+  --animate-ring: ring 1.1s ease-out 0.15s both;
+  --animate-grow: grow 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* Modal and Drawer. The exits run on a copy of the closed dialog (see `useDialogExit`). */
+  --animate-dialog-in: dialog-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  --animate-dialog-out: dialog-out 0.16s ease-in forwards;
+  --animate-drawer-in: drawer-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  --animate-drawer-out: drawer-out 0.2s ease-in forwards;
+  --animate-backdrop-in: backdrop-in 0.22s ease-out backwards;
+  --animate-backdrop-out: backdrop-out 0.2s ease-in forwards;
+
+  @keyframes dialog-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.97);
+    }
+  }
+  @keyframes dialog-out {
+    to {
+      opacity: 0;
+      transform: translateY(8px) scale(0.97);
+    }
+  }
+  @keyframes drawer-in {
+    from {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes drawer-out {
+    to {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes backdrop-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes backdrop-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(32px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes slide-in-left {
+    from {
+      opacity: 0;
+      transform: translateX(-32px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-12px);
+    }
+  }
+  @keyframes drift {
+    from {
+      transform: translate(0, 0) scale(1);
+    }
+    to {
+      transform: translate(24px, -18px) scale(1.06);
+    }
+  }
+  @keyframes draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes grow {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+  @keyframes ring {
+    from {
+      opacity: 0.6;
+      transform: scale(0.8);
+    }
+    to {
+      opacity: 0;
+      transform: scale(1.9);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after,
+  ::backdrop {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Without motion the sweeping segment would stop off the edge: light the whole edge instead. */
+  .edge-progress {
+    background: color-mix(in oklab, var(--primary) 60%, transparent) !important;
+  }
+}
+
+/* Fade the top and bottom edges of a scroll area */
+@utility edge-fade-y {
+  mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+}
+
+/* Items grow and brighten near the center of the scroll area and shrink/fade near the edges. */
+@keyframes nav-focus {
+  0%,
+  100% {
+    opacity: 0.25;
+    scale: 0.85;
+  }
+  50% {
+    opacity: 1;
+    scale: 1;
+  }
+}
+@utility nav-focus {
+  @supports (animation-timeline: view()) {
+    animation: nav-focus linear both;
+    animation-timeline: view();
+  }
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/*
+ * Indeterminate progress along the top edge of a rounded box (a table refreshing). Place it over
+ * the box with the same radius: the mask keeps a 2px band on the top edge that follows the corners
+ * and tapers down their curve, and a segment of primary sweeps along it.
+ */
+@keyframes edge-progress {
+  from {
+    background-position:
+      -70% 0,
+      0 0;
+  }
+  to {
+    background-position:
+      170% 0,
+      0 0;
+  }
+}
+@utility edge-progress {
+  padding-top: 2px;
+  background:
+    linear-gradient(90deg, transparent, var(--primary) 30% 70%, transparent) no-repeat,
+    color-mix(in oklab, var(--primary) 15%, transparent);
+  background-size:
+    40% 100%,
+    100% 100%;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  animation: edge-progress 1.1s ease-in-out infinite;
+}
+
+/*
+ * Skeleton placeholders (`Skeleton`). The shine is fixed to the viewport, so every block on screen
+ * shares one sweep. With reduced motion the sweep ends off screen and the blocks stay still.
+ */
+@keyframes shimmer {
+  from {
+    background-position: -50vw 0;
+  }
+  to {
+    background-position: 150vw 0;
+  }
+}
+@utility skeleton {
+  background-color: color-mix(in oklab, var(--primary) 8%, transparent);
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--primary) 10%, transparent),
+    transparent
+  );
+  background-size: 50vw 100%;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  animation: shimmer 1.6s ease-in-out infinite;
 }

@@ -21,16 +21,24 @@ Pango web application (SPA), a multi-organization SaaS platform for intelligent 
 
 ## 1. Project status
 
-| Area                                                                     | Status                           |
-| ------------------------------------------------------------------------ | -------------------------------- |
-| Skeleton (Vite + React + TS), feature-based structure, CI                | ✅ Done                          |
-| Light / dark / system theme with Tailwind v4                             | ✅ Done                          |
-| Session (store + JWT on requests), permission-based route guards, layout | ⏳ Pending                       |
-| Module screens                                                           | ⏳ Placeholders                  |
-| Base components (table, modal, status badges, form fields)               | ⏳ Pending                       |
-| Login with the pangolin illustration and "under construction" screen     | ⏳ Pending                       |
-| ESLint + Prettier, tests (Vitest + Testing Library)                      | ⏳ Pending                       |
-| API contract and final permission catalog                                | ⏳ To be agreed with the backend |
+| Area                                                                                                                                                    | Status                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| Skeleton (Vite + React + TS), feature-based structure, CI                                                                                               | ✅ Done                              |
+| Light / dark / system theme with Tailwind v4                                                                                                            | ✅ Done                              |
+| Session (HttpOnly cookies + refresh rotation), permission-based route guards, layout                                                                    | ✅ Done                              |
+| Module screens                                                                                                                                          | ⏳ Placeholders                      |
+| Owner sign-up, login, email confirmation, invitations (US-001 / CU-13)                                                                                  | ✅ Against `pango-core` and the mock |
+| User management (CU-02, US-005): list, job title, roles, (de)activate, invitations; create, rename and delete roles                                     | ✅ Against `pango-core` and the mock |
+| Products (CU-03, US-008, US-011): list, search, filter by family and status, register, edit; families: tree, create, rename, move, (de)activate         | ✅ Against `pango-core` and the mock |
+| Warehouses (CU-04, US-017): list, search, filter, detail, register, edit, close, reopen                                                                 | ✅ Against `pango-core` and the mock |
+| Inventory (CU-05, US-012, US-013, US-015, US-016): inbound, outbound and adjustments, stock by warehouse and by product, safety stock and reorder point | ✅ Against `pango-core` and the mock |
+| Areas and internal requests (CU-08, CU-09, US-028, US-030, US-031, US-032): areas, create, cancel and attend requests, history                          | ✅ Against the mock and pango-core   |
+| Alerts (CU-12, US-043, US-044): list with filters, detail with the current situation, header bell                                                       | ✅ Against the mock and pango-core   |
+| Movement history (CU-05 A2, US-014): every movement, filters by product, warehouse, type and dates, detail                                              | ✅ Against the mock and pango-core   |
+| Base components (table, modal, status badges, form fields)                                                                                              | ⏳ Pending                           |
+| Login with the pangolin illustration and "under construction" screen                                                                                    | ⏳ Pending                           |
+| ESLint + Prettier, tests (Vitest + Testing Library)                                                                                                     | ⏳ Pending                           |
+| API contract and final permission catalog                                                                                                               | ⏳ To be agreed with the backend     |
 
 ## 2. Scope
 
@@ -58,7 +66,7 @@ The frontend is the presentation layer for the use cases in the SRS. It consumes
 ### Out of scope
 
 - Business logic, forecast computation, reorder point and alert generation (backend / FastAPI service).
-- Multi-tenant isolation: enforced by the backend; the frontend only sends the JWT.
+- Multi-tenant isolation: enforced by the backend; the frontend only tells the API which organization a request targets (`X-Tenant`, taken from the subdomain) and sends the access token.
 - Physical RFID reading: the reader is an external device integrated by the backend (RFID Adapter). The frontend only presents the result.
 - Pricing, billing and last-mile logistics.
 - Native mobile app. The web app must be responsive.
@@ -75,7 +83,7 @@ The frontend is the presentation layer for the use cases in the SRS. It consumes
 | React Router          | 7                                       | Routing (`createBrowserRouter`, `lazy` routes) |
 | TanStack Query        | 5                                       | Server state: caching, retries, invalidation   |
 | Zustand               | 5.0.15                                  | Client state (session, theme)                  |
-| React Hook Form + Zod | 7 / 3                                   | Forms and validation                           |
+| React Hook Form + Zod | 7 / 4 (`@hookform/resolvers` 7)         | Forms and validation                           |
 | Axios                 | 1                                       | HTTP client with interceptors                  |
 
 Requirements: Node.js 20+ and pnpm. Modern browsers (Chrome 111+, Safari 16.4+, Firefox 128+), due to Tailwind v4.
@@ -96,9 +104,9 @@ Browser ──► Frontend (SPA) ──► BFF / API Gateway (NestJS) ──► 
 | Form state          | React Hook Form + Zod | create-product form                               |
 | Local UI state      | `useState`            | open modal, active tab                            |
 
-**Requests.** All requests go through `core/api/client.ts`, which adds `Authorization: Bearer <token>` and logs the user out on a 401. The organization (tenant) is resolved by the backend from the JWT; the frontend does not send it.
+**Requests.** Every request goes through an Axios client built by `core/api/client.ts`, which adds `X-Tenant` (the organization, read from the hostname). Every client sends the session cookies (`withCredentials`). `http` (`core/api/http.ts`) is for signed-in calls: on a 401 it renews the session once and repeats the request. It gets the renewal through `configureHttpAuth`, which `core/auth` fills in at startup (`bindHttpToSession`), so `core/api` never imports `core/auth`. `authHttp` is for the `/auth/*` and `/invitations/*` endpoints (see _Authentication and organizations_).
 
-**Permissions.** The SRS states that profiles and permissions are configurable by each organization's administrator, so the frontend **does not hardcode roles**: the session carries a list of permissions (`resource:action`) and the UI decides based on it (`hasAnyPermission`, `RequirePermission`). Hiding an element is a UX concern only; real authorization is enforced by the backend.
+**Permissions.** The SRS states that profiles and permissions are configurable by each organization's administrator, so the frontend **does not hardcode roles**: the session carries a list of permissions (`resource.action`, e.g. `stock_request.approve`) and the UI decides based on it (`hasAnyPermission`, `RequirePermission`). Hiding an element is a UX concern only; real authorization is enforced by the backend.
 
 **Anti-corruption layer.** Components never use the raw backend JSON: each `features/<x>/api/` converts responses into the frontend's domain types (camelCase, in English). If the contract changes, only that layer is touched.
 
@@ -108,26 +116,40 @@ Browser ──► Frontend (SPA) ──► BFF / API Gateway (NestJS) ──► 
 
 ```
 pango-frontend/
-├─ .github/workflows/ci.yml      # typecheck + build
+├─ .github/
+│  ├─ pull_request_template.md   # PR description template
+│  └─ workflows/
+│     ├─ ci.yml                  # format + lint + typecheck + test + build
+│     └─ commit-convention.yml   # Conventional Commits check on PRs
 ├─ public/                       # static assets (favicon, pangolin illustrations)
 ├─ src/
-│  ├─ main.tsx                   # entry point; initializes the theme
+│  ├─ main.tsx                   # entry point; initializes the theme, binds the HTTP client to the session
 │  ├─ app/                       # app composition
 │  │  ├─ App.tsx                 # providers (QueryClient, Router)
-│  │  └─ router.tsx              # route table and guards
+│  │  ├─ router.tsx              # route table and guards
+│  │  ├─ routes.tsx              # the screens: path, menu entry, permissions, page
+│  │  └─ SessionCheck.tsx        # screen shown while the session is restored
 │  ├─ core/                      # cross-cutting infrastructure, no business UI
-│  │  ├─ api/client.ts           # Axios instance + interceptors
-│  │  ├─ auth/                   # auth.store.ts · permissions.ts · guards.tsx
+│  │  ├─ api/                    # client.ts (Axios factory) · http.ts (401 renewal) · authHttp.ts · errors.ts
+│  │  ├─ auth/                   # session and auth contract
+│  │  │                          #   auth.api/dto/mappers/types: every /auth and /invitations call
+│  │  │                          #   session.api · refresh.coordinator · session.hint: local session
+│  │  │                          #   auth.store · user · permissions · guards · http.binding
+│  │  ├─ config/env.ts           # VITE_* variables
+│  │  ├─ tenant/tenant.ts        # organization from the hostname, workspace URLs, slugify
 │  │  └─ theme/theme.store.ts    # light/dark/system mode
 │  ├─ shared/                    # reusable, no business logic
 │  │  ├─ ui/                     # base components (PageHeader, ThemeToggle, …)
 │  │  ├─ layout/                 # AppLayout, nav.ts
-│  │  ├─ hooks/                  # generic hooks (useDebounce, …)
+│  │  ├─ hooks/                  # generic hooks (useDebouncedValue, useShake, …)
 │  │  └─ lib/                    # pure utilities (formatDate, formatQuantity, …)
 │  ├─ features/                  # one directory per domain module
 │  │  └─ <feature>/
 │  │     ├─ api/                 # <feature>.api.ts · <feature>.keys.ts · <feature>.mappers.ts · query hooks
 │  │     ├─ components/          # feature-specific components
+│  │     ├─ content/             # static catalogs and copy (select options, permission catalog…)
+│  │     ├─ hooks/               # feature logic that composes forms/queries (useLoginForm, useRegisterForm…)
+│  │     ├─ lib/                 # pure business rules of the feature (no React, no I/O)
 │  │     ├─ pages/               # <Name>Page.tsx (one per route)
 │  │     └─ types/               # <feature>.types.ts · <feature>.schema.ts (Zod)
 │  └─ styles/
@@ -154,28 +176,19 @@ app ──► features ──► shared ──► core
 
 ## 6. Routes and permissions
 
-URLs are in Spanish and kebab-case. Permissions are provisional until the catalog is closed with the backend.
+URLs are in English and kebab-case (`/roles-permissions`).
 
-| Route          | Feature      | UC           | Required permission (any of)         |
-| -------------- | ------------ | ------------ | ------------------------------------ |
-| `/login`       | `auth`       | CU-01        | public                               |
-| `/`            | `dashboard`  | CU-07        | signed in                            |
-| `/productos`   | `products`   | CU-03        | `products:manage`                    |
-| `/almacenes`   | `warehouses` | CU-04, CU-07 | `warehouses:manage`                  |
-| `/inventario`  | `inventory`  | CU-05, CU-06 | `inventory:record`                   |
-| `/solicitudes` | `requests`   | CU-08, CU-09 | `requests:create`, `requests:attend` |
-| `/proveedores` | `suppliers`  | —            | `suppliers:manage`                   |
-| `/prediccion`  | `forecast`   | CU-10, CU-11 | `forecast:view`                      |
-| `/alertas`     | `alerts`     | CU-12        | `alerts:view`                        |
-| `/areas`       | `areas`      | —            | `areas:manage`                       |
-| `/usuarios`    | `users`      | CU-02        | `users:manage`                       |
+- **Routes.** [`src/app/routes.tsx`](src/app/routes.tsx) is the single place that declares the screens: path, menu label and icon, menu section, required permissions (`anyOf`, empty = any signed-in user) and page. The router, the sidebar menu and the header title are all derived from it. A new screen is one entry there (plus its `pages/<Name>Page.tsx`).
+- **Permissions.** Codes are `resource.action` and mirror the backend's `permissions` table, including its scope (`ORGANIZATION` or `WAREHOUSE`). The list lives in `PERMISSION_SCOPES` in [`src/core/auth/user.ts`](src/core/auth/user.ts); their Spanish names and descriptions, used by the roles screen, in [`permissions.catalog.ts`](src/features/users/content/permissions.catalog.ts). A permission added to the first without the second does not compile.
+- **Roles are configurable.** Each organization defines its own roles (the backend seeds a default set), so the UI must never branch on a role name, only on permissions.
+- `/login`, `/register`, `/verify-email` and `/invitations/accept` are public (the last two are opened from emails); `/` needs only a session; everything else is guarded with `RequirePermission`, which shows the 403 page when the permission is missing.
 
 ## 7. Naming conventions
 
 ### 7.1 Language
 
 - **Code identifiers** (directories, files, components, functions, variables, types, permissions): **English**.
-- **User-facing text and URLs**: **Spanish**.
+- **User-facing text**: **Spanish**.
 - **Documentation, code comments and commit messages**: **English**.
 - ER diagram entities are translated with the glossary below; do not invent synonyms:
   | ER diagram (Spanish)           | Code (English)    |     | ER diagram (Spanish)     | Code (English)   |
@@ -216,8 +229,8 @@ URLs are in Spanish and kebab-case. Permissions are provisional until the catalo
 | Zustand stores                    | `use<Name>Store`                         | `useAuthStore`                                         |
 | Query keys                        | `<feature>Keys` object                   | `productKeys.list(filters)`                            |
 | Providers / contexts              | `<Name>Provider`                         | `ThemeProvider`                                        |
-| Permissions                       | `resource:action` (English)              | `products:manage`                                      |
-| URL routes                        | `kebab-case`, Spanish                    | `/ordenes-de-compra`                                   |
+| Permissions                       | `resource.action` (English)              | `product.manage`                                       |
+| URL routes                        | `kebab-case`, English                    | `/purchase-orders`                                     |
 | Environment variables             | `VITE_` + `UPPER_SNAKE_CASE`             | `VITE_API_URL`                                         |
 | Custom CSS utilities (`@utility`) | `kebab-case`                             | `btn-primary`                                          |
 | Branches                          | `<type>/<module>-<description>`          | `feature/products-crud`                                |
@@ -241,9 +254,11 @@ Rules marked 🔒 are enforced by ESLint (`eslint.config.js`) and fail CI; the r
 - 🔒 **Styles**: only semantic theme tokens (`bg-surface`, `text-fg`, `border-line`, `bg-primary`…). **Literal colors are forbidden** in `className` (`bg-white`, `text-gray-500`, `bg-[#fff]`): they break dark mode.
 - **Data**: read with `useQuery`, write with `useMutation` plus invalidation through the `*Keys` objects. No `fetch`/Axios calls inside components.
 - **Forms**: React Hook Form with `zodResolver`; the Zod schema lives in `types/<feature>.schema.ts`.
+- **Shared UI**: do not hand-roll controls; use `shared/ui/components`. Form: `form/TextBox`, `form/TextArea`, `form/select/Select`, `form/select/MultiSelect`, `form/date/DatePicker`, `form/Checkbox`, `form/Switch`, `form/RadioGroup` (label, hint, error and `aria-*` wiring included; `TextBox`, `TextArea`, `Checkbox` and `Switch` forward their ref, so they work with React Hook Form's `register`, while `Select`, `MultiSelect` and `DatePicker` take `value`/`onChange`, so use RHF's `Controller`). Display: `Avatar`, `Badge`, `Alert`, `Modal` (native `<dialog>`), `Button`. Dates travel as local `YYYY-MM-DD` strings.
+- **Scrollbars**: styled once, globally, in `styles/index.css` (thin line, no arrows, same in Chromium/WebKit and Firefox). Do not restyle them per component.
 - **Errors**: screens handle three explicit states — loading, error and empty — in addition to the data state.
 - 🔒 **Accessibility**: real interactive elements (`button`, `a`) and `aria-label` on icon-only controls (`jsx-a11y` rules); visible focus and legible contrast in both themes are review items.
-- **Security**: store no sensitive data besides the session token; never rely on the UI for authorization.
+- **Security**: both tokens are HttpOnly cookies that JS never touches; never rely on the UI for authorization.
 - **Performance**: pages are lazy-loaded; long lists are paginated server-side.
 
 ### Testing
@@ -284,19 +299,47 @@ npm run dev        # http://localhost:5173 — proxies /api → http://localhost
 | `pnpm test` / `npm run test:watch`         | Vitest (single run / watch mode)                |
 | `pnpm run test:coverage`                   | Vitest with a V8 coverage report in `coverage/` |
 
-| Variable       | Description                       | Default |
-| -------------- | --------------------------------- | ------- |
-| `VITE_API_URL` | Base URL of the BFF / API Gateway | `/api`  |
+| Variable               | Description                                                                                                                                                                            | Default     |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `VITE_API_BASE_URL`    | Base URL of `pango-core` (no trailing slash). In development `/api`: Vite proxies it to `VITE_DEV_API_TARGET` (default `http://localhost:3000`) so the session cookies are same-origin | `/api`      |
+| `VITE_APP_BASE_DOMAIN` | Domain organizations hang from: `<subdomain>.<domain>`. Must equal `APP_BASE_DOMAIN` in core                                                                                           | `localhost` |
+| `VITE_DEV_TENANT`      | Pins the organization instead of reading it from the hostname (single-host dev, mock)                                                                                                  | _(empty)_   |
+| `VITE_USE_MOCK`        | `true` = in-browser mock backend instead of `pango-core`                                                                                                                               | `false`     |
+
+### Authentication and organizations
+
+The contract is `docs/auth.md` in `pango-core`. In short:
+
+- **Organization-first.** Every organization lives on its own subdomain (`mi-empresa.onpango.com`) and a session belongs to exactly one. The frontend reads the organization from the hostname (`core/tenant/tenant.ts`) and sends it as `X-Tenant`. On the main domain `/login` first asks for the workspace address and redirects there.
+- **Tokens.** Both tokens are **HttpOnly cookies** set by the API, one pair per organization: `pango_access_<subdomain>` (15 min, path `/`) and `pango_refresh_<subdomain>` (30 days, path `/auth`), `SameSite=Lax`. JavaScript never sees them and no response body carries a token, so nothing token-like is in memory or storage; the browser attaches them to every request made `withCredentials`. When the access cookie expires the browser stops sending it, the API answers 401 and the `http` client calls `POST /auth/refresh` (no body) and repeats the request once. On boot the session is first recognized with `GET /auth/me` (read-only, while the access cookie is alive) and only renewed with refresh if that fails. Refresh tokens rotate and reusing one ends every session, so concurrent refreshes share one request and tabs serialize through the Web Locks API. Because JS cannot tell whether the cookie exists, `localStorage` keeps a non-secret hint (`pango.session_until`: when the session ends) so first-time visitors do not trigger a pointless refresh. Cookies are sent automatically, so CSRF is the API's job (`SameSite=Lax` plus an `Origin` check on unsafe methods); a script injected into the page (XSS) cannot read the tokens but can still make requests as the user, so keep the CSP strict and never render untrusted HTML.
+- **Two clients.** `authHttp` (login, signup, refresh, logout, verify email, invitations: never refreshes on a 401) and `http` (everything else: renews the session and retries once on a 401). Both send credentials. All the auth calls live in `core/auth/auth.api.ts` and answer with domain types (`Session`, `SignupResult`…), never with the raw bodies.
+- **Errors** carry a stable `code`; `features/auth/lib/auth.errors.ts` maps them to Spanish copy.
+- **User management** (`features/users`, `/users`) follows `pango-core`'s model: people join through **invitations** (`POST /invitations`, resend = invite again, revoke = `DELETE`), not by being created, and a pending invitation is a row of the users table with the status _Invitado_; a user's name and email belong to their account and are not edited; roles are assignments `(role, warehouse)` (the Owner role applies to every warehouse), granted with `POST /users/:id/role-assignments` and removed with `DELETE …/:assignmentId`, and the API lets you grant only roles below your own on that warehouse; (de)activation is `POST /users/:id/(de)activate`. The role list comes from `GET /roles`, and `/roles-permissions` edits each role's permissions (`PATCH /roles/:id`); roles are created there too (US-005, `POST /roles`: name, optional description, and optionally the permissions of an existing role to start from; anyone but the Owner only copies the permissions they hold), renamed (`PATCH /roles/:id` with the name and description) and deleted (`DELETE /roles/:id`). A role that people hold or a pending invitation offers cannot be deleted, and the dialog says why before calling the API. Names are unique as the screens show them ("Administrador" is taken by Admin). Only the Owner edits or deletes a role they hold, so for anyone else their own role is read-only. The seeded roles' names and descriptions show in Spanish. The area (department) is chosen from `GET /departments`.
+- **Warehouses** (`features/warehouses`, `/warehouses`) follow `pango-core`'s `docs/warehouses.md`: `GET /warehouses?status=ALL` is not paged, so the list searches (name, code, address), filters (type, status) and keeps them in the URL like products. A warehouse is a _Bodega_ (`WAREHOUSE`) or a _Tienda_ (`STORE`), with a code and a name unique in the organization; the form proposes the code from the name and type (`suggestCode`). Clicking a name opens the detail in a side panel (`shared/ui/components/Drawer.tsx`). Closing (`PATCH … isActive: false`) asks for confirmation and is refused while the warehouse has stock (`WAREHOUSE_HAS_STOCK`). Holders of `warehouse.manage` see every warehouse; others only those where a role grants `warehouse.read`. Locations (S6–S7) and occupancy (CU-07) are not built yet.
+- **Inventory** (`features/inventory`, `/inventory`) follows CU-05's main flow: one product, one warehouse, one quantity per movement (`POST /movements`, confirmed at once). "Registrar entrada" / "Registrar salida" ask for the warehouse, the reason (the movement types of that nature the user's roles allow there, `GET /movement-types?warehouseId=`, with Spanish names for the seeded ones), the product (searched by code or name), the quantity (> 0, up to 4 decimals), the lot when the product tracks lots and an optional document reference. An outbound movement shows the stock available in the warehouse and cannot exceed it; `INSUFFICIENT_STOCK`, `LOT_*` and the other line errors land on their field. After saving, the notice shows the product's new stock in that warehouse (CU-05 step 7). The page has two views, kept in the URL (`?view=warehouse&warehouse=`, `?view=product&product=`): **por almacén** (a warehouse's products with their stock, searchable, zeros hidden unless asked for) and **por producto** (a product's total and per-warehouse stock, US-015, `GET /products/:id`). Clicking a product or a warehouse jumps to the other view; each row registers an inbound or outbound movement with both already chosen. With a single open warehouse it is chosen for you; otherwise the last view used on the device opens. The products' detail panel shows the global stock with a link here. The warehouse view reads `GET /stock?warehouseId=&includeZero=true` (100 per request: on hand, reserved and available) and searches and paginates in the browser. An outbound movement of a per-lot product picks the lot from `GET /products/:id/lots` (lots with stock in that warehouse, earliest expiry first) and cannot take more than that lot has; an inbound one types the code, since it may bring a new lot. **Lotes**: a per-lot product's "Por lote" badge (warehouse view) and its "Ver lotes" button (product view, each warehouse row) open a side panel with its lots in that warehouse (`GET /products/:id/lots?warehouseId=`, only those with stock there, earliest expiry first): code, stock, manufacture and expiry dates, and a flag for expired lots and those expiring within 30 days. A lot is created by an inbound movement, which carries no dates, so holders of `product.manage` set them there (`PATCH /products/:id/lots/:lotId`; expiry not before manufacture, `LOT_DATES_INVALID`); the adjustment and attention forms then show the expiry and suggest the earliest lot. **Reposición** (US-016, `GET`/`PUT /products/:id/warehouses/:warehouseId/replenishment`, `replenishment.manage`) edits a row's safety stock and reorder point: the modal shows on hand, reserved and available (the alert compares the reorder point with available), the current values with their origin (manual or computed by the forecast, which saving replaces), checks safety ≤ reorder point and reorder point ≤ max stock, and sends the min and max stock back unchanged (the `PUT` clears what it does not get). The notice says whether the new values open an alert. The rows show both values, their origin and the open alert. The lead time (RF-INV-009) is not exposed by the API. **Ajustes** (CU-05 E5, RN-006: an error is corrected with a later operation, never by editing) correct the stock from a count: "Registrar ajuste" (header) and "Ajuste" (each row, also at zero, since a count can find stock) ask for the warehouse, the product, the lot for per-lot products (those with stock there, or "Otro lote" for one the count found) and the **counted quantity** (zero allowed), and show it beside what Pango has (`GET /products/:id/stock?warehouseId=`), with the difference and its direction as you type. A reason is required (it stays in the history as the movement's notes); a document is optional. The form reads the stock every time it opens (never a cached figure) and again on saving; if it changed meanwhile, asks to check the count against the new figure instead of registering a stale difference. It registers `POST /movements` with the adjustment type (organizations start with one, chosen for you) and `direction: INCREASE|DECREASE` on each line: an increase is one line to the default location; a decrease takes from each location holding that lot, one line each. A decrease below what requests in attention hold warns that some will not be completed. Transfers are not built yet; the movement history has its own page (see Movements).
+- **Workspace lookup**: on a subdomain the login first asks `GET /organizations/current` (public) and says at once when the space does not exist or is inactive; when it exists the title shows the organization's name. "Encuentra tu espacio" checks the address before redirecting, and the registration tells whether the address is free while it is typed. A network failure never counts as "does not exist".
+- **Areas** (`features/areas`, `/areas`, `department.manage`) are pango-core's departments (`GET/POST/PATCH /departments`): name (unique, any case) and an optional cost center; deactivating one keeps its requests, but its people cannot create new ones. A person's area is set in the user modal (`PATCH /users/:id` with `departmentId`, or "Sin área").
+- **Requests** (`features/requests`, `/requests`) follow CU-08 and CU-09. "Nueva solicitud" asks for the type (RF-REQ-007: only internal consumption for now, which counts as demand; the others show as coming later), takes the user's area as the requesting one (read from `GET /users/:id` with `user.read`; otherwise the API assigns it on send), the attending warehouse (where the user's roles grant `stock_request.create`), priority, an optional date and notes, and one or more lines (product and quantity, a product only once). It starts pending and does not change stock. The list opens on the user's area; without an area the page says why and offers no "Nueva solicitud" (E3). "De mi área" and "Para atender" list only the **active** requests (pending and in attention); the finished ones (fulfilled, rejected, cancelled) live in **Histórico** (US-032, RF-REQ-005), filtered by product (archived ones too), area, status and the days they were created (`productId`, `departmentId`, `status`, `from`/`to`). The API filters by one status at a time: "Todas las activas" reads both active statuses and pages them in the browser (they are few), and the history shows one finished status at a time until the API takes several. The audit log (Bitácora, US-007, S7) is a different thing: who did what and when, across the platform, for administrators; it needs its own backend. Clicking a number opens the detail: lines, reserved quantities, status history with who and when, the rejection reason and the fulfilling movement. The requester can cancel a pending request. Warehouse staff with `stock_request.approve` get a "Para atender" tab (their warehouses, pending by default) and attend from the detail (US-030, US-031): **Iniciar atención** reserves every line (`POST …/start`; `INSUFFICIENT_STOCK` names the product), **Confirmar consumo** registers the outbound movement (`POST …/fulfil`; per-lot lines pick a lot from `GET /products/:id/lots`, and the earliest-expiring lot that covers the line is suggested) and **Rechazar** asks for a reason and releases the reservation. Whoever created a request does not attend it (separation of duties): the detail says so and offers no attention actions. pango-core does not enforce this yet; the mock answers `403 REQUESTER_CANNOT_ATTEND`, the code proposed to the backend. Invalid transitions answer `STOCK_REQUEST_STATUS_INVALID`, so a fulfilled request is never discounted twice.
+- **Alerts** (`features/alerts`, `/alerts`) follow CU-12 (US-043, US-044). pango-core raises and resolves them on every movement, replenishment change and reservation; the frontend reads them (`GET /alerts`, `GET /alerts/:id`, `alert.read` per warehouse). The list starts on pending ones, most recent first, and filters by status, warehouse and product (code or name); it can also be sorted by last change (an old alert that just got worse comes up) or by severity (`sort=UPDATED|SEVERITY`, which needs pango-core's `alert_resolution` change; the default sends nothing). Severity follows RF-ALT-001: crítica (nothing available), alta (at or below the safety stock), media (at or below the reorder point). While pending, pango-core refreshes an alert on every evaluation (severity, available, reorder point, suggestion; `updatedAt`), and a resolved one keeps its last values with the reason (`resolution`: stock recovered, reorder point lowered or removed, product or warehouse deactivated). Its detail (`?alert=<id>`) says when it was raised and last updated, its current values, whether that reorder point was manual or calculated, the suggested replenishment, why it was resolved and, with `stock.read` in its warehouse, how the product stands now (`GET /products/:id/warehouses/:warehouseId/replenishment`). "Ver en Inventario" opens the product view of that product. The header's bell (`AlertsBell`, passed to `AppLayout` by the app layer) shows how many alerts are pending and the five most recent, and checks again every two minutes and after every movement, replenishment change or request transition (they invalidate the `['alerts']` root key). Marking alerts as attended (S6) and notifications (S7) are not done yet.
+- **Movements** (`features/movements`, `/movements`) is the movement history (CU-05 A2, US-014): every confirmed movement, most recent first, one row per movement (`GET /movements`, `movement.read` per warehouse), with date, number, type (in Spanish, with the icon of its direction), quantity with its sign, warehouse, who registered it and its source. It filters by product, warehouse, type and a range of local days; the product and the open movement live in the URL (`?product=12&movement=40`), so Inventario's product view ("Ver el historial de movimientos") and a product's detail in Productos ("Ver sus movimientos") link straight to it. With a product chosen, each row shows that product's quantity. A movement that fulfilled a stock request shows the request's number (pango-core writes it as the movement's document) and the requesting area. The detail lists every line with its lot and location. Movements are immutable (RN-006): there is no edit or delete. The Spanish names of the movement types live in `shared/lib/movementTypes.ts`, shared with Inventario.
+- **Products** (`features/products`, `/products`) follow `pango-core`'s catalog (`docs/catalog.md`): the list loads the whole catalog once (`GET /products?status=ALL`, 100 per request, the API's maximum) and searches, filters and paginates it in the browser (`content/productSearch.ts`), because US-09 asks to search by code, name or family and the API search only covers code and name. Every word typed must match the code, the name or the family with its parents, ignoring case and accents; the filters live in the URL. A product needs a family (`GET /categories`, shown with its parents, e.g. _Ferretería › Tornillería_) and a unit of measure (`GET /units-of-measure`, Spanish names in `content/catalog.labels.ts`). "Nuevo producto" (`POST /products`) asks for code, name, family, unit, description, tracking (only quantity or per lot) and optional measures in cm, kg and litres; with `category.manage` a family can be created from the form. "Editar" opens the same form filled in and sends only the changed fields (`PATCH /products/:id`); the code and the tracking lock once the product has movements, which only the detail says (`GET /products/:id`, `hasMovements`), so they stay read-only until it answers. Stock, reorder point and alert status are per warehouse and only come with a product's detail (`GET /products/:id`) or the alerts, so the list does not show them yet; archiving and the product page are next.
+
+- **Families** (`/families`, same feature) show `GET /categories` as a tree (each family followed by its subfamilies; a search or the "Inactivas" filter lists them flat, with their parents). With `category.manage`: "Nueva familia" or "Subfamilia" on a row (`POST /categories` with `parentId`), "Editar" to rename, describe or move it under another active family, never under itself or one of its subfamilies (`PATCH /categories/:id`), and "Desactivar" / "Reactivar". As in pango-core, a family is deactivated only once its subfamilies are inactive and reactivated only under an active family; the dialog says so instead of calling the API. Its products keep it, and the product count links to the products filtered by it. "Tabla | Tarjetas" switches to one card per top-level family (the choice is remembered on the device, `hooks/useFamiliesView.ts`): a picture from `public/backgrounds` picked by the family's id (`content/familyBackgrounds.ts`, with the dark version of the pattern on the dark theme when it has one), its status, description, products and number of subfamilies. The cards do not list the subfamilies: "Ver detalle" opens a panel with the family and its subfamilies as a tree, with the same actions as the table. A card stays when only one of its subfamilies passes the search or the status filter, and names it.
+- **Sign-up** (`/register`, main domain) creates the account and the organization; the owner must confirm the email (`/verify-email?token=`) before logging in. Invited users join from `/invitations/accept?token=` on the organization's subdomain.
+
+With `VITE_USE_MOCK=true` set `VITE_DEV_TENANT=pango`. Seed login: `carlosarango1107@outlook.com` / `Pango123*`; invitation link: `/invitations/accept?token=invite-demo`. The mock imitates the refresh cookie with a private cookie jar and "sends" confirmation emails to the browser console. The mock keeps a single role per user and ignores warehouse scoping.
 
 ## 11. Workflow (Git and CI)
 
 - Branches: `main` (stable) ← `develop` ← `feature/<module>-<description>`. Changes land through Pull Requests.
-- Commits: [Conventional Commits](https://www.conventionalcommits.org/) in English (`feat`, `fix`, `refactor`, `docs`, `chore`, `style`, `test`), with the module as scope.
+- Commits: [Conventional Commits](https://www.conventionalcommits.org/) in English (`feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`), with the module as scope. Format: `<type>(<scope>)!: <description>` (scope and `!` optional, subject up to 100 characters).
 - CI (`.github/workflows/ci.yml`, GitHub Actions) runs on every push to `main`/`develop` and on every PR targeting them, and can be started manually (`workflow_dispatch`). Steps: `npm ci` → `format:check` → `lint` → `typecheck` → `test` → `build`. A new push to a PR cancels its previous run.
-- Branch protection (recommended): require the **CI / Checks** status check on `main` and `develop`, and at least one approving review.
+- Commit convention (`.github/workflows/commit-convention.yml`) runs on every PR targeting `main`/`develop` and fails if the PR title or any non-merge commit in it does not follow Conventional Commits (the title matters because squash merges use it). Merge commits and history prior to the PR are ignored. Examples: `feat(auth): add organization registration`, `fix(layout)!: drop the legacy sidebar prop`.
+- Branch protection (recommended): require the **CI / Checks** and **Commit convention / Conventional Commits** status checks on `main` and `develop`, and at least one approving review.
+- PR template (`.github/pull_request_template.md`) pre-fills every PR description (summary, changes, how to test, screenshots, checklist, reviewer notes).
 - PR checklist: `npm run format:check`, `npm run lint`, `npm test` and `npm run build` pass · looks right in light and dark · handles loading, error and empty states · new behavior has tests · a new feature is added to `FEATURES` in `eslint.config.js`.
 
-## 12. Reference documents
+## 12. Reference documents.
 
 - Platform SRS (use cases, requirements and actors).
 - Entity–Relationship diagram (ERD) and initial proposed architecture (Lucidchart).

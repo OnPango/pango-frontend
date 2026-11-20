@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#F6F1E7" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/logos/pango-icono-app-marca-oscuro.svg" type="image/svg+xml" />
     <script>
       (function () {
         try {
@@ -20,6 +20,15 @@
         } catch (e) {}
       })();
     </script>
+    <!-- The canvas color before the styles load, so the boot screen does not follow a white flash. -->
+    <style>
+      html {
+        background: #f6f1e7;
+      }
+      html.dark {
+        background: #1a1a1a;
+      }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
