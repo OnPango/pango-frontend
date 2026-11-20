@@ -1,4 +1,5 @@
 import { lazy } from 'react';
+import { getCurrentTenant } from '@/core/tenant/tenant';
 import { createBrowserRouter } from 'react-router-dom';
 
 import { RequireAuth, RequireGuest, RequirePermission } from '../core/auth/guards';
@@ -13,7 +14,6 @@ import { RouteErrorPage } from '@/fallbacks/error-pages/RouteErrorPage';
 import { AlertsBell } from '@/features/alerts/components/AlertsBell';
 import { AppLayout } from '@/shared/layout/AppLayout';
 
-const WorkspacePage = lazy(() => import('@/features/auth/pages/WorkspacePage'));
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'));
 const VerifyEmailPage = lazy(() => import('@/features/auth/pages/VerifyEmailPage'));
@@ -42,10 +42,10 @@ export const router = createBrowserRouter(
       // Last-resort boundary for what the page routes do not catch (login, layout).
       errorElement: <RouteErrorPage />,
       children: [
-        { path: '/workspace', element: page({ Page: WorkspacePage }) },
         {
           element: <RequireGuest loadingFallback={<SessionCheck />} />,
           children: [
+            ...(!getCurrentTenant() ? [{ path: '/', element: page({ Page: LoginPage }) }] : []),
             { path: '/login', element: page({ Page: LoginPage }) },
             { path: '/register', element: page({ Page: RegisterPage }) },
           ],
@@ -60,7 +60,7 @@ export const router = createBrowserRouter(
               element: <AppLayout navSections={NAV_SECTIONS} headerActions={<AlertsBell />} />,
               // An unknown address is answered inside the app, with the header and the menu at hand.
               // Signed out, it goes through the login first and comes back here.
-              children: [...APP_ROUTES.map(toRoute), { path: '*', element: <NotFoundPage /> }],
+              children: [...APP_ROUTES.filter((route) => getCurrentTenant() || route.path !== '/').map(toRoute), { path: '*', element: <NotFoundPage /> }],
             },
           ],
         },
