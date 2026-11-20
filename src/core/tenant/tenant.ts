@@ -76,7 +76,7 @@ export function buildTenantUrl(subdomain: string, path = '/'): string {
 /** URL of `path` on the main domain (where organizations are created and found). */
 export function buildMainUrl(path = '/'): string {
   if (env.devTenant) return path;
-  return `${originFor(env.appBaseDomain)}${path}`;
+  return `${originFor(`app.${env.appBaseDomain}`)}${path}`;
 }
 
 /**
