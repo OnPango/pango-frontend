@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { FiBox } from 'react-icons/fi';
-import { MdWarehouse } from 'react-icons/md';
+// Per-warehouse view, waiting for the backend (see `WAREHOUSE VIEW` below).
+// import { FiBox } from 'react-icons/fi';
+// import { MdWarehouse } from 'react-icons/md';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
 import { Alert } from '@/shared/ui/components/Alert';
-import { SegmentedControl } from '@/shared/ui/components/form/SegmentedControl';
+// import { SegmentedControl } from '@/shared/ui/components/form/SegmentedControl';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import {
   useForecastProducts,
@@ -16,22 +17,30 @@ import {
 import { ForecastExplorer } from '../components/ForecastExplorer';
 import { ForecastRunsTable } from '../components/ForecastRunsTable';
 import { RunForecastModal } from '../components/RunForecastModal';
-import { WarehouseForecastView } from '../components/WarehouseForecastView';
+// import { WarehouseForecastView } from '../components/WarehouseForecastView';
 import { formatInstant } from '../content/forecast.labels';
 import { forecastErrorMessage } from '../content/forecast.errors';
 import { forecastWarehouses } from '../content/forecast.permissions';
 import type { Option } from '../types/forecast.types';
 
-type ForecastView = 'warehouse' | 'product';
-
-const VIEWS = [
-  { value: 'warehouse' as const, label: 'Por almacén', icon: MdWarehouse },
-  { value: 'product' as const, label: 'Por producto', icon: FiBox },
-];
+/*
+ * WAREHOUSE VIEW: the forecast of every product of a warehouse needs
+ * `GET /warehouses/:id/forecasts`, proposed to pango-core and not implemented there yet (only the
+ * mock answers it). Until it exists the page shows the product view alone. To bring it back,
+ * uncomment the imports above, this block and the view switch in the page.
+ *
+ * type ForecastView = 'warehouse' | 'product';
+ *
+ * const VIEWS = [
+ *   { value: 'warehouse' as const, label: 'Por almacén', icon: MdWarehouse },
+ *   { value: 'product' as const, label: 'Por producto', icon: FiBox },
+ * ];
+ */
 
 /**
- * CU-10: the forecast of every product of a warehouse; the demand history and the forecasts of one
- * product (US-37, US-38, A1 and A2); and the forecast runs.
+ * CU-10: the demand history and the forecasts of one product (US-37, US-38, A1 and A2), and the
+ * forecast runs. The forecast of every product of a warehouse waits for the backend (`WAREHOUSE
+ * VIEW` above).
  */
 export default function ForecastPage() {
   const user = useAuthStore((state) => state.user);
@@ -47,7 +56,8 @@ export default function ForecastPage() {
 
   // What is open lives in the address, to share it or come back to it.
   const [searchParams, setSearchParams] = useSearchParams();
-  const view: ForecastView = searchParams.get('view') === 'product' ? 'product' : 'warehouse';
+  // WAREHOUSE VIEW:
+  // const view: ForecastView = searchParams.get('view') === 'product' ? 'product' : 'warehouse';
   const productId = searchParams.get('product') ?? '';
   const warehouseId = searchParams.get('warehouse') ?? warehouses[0]?.id ?? '';
   const forecastId = searchParams.get('forecast') ?? '';
@@ -91,6 +101,7 @@ export default function ForecastPage() {
 
       {canRead && (
         <>
+          {/* WAREHOUSE VIEW: the switch and the per-warehouse view, waiting for the backend.
           <SegmentedControl<ForecastView>
             legend="Ver el pronóstico"
             options={VIEWS}
@@ -104,7 +115,8 @@ export default function ForecastPage() {
               onWarehouseChange={(id) => setParams({ warehouse: id, forecast: '' })}
               onOpenProduct={(id) => setParams({ view: 'product', product: id, forecast: '' })}
             />
-          ) : canReadCatalog ? (
+          ) : canReadCatalog ? ( */}
+          {canReadCatalog ? (
             <ForecastExplorer
               products={products.data ?? []}
               productsLoading={products.isLoading}

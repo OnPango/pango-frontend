@@ -58,7 +58,8 @@ export async function getProductForecasts(
 
 /**
  * `GET /warehouses/:id/forecasts`: where the forecast of every product of a warehouse stands.
- * Proposed to pango-core and not implemented there yet; only the mock answers it for now.
+ * Proposed to pango-core and not implemented there yet; only the mock answers it for now. Not
+ * called until then: the view that uses it is commented out in `ForecastPage`.
  */
 export async function getWarehouseForecasts(
   filters: WarehouseForecastFilters,
