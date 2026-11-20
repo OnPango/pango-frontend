@@ -18,6 +18,12 @@ import {
   type UserRow,
 } from '../db';
 import { numericId, roleApiName, roleNumericId } from '../ids';
+import {
+  resendLoginChallenge,
+  startLoginChallenge,
+  verifyLoginChallenge,
+  type ChallengeFailure,
+} from '../loginCodes';
 import { requestContext, type MockResponse, type MockRoutes } from '../server';
 import {
   clearSessionCookies,
@@ -29,10 +35,19 @@ import {
 } from '../session';
 
 /** Error body with the backend's shape: `{ statusCode, code, message }`. */
-const error = (status: number, code: string, message: string): MockResponse => ({
+const error = (
+  status: number,
+  code: string,
+  message: string,
+  extra?: Record<string, number>,
+): MockResponse => ({
   status,
-  data: { statusCode: status, code, message },
+  data: { statusCode: status, code, message, ...extra },
 });
+
+const failure = (f: ChallengeFailure) => error(f.status, f.code, f.message, f.extra);
+const isFailure = (value: object): value is ChallengeFailure =>
+  'code' in value && 'status' in value;
 
 const MIN_PASSWORD_LENGTH = 8;
 const SUBDOMAIN_PATTERN = /^[a-z0-9][a-z0-9-]{0,39}[a-z0-9]$/;
@@ -268,9 +283,35 @@ export const authRoutes: MockRoutes = {
       return error(403, 'USER_DISABLED', 'This user is disabled in this organization');
     }
 
+    // Second step: the session opens with the code emailed now (here, logged to the console).
+    return { status: 202, data: startLoginChallenge(user, subdomain) };
+  },
+
+  'POST /auth/login/verify': ({ body }) => {
+    const subdomain = tenantOf();
+    if (!subdomain) return error(400, 'TENANT_REQUIRED', 'The organization subdomain is required');
+    const code = str((body as { code?: unknown } | null)?.code);
+    if (!/^\d{6}$/.test(code)) {
+      return error(400, 'VALIDATION_FAILED', 'The code must be six digits');
+    }
+    const result = verifyLoginChallenge(subdomain, code);
+    if (isFailure(result)) return failure(result);
+
+    // The checks of the session run again when it opens.
+    const user = findUserById(result.userId);
+    if (!user || !user.is_active) {
+      return error(403, 'USER_DISABLED', 'This user is disabled in this organization');
+    }
     user.last_login_at = new Date().toISOString();
     persistUsers();
     return startSession(user);
+  },
+
+  'POST /auth/login/resend': () => {
+    const subdomain = tenantOf();
+    if (!subdomain) return error(400, 'TENANT_REQUIRED', 'The organization subdomain is required');
+    const result = resendLoginChallenge(subdomain, (id) => findUserById(id)?.email);
+    return isFailure(result) ? failure(result) : { status: 202, data: result };
   },
 
   // No body: the refresh token comes from the cookie, like in the real API.

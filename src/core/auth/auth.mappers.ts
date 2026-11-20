@@ -1,12 +1,20 @@
 import type {
   InvitationPreviewDto,
+  LoginCodeRequiredDto,
+  LoginResponseDto,
   RoleGrantDto,
   SessionProfileDto,
   SessionResponseDto,
   SignupDto,
   SignupResponseDto,
 } from './auth.dto';
-import type { InvitationPreview, Session, SignupResult } from './auth.types';
+import type {
+  InvitationPreview,
+  LoginChallenge,
+  LoginResult,
+  Session,
+  SignupResult,
+} from './auth.types';
 import { PERMISSIONS, type Permission, type RoleGrant, type User } from './user';
 
 const isPermission = (value: string): value is Permission =>
@@ -44,6 +52,19 @@ export const toSession = (dto: SessionResponseDto): Session => ({
   user: toUser(dto),
   expiresAt: dto.refreshTokenExpiresAt,
 });
+
+export const toLoginChallenge = (dto: LoginCodeRequiredDto): LoginChallenge => ({
+  email: dto.email,
+  codeLength: dto.codeLength,
+  expiresAt: dto.expiresAt,
+  resendAvailableAt: dto.resendAvailableAt,
+  emailSent: dto.emailSent,
+});
+
+export const toLoginResult = (dto: LoginResponseDto): LoginResult =>
+  'codeRequired' in dto
+    ? { kind: 'code', challenge: toLoginChallenge(dto) }
+    : { kind: 'session', session: toSession(dto) };
 
 const isSessionResponse = (dto: SignupResponseDto): dto is SessionResponseDto =>
   !('verificationRequired' in dto);

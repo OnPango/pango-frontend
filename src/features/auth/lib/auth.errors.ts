@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios';
 import { getApiErrorCode, getApiErrorMessage } from '@/core/api/errors';
 
 /** Spanish copy for the backend's stable error codes (`docs/auth.md` in pango-core). */
@@ -20,6 +21,15 @@ const MESSAGES: Record<string, string> = {
   SUBDOMAIN_INVALID: 'Esa dirección no está permitida. Elige otra.',
   SUBDOMAIN_TAKEN: 'Esa dirección ya está en uso. Elige otra.',
   TAX_ID_TAKEN: 'Ya existe una organización con ese identificador tributario.',
+  LOGIN_CHALLENGE_INVALID:
+    'Este inicio de sesión ya no está pendiente. Escribe tu contraseña otra vez.',
+  LOGIN_CODE_INVALID: 'Ese no es el código.',
+  LOGIN_CODE_EXPIRED: 'Este código venció. Pide uno nuevo.',
+  LOGIN_CODE_ATTEMPTS_EXCEEDED:
+    'Demasiados códigos incorrectos. Por seguridad, inicia sesión de nuevo.',
+  LOGIN_CODE_RESEND_TOO_SOON: 'Espera un momento antes de pedir otro código.',
+  LOGIN_CODE_RESEND_LIMIT:
+    'Ya enviamos varios códigos para este inicio de sesión. Inicia sesión de nuevo para pedir otro.',
 };
 
 /** Message for a failed auth request: the code's Spanish copy, else the server's text, else `fallback`. */
@@ -27,3 +37,17 @@ export function getAuthErrorMessage(error: unknown, fallback: string): string {
   const code = getApiErrorCode(error);
   return (code && MESSAGES[code]) || getApiErrorMessage(error, fallback);
 }
+
+/** A numeric detail some errors carry next to the code (`attemptsLeft`, `retryAfterSeconds`). */
+export function getAuthErrorNumber(error: unknown, key: string): number | null {
+  if (!isAxiosError<Record<string, unknown>>(error)) return null;
+  const value = error.response?.data?.[key];
+  return typeof value === 'number' ? value : null;
+}
+
+/** Errors after which the pending login is gone: the password must be entered again. */
+export const ENDS_LOGIN_CHALLENGE = new Set([
+  'LOGIN_CHALLENGE_INVALID',
+  'LOGIN_CODE_ATTEMPTS_EXCEEDED',
+  'LOGIN_CODE_RESEND_LIMIT',
+]);

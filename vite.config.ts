@@ -20,12 +20,14 @@ export default defineConfig(({ mode }) => {
         // `<org>.localhost:5173` and the API from `localhost:3000`, which browsers treat as different
         // sites, so they would not store or send the cookies. Going through this proxy makes every
         // call same-origin. The `Host` / `Origin` are kept (the API still sees the organization's
-        // subdomain) and the refresh cookie's `Path=/auth` is moved under `/api`, where the browser
-        // now sends the requests. Production does not need it: the app and the API share `onpango.com`.
+        // subdomain) and the cookies scoped to `/auth` (refresh) and `/auth/login` (the login waiting
+        // for its emailed code) are moved under `/api`, where the browser now sends the requests; the
+        // rewrite matches whole paths only. Production does not need it: the app and the API share
+        // `onpango.com`.
         '/api': {
           target: env.VITE_DEV_API_TARGET || 'http://localhost:3000',
           rewrite: (path) => path.replace(/^\/api/, ''),
-          cookiePathRewrite: { '/auth': '/api/auth' },
+          cookiePathRewrite: { '/auth': '/api/auth', '/auth/login': '/api/auth/login' },
         },
       },
     },
