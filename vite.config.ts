@@ -14,6 +14,10 @@ export default defineConfig(({ mode }) => {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
       },
     },
+    preview: {
+      // Accept the platform domain and all tenant subdomains when served by Vite preview.
+      allowedHosts: ['.onpango.com'],
+    },
     server: {
       proxy: {
         // The session lives in `SameSite=Lax` cookies. In development the app is served from
