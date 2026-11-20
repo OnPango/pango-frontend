@@ -2,14 +2,30 @@ import { authHttp } from '@/core/api/authHttp';
 import type {
   AcceptInvitationDto,
   InvitationPreviewDto,
+  LoginCodeRequiredDto,
   LoginDto,
+  LoginResponseDto,
   SessionProfileDto,
   SessionResponseDto,
   SignupDto,
   SignupResponseDto,
+  VerifyLoginCodeDto,
 } from './auth.dto';
-import { toInvitationPreview, toSession, toSignupResult, toUser } from './auth.mappers';
-import type { InvitationPreview, Session, SignupResult } from './auth.types';
+import {
+  toInvitationPreview,
+  toLoginChallenge,
+  toLoginResult,
+  toSession,
+  toSignupResult,
+  toUser,
+} from './auth.mappers';
+import type {
+  InvitationPreview,
+  LoginChallenge,
+  LoginResult,
+  Session,
+  SignupResult,
+} from './auth.types';
 import type { User } from './user';
 
 /**
@@ -23,15 +39,38 @@ import type { User } from './user';
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
 /**
- * `POST /auth/login`, on the organization's subdomain. Rejects with a coded error
+ * `POST /auth/login`, on the organization's subdomain: the first step. With the right password the
+ * API emails a code and answers which login is pending (its token stays in an HttpOnly cookie); with
+ * the second step turned off it answers the session right away. Rejects with a coded error
  * (`INVALID_CREDENTIALS`, `EMAIL_NOT_VERIFIED`, `NOT_A_MEMBER`…).
  */
-export async function login(credentials: LoginDto): Promise<Session> {
-  const { data } = await authHttp.post<SessionResponseDto>('/auth/login', {
+export async function login(credentials: LoginDto): Promise<LoginResult> {
+  const { data } = await authHttp.post<LoginResponseDto>('/auth/login', {
     email: normalizeEmail(credentials.email),
     password: credentials.password,
   });
+  return toLoginResult(data);
+}
+
+/**
+ * `POST /auth/login/verify`: the code of the pending login opens the session. Rejects with
+ * `LOGIN_CODE_INVALID` (with `attemptsLeft`), `LOGIN_CODE_EXPIRED`, `LOGIN_CODE_ATTEMPTS_EXCEEDED`
+ * or `LOGIN_CHALLENGE_INVALID`; the last two end the login.
+ */
+export async function verifyLoginCode(code: string): Promise<Session> {
+  const body: VerifyLoginCodeDto = { code };
+  const { data } = await authHttp.post<SessionResponseDto>('/auth/login/verify', body);
   return toSession(data);
+}
+
+/**
+ * `POST /auth/login/resend`: emails a new code for the pending login (the previous one stops
+ * working). Rejects with `LOGIN_CODE_RESEND_TOO_SOON` (with `retryAfterSeconds`) or
+ * `LOGIN_CODE_RESEND_LIMIT`.
+ */
+export async function resendLoginCode(): Promise<LoginChallenge> {
+  const { data } = await authHttp.post<LoginCodeRequiredDto>('/auth/login/resend');
+  return toLoginChallenge(data);
 }
 
 /**

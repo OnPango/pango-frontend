@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/components/Button';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { useLoginForm } from '../hooks/useLoginForm';
 import { AuthCard } from './AuthPageShell';
+import { LoginCodeStep } from './LoginCodeStep';
 
 /** Login card of one organization (the page is served from its subdomain). */
 export function LoginForm({
@@ -19,6 +20,8 @@ export function LoginForm({
   const {
     form,
     submit,
+    codeStep,
+    notice,
     isSubmitting,
     serverError,
     needsEmailConfirmation,
@@ -30,6 +33,8 @@ export function LoginForm({
     register,
     formState: { errors },
   } = form;
+
+  if (codeStep) return <LoginCodeStep {...codeStep} />;
 
   return (
     <AuthCard
@@ -51,6 +56,7 @@ export function LoginForm({
     >
       <form onSubmit={submit} noValidate className="space-y-5">
         {justVerified && <Alert tone="success">Correo confirmado. Ya puedes iniciar sesión.</Alert>}
+        {notice && <Alert tone="warning">{notice}</Alert>}
 
         <section className="flex flex-col gap-3">
           <TextBox
