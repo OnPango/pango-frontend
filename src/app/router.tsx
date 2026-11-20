@@ -13,6 +13,7 @@ import { RouteErrorPage } from '@/fallbacks/error-pages/RouteErrorPage';
 import { AlertsBell } from '@/features/alerts/components/AlertsBell';
 import { AppLayout } from '@/shared/layout/AppLayout';
 
+const WorkspacePage = lazy(() => import('@/features/auth/pages/WorkspacePage'));
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'));
 const VerifyEmailPage = lazy(() => import('@/features/auth/pages/VerifyEmailPage'));
@@ -41,6 +42,7 @@ export const router = createBrowserRouter(
       // Last-resort boundary for what the page routes do not catch (login, layout).
       errorElement: <RouteErrorPage />,
       children: [
+        { path: '/workspace', element: page({ Page: WorkspacePage }) },
         {
           element: <RequireGuest loadingFallback={<SessionCheck />} />,
           children: [
