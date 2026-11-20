@@ -18,14 +18,22 @@ export function AuthPageShell({ children }: { children: ReactNode }) {
       <AuthBackdrop />
 
       <div className="absolute inset-0 z-50 flex overflow-y-auto">
-        <main className="m-auto flex w-full max-w-130 min-w-80 flex-col items-center justify-center gap-10 p-5">
+        {/* Phones get a smaller brand and tighter gaps, short screens a one-line brand, so the login
+            fits without scrolling. */}
+        <main className="m-auto flex w-full max-w-130 min-w-80 flex-col items-center justify-center gap-6 px-4 py-6 sm:gap-10 sm:p-5 short:gap-4 short:py-4">
           <section className="flex items-center justify-center gap-5 xl:hidden">
             <div className="flex flex-col gap-1 text-center">
-              <div className="flex items-center gap-5">
-                <Logo width="50" height="50" />
-                <h2 className="text-5xl font-bold tracking-wider">PANGO</h2>
+              <div className="flex items-center justify-center gap-3 sm:gap-5">
+                <span className="[&>img]:size-10 sm:[&>img]:size-12.5 short:[&>img]:size-8">
+                  <Logo width="50" height="50" />
+                </span>
+                <h2 className="text-4xl font-bold tracking-wider sm:text-5xl short:text-3xl">
+                  PANGO
+                </h2>
               </div>
-              <p className="text-muted">Más control, mejores decisiones</p>
+              <p className="text-sm text-muted sm:text-base short:hidden">
+                Más control, mejores decisiones
+              </p>
             </div>
           </section>
           {children}
@@ -53,7 +61,7 @@ export function AuthCard({
   return (
     <div
       className={cn(
-        'w-full max-w-105 space-y-5 rounded-[45px] border border-line2 bg-surface px-8 py-10 wrap-break-word shadow-lg sm:px-12',
+        'w-full max-w-105 space-y-4 rounded-[36px] border border-line2 bg-surface px-6 py-8 wrap-break-word shadow-lg sm:space-y-5 sm:rounded-[45px] sm:px-12 sm:py-10 short:space-y-3 short:py-6',
         className,
       )}
     >

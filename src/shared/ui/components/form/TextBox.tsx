@@ -88,7 +88,7 @@ export const TextBox = forwardRef<HTMLInputElement, TextBoxProps>(function TextB
             disabled={disabled}
             aria-label={revealed ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             aria-pressed={revealed}
-            className="-mr-1 grid size-7 shrink-0 place-items-center rounded-full text-muted transition hover:text-fg focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-hidden"
+            className="grid shrink-0 place-items-center rounded-full p-2 text-muted transition hover:text-fg focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-hidden"
           >
             {revealed ? <FiEyeOff className="size-4" /> : <FiEye className="size-4" />}
           </Button>
