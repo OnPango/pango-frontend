@@ -7,6 +7,21 @@ export type Session = {
   expiresAt: string;
 };
 
+/** A login waiting for the code emailed after the password. */
+export type LoginChallenge = {
+  /** Masked address the code went to. */
+  email: string;
+  codeLength: number;
+  expiresAt: string;
+  resendAvailableAt: string;
+  /** False if the email could not be sent: offer to send it again. */
+  emailSent: boolean;
+};
+
+/** Outcome of the password step. */
+export type LoginResult =
+  { kind: 'session'; session: Session } | { kind: 'code'; challenge: LoginChallenge };
+
 /** Outcome of an owner sign-up, as the UI needs it. */
 export type SignupResult =
   /** New account: the organization exists but the owner must confirm the email first. */

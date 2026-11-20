@@ -33,6 +33,29 @@ export interface SessionResponseDto extends SessionProfileDto {
 /** `POST /auth/login` */
 export type LoginDto = { email: string; password: string };
 
+/**
+ * `202` of `POST /auth/login` and `POST /auth/login/resend`: the password was right and a code was
+ * emailed. The pending login travels in the HttpOnly cookie `pango_login_<subdomain>`.
+ */
+export type LoginCodeRequiredDto = {
+  codeRequired: true;
+  /** Masked address the code went to: `a**@miempresa.co`. */
+  email: string;
+  codeLength: number;
+  /** When the current code stops working. */
+  expiresAt: string;
+  /** From when `POST /auth/login/resend` sends another code. */
+  resendAvailableAt: string;
+  /** False if the email could not be sent; resending retries. */
+  emailSent: boolean;
+};
+
+/** The second step is asked for, unless the backend has it turned off: then the session. */
+export type LoginResponseDto = LoginCodeRequiredDto | SessionResponseDto;
+
+/** `POST /auth/login/verify` */
+export type VerifyLoginCodeDto = { code: string };
+
 /** `POST /auth/signup`: the owner and the organization created with the account. */
 export type SignupDto = {
   name: string;
