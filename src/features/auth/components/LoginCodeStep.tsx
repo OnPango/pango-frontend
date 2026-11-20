@@ -65,11 +65,10 @@ export function LoginCodeStep({ onBack, ...options }: LoginCodeStepProps) {
           <InboxBadge />
         </div>
       }
-      className="px-8 sm:px-12"
     >
       <form
         noValidate
-        className="space-y-6"
+        className="space-y-5 sm:space-y-6"
         onSubmit={(event) => {
           event.preventDefault();
           code.submit();
@@ -110,11 +109,11 @@ export function LoginCodeStep({ onBack, ...options }: LoginCodeStepProps) {
           </p>
         </div>
 
-        <section className="space-y-4">
+        <section className="space-y-3 sm:space-y-4">
           <Button
             type="submit"
             variant="primary"
-            className="w-full rounded-2xl p-2.5 py-3.5"
+            className="w-full rounded-2xl p-2.5 py-3 sm:py-3.5"
             isLoading={code.isVerifying}
             disabled={!code.canSubmit}
           >
