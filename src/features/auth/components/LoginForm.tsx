@@ -52,9 +52,8 @@ export function LoginForm({
           </div>
         )
       }
-      className="px-10 sm:px-12"
     >
-      <form onSubmit={submit} noValidate className="space-y-5">
+      <form onSubmit={submit} noValidate className="space-y-4 sm:space-y-5">
         {justVerified && <Alert tone="success">Correo confirmado. Ya puedes iniciar sesión.</Alert>}
         {notice && <Alert tone="warning">{notice}</Alert>}
 
@@ -69,7 +68,7 @@ export function LoginForm({
             shape="xl2"
             error={errors.email?.message}
             {...register('email')}
-            className="h-14"
+            className="h-12 sm:h-14"
           />
           <TextBox
             type="password"
@@ -81,7 +80,7 @@ export function LoginForm({
             shape="xl2"
             error={errors.password?.message}
             {...register('password')}
-            className="h-14"
+            className="h-12 sm:h-14"
           />
 
           {serverError && <Alert tone="danger">{serverError}</Alert>}
@@ -116,18 +115,15 @@ export function LoginForm({
           <Button
             type="submit"
             variant="primary"
-            className="w-full rounded-2xl p-2.5 py-3.5"
+            className="w-full gap-3 rounded-2xl p-2.5 py-3 sm:py-3.5"
             isLoading={isSubmitting}
           >
             Iniciar sesión
           </Button>
           <div className="flex items-center justify-center gap-2 text-muted">
-            <div className="h-px w-full bg-canvas"></div>o
-            <div className="h-px w-full bg-canvas"></div>
+            <div className="m-3 h-px w-full bg-muted/40"></div>
+            <div className="m-3 h-px w-full bg-muted/40"></div>
           </div>
-          <Button type="button" variant="outline" className="w-full rounded-2xl p-2.5 py-3.5">
-            Acceso con SSO
-          </Button>
           <p className="text-center text-sm text-muted">
             ¿Aún no tienes cuenta?{' '}
             <a href={buildMainUrl('/register')} className="text-primary">
