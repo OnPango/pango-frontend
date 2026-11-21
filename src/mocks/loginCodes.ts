@@ -7,12 +7,16 @@
 
 const STORAGE_KEY = 'pango_mock_login_challenges_v1';
 const COOKIE_JAR_KEY = 'pango_mock_login_cookie_jar_v1';
+const DEVICE_JAR_KEY = 'pango_mock_trusted_devices_v1';
 
 export const LOGIN_CODE_LENGTH = 6;
 const TTL_MS = 10 * 60_000;
 const MAX_ATTEMPTS = 5;
 const RESEND_COOLDOWN_MS = 60_000;
 const MAX_SENDS = 5;
+/** `LOGIN_TRUSTED_DEVICE_HOURS` / `LOGIN_REMEMBER_DEVICE_DAYS` (pango-core's defaults). */
+const TRUSTED_DEVICE_HOURS = 12;
+const REMEMBER_DEVICE_DAYS = 30;
 
 interface ChallengeRecord {
   userId: string;
@@ -32,6 +36,8 @@ export interface ChallengeState {
   expiresAt: string;
   resendAvailableAt: string;
   emailSent: boolean;
+  trustedDeviceHours: number;
+  rememberDeviceDays: number;
 }
 
 /** A failed step, with the backend's code and extra fields. */
@@ -84,7 +90,25 @@ function toState(record: ChallengeRecord, email: string, emailSent = true): Chal
     expiresAt: new Date(record.expiresAt).toISOString(),
     resendAvailableAt: new Date(record.lastSentAt + RESEND_COOLDOWN_MS).toISOString(),
     emailSent,
+    trustedDeviceHours: TRUSTED_DEVICE_HOURS,
+    rememberDeviceDays: REMEMBER_DEVICE_DAYS,
   };
+}
+
+/**
+ * The `pango_device_<subdomain>` cookie: after a code, this browser logs in to that organization
+ * with that account without another code, until the trust expires. Logging out keeps it.
+ */
+export function trustDevice(subdomain: string, userId: string, remember: boolean) {
+  const devices = load<{ userId: string; expiresAt: number }>(DEVICE_JAR_KEY);
+  const ms = remember ? REMEMBER_DEVICE_DAYS * 86_400_000 : TRUSTED_DEVICE_HOURS * 3_600_000;
+  devices[subdomain] = { userId, expiresAt: Date.now() + ms };
+  save(DEVICE_JAR_KEY, devices);
+}
+
+export function isTrustedDevice(subdomain: string, userId: string): boolean {
+  const trust = load<{ userId: string; expiresAt: number }>(DEVICE_JAR_KEY)[subdomain];
+  return trust?.userId === userId && trust.expiresAt > Date.now();
 }
 
 const sendCode = (email: string, subdomain: string, code: string) =>

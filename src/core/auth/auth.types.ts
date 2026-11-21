@@ -16,6 +16,10 @@ export type LoginChallenge = {
   resendAvailableAt: string;
   /** False if the email could not be sent: offer to send it again. */
   emailSent: boolean;
+  /** After the code, this browser logs in with the password only for this many hours (0: none)… */
+  trustedDeviceHours: number;
+  /** …or for this many days if the person asks to be remembered. */
+  rememberDeviceDays: number;
 };
 
 /** Outcome of the password step. */
