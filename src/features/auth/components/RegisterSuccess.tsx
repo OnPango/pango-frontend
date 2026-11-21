@@ -12,6 +12,8 @@ interface RegisterSuccessProps {
   isResending: boolean;
   /** Seconds before the email can be requested again. */
   resendCooldown: number;
+  /** A resend was accepted (not proof of delivery: the API does not say). */
+  resent: boolean;
   resendFailed: boolean;
 }
 
@@ -22,6 +24,7 @@ export function RegisterSuccess({
   onResend,
   isResending,
   resendCooldown,
+  resent,
   resendFailed,
 }: RegisterSuccessProps) {
   const address = `${result.subdomain}.${WORKSPACE_DOMAIN}`;
@@ -71,9 +74,16 @@ export function RegisterSuccess({
         )}
       </div>
 
-      {pending && !result.emailSent && (
+      {pending && !result.emailSent && !resent && (
         <Alert tone="warning" className="w-full animate-fade-up">
           No pudimos enviar el correo de confirmación. Pídelo de nuevo con el botón de abajo.
+        </Alert>
+      )}
+      {pending && resent && !resendFailed && (
+        <Alert tone="success" className="w-full animate-fade-up">
+          Si tu cuenta sigue pendiente, te enviamos un nuevo enlace a{' '}
+          <b className="text-fg">{result.email}</b>. Si no llega en unos minutos, revisa la carpeta
+          de spam.
         </Alert>
       )}
       {resendFailed && (

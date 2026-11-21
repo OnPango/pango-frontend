@@ -32,7 +32,7 @@ export default function RegisterPage() {
   const formRef = useRef<HTMLFormElement>(null);
   useShake(formRef, rejections);
 
-  const { goToLogin, resendEmail, isResending, resendFailed, resendCooldown } =
+  const { goToLogin, resendEmail, isResending, resent, resendFailed, resendCooldown } =
     useRegisterSuccess(result);
 
   const slide = direction === 'forward' ? 'animate-slide-in-right' : 'animate-slide-in-left';
@@ -56,6 +56,7 @@ export default function RegisterPage() {
                 onResend={resendEmail}
                 isResending={isResending}
                 resendCooldown={resendCooldown}
+                resent={resent}
                 resendFailed={resendFailed}
               />
             )
