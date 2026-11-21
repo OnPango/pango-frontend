@@ -1,4 +1,6 @@
 @custom-variant dark (&:where(.dark, .dark *));
+/* Short viewports (a phone with the browser bars, landscape): compact layouts. */
+@custom-variant short (@media (max-height: 620px));
 
 :root {
   color-scheme: light;
