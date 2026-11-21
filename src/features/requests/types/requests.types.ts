@@ -5,7 +5,7 @@ export type RequestStatus = 'pending' | 'inProgress' | 'fulfilled' | 'rejected' 
 
 /**
  * RF-REQ-007. Internal consumption is the only type pango-core accepts (and the one that counts
- * as demand, RN-008); the others come when the API has rules for them.
+ * as demand); the others come when the API has rules for them.
  */
 export type RequestType = 'internalConsumption';
 

@@ -82,9 +82,7 @@ export function MovementDetailPanel({
               <MovementTypeLabel type={movement.type} />
             </Badge>
             {movement.status === 'inTransit' && <Badge tone="secondary">{IN_TRANSIT_LABEL}</Badge>}
-            {feedsDemand(movement.type, movement.source === 'stockRequest') && (
-              <Badge tone="primary">Cuenta como demanda</Badge>
-            )}
+            {feedsDemand(movement.type) && <Badge tone="primary">Cuenta como demanda</Badge>}
           </div>
 
           {movement.status === 'inTransit' && (
