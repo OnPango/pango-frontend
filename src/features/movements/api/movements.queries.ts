@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { MovementFilters } from '../types/movements.types';
 import {
   getHistoryProducts,
@@ -6,6 +6,7 @@ import {
   getMovement,
   getMovements,
   getMovementTypes,
+  receiveTransfer,
 } from './movements.api';
 
 /**
@@ -32,6 +33,31 @@ export function useMovements(filters: MovementFilters) {
 
 export function useMovement(id: string) {
   return useQuery({ queryKey: movementsKeys.detail(id), queryFn: () => getMovement(id) });
+}
+
+/**
+ * Receiving adds stock to the destination: its stock (Inventario), its alerts and this history
+ * change. Other features' roots are named, not imported (`['inventory']`, `['alerts']`).
+ */
+export function useReceiveTransfer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      received,
+    }: {
+      id: string;
+      received: { lineNumber: number; quantity: number }[];
+    }) => receiveTransfer(id, received),
+    onSuccess: (movement) => {
+      queryClient.setQueryData(movementsKeys.detail(movement.id), movement);
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: movementsKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ['inventory'] }),
+        queryClient.invalidateQueries({ queryKey: ['alerts'] }),
+      ]);
+    },
+  });
 }
 
 export function useMovementTypes() {

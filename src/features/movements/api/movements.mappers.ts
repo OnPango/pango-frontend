@@ -21,13 +21,26 @@ export const toMovementType = (dto: MovementTypeDto): MovementTypeRef => ({
   countsAsDemand: dto.countsAsDemand,
 });
 
+const STATUS: Record<MovementDto['status'], Movement['status']> = {
+  CONFIRMED: 'confirmed',
+  IN_TRANSIT: 'inTransit',
+  DRAFT: 'draft',
+  VOIDED: 'voided',
+};
+
 export function toMovement(dto: MovementDto): Movement {
+  const transfer = dto.movementType.nature === 'TRANSFER';
   return {
     id: String(dto.id),
     number: dto.number,
     type: toMovementType(dto.movementType),
+    status: STATUS[dto.status],
     warehouse: { id: String(dto.warehouse.id), name: dto.warehouse.name },
+    destination: dto.destinationWarehouse
+      ? { id: String(dto.destinationWarehouse.id), name: dto.destinationWarehouse.name }
+      : null,
     registeredBy: dto.registeredBy.name,
+    received: dto.receivedAt ? { by: dto.receivedBy?.name ?? null, at: dto.receivedAt } : null,
     source: dto.source === 'STOCK_REQUEST' ? 'stockRequest' : 'manual',
     department: dto.department
       ? { id: String(dto.department.id), name: dto.department.name }
@@ -36,8 +49,10 @@ export function toMovement(dto: MovementDto): Movement {
     notes: dto.notes,
     occurredAt: dto.occurredAt,
     lines: dto.lines.map((line) => {
-      // Stock leaves from an origin; it arrives at a destination.
-      const removes = line.originLocation !== null && line.destinationLocation === null;
+      // Stock leaves from an origin; it arrives at a destination. A transfer has both: it is
+      // read from its origin, where it was registered.
+      const removes =
+        transfer || (line.originLocation !== null && line.destinationLocation === null);
       return {
         lineNumber: line.lineNumber,
         product: {
@@ -51,6 +66,7 @@ export function toMovement(dto: MovementDto): Movement {
         removes,
         lot: line.lot?.code ?? null,
         location: (removes ? line.originLocation : line.destinationLocation)?.code ?? null,
+        receivedQuantity: line.receivedQuantity ?? null,
       };
     }),
   };
@@ -60,6 +76,8 @@ export function toListQuery(filters: MovementFilters) {
   return {
     ...(filters.productId && { productId: Number(filters.productId) }),
     ...(filters.warehouseId && { warehouseId: Number(filters.warehouseId) }),
+    ...(filters.incomingTo && { destinationWarehouseId: Number(filters.incomingTo) }),
+    ...((filters.inTransit || filters.incomingTo) && { status: 'IN_TRANSIT' }),
     ...(filters.typeId && { movementTypeId: Number(filters.typeId) }),
     ...(filters.from && { from: dayBound(filters.from, false) }),
     ...(filters.to && { to: dayBound(filters.to, true) }),

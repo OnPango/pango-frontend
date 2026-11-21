@@ -80,7 +80,12 @@ export interface MovementTypeDto {
 /** `POST /movements`. */
 export interface CreateMovementDto {
   movementTypeId: number;
+  /** On transfers, the origin. */
   warehouseId: number;
+  /** Transfers only, and required there. */
+  destinationWarehouseId?: number;
+  /** Transfers only: arrives at once instead of staying in transit. */
+  receiveNow?: boolean;
   documentRef?: string;
   notes?: string;
   lines: {
@@ -97,8 +102,11 @@ export interface CreateMovementDto {
 export interface MovementDto {
   id: number;
   number: string;
+  status: 'DRAFT' | 'IN_TRANSIT' | 'CONFIRMED' | 'VOIDED';
   movementType: { id: number; name: string; nature: MovementNatureDto };
   warehouse: { id: number; name: string };
+  /** Transfers: the warehouse the stock goes to. */
+  destinationWarehouse: { id: number; name: string } | null;
   /** A line that removes stock has an origin location and no destination. */
   lines: {
     product: { id: number };
@@ -128,6 +136,11 @@ export interface StockPageDto {
   total: number;
   page: number;
   pageSize: number;
+}
+
+/** `GET /movements` page, only to count transfers on their way to a warehouse. */
+export interface MovementCountDto {
+  total: number;
 }
 
 /** `GET /products/:id/lots`. */

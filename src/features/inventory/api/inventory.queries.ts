@@ -10,9 +10,11 @@ import type {
   ProductStock,
   RegisteredMovement,
   SetReplenishmentInput,
+  StockProduct,
   UpdateLotDatesInput,
 } from '../types/inventory.types';
 import {
+  countIncomingTransfers,
   getActiveProducts,
   getMovementTypes,
   getProductLots,
@@ -23,6 +25,7 @@ import {
   getWarehouseStock,
   registerAdjustment,
   registerMovement,
+  registerTransfer,
   setReplenishment,
   updateLotDates,
 } from './inventory.api';
@@ -53,13 +56,40 @@ export function useWarehouseStock(warehouseId: string | null) {
   });
 }
 
+/** Lots of a per-lot product with stock in a warehouse. */
+export const productLotsQuery = (productId: string, warehouseId: string) =>
+  queryOptions({
+    queryKey: inventoryKeys.lots(productId, warehouseId),
+    queryFn: () => getProductLots(productId, warehouseId),
+  });
+
 /** Lots of a per-lot product with stock in a warehouse. Null: not needed yet. */
 export function useProductLots(productId: string | null, warehouseId: string | null) {
   return useQuery({
-    queryKey: inventoryKeys.lots(productId ?? '', warehouseId ?? ''),
-    queryFn: () => getProductLots(productId ?? '', warehouseId ?? ''),
+    ...productLotsQuery(productId ?? '', warehouseId ?? ''),
     enabled: productId !== null && warehouseId !== null,
   });
+}
+
+/**
+ * The stock of several products, and the lots in `warehouseId` of those that track them (a
+ * transfer's lines). Indexed by product id.
+ */
+export function useLinesStock(products: StockProduct[], warehouseId: string | null) {
+  const stocks = useQueries({
+    queries: products.map((product) => productStockQuery(product.id)),
+  });
+  const lots = useQueries({
+    queries: products.map((product) => ({
+      ...productLotsQuery(product.id, warehouseId ?? ''),
+      enabled: product.tracksLots && warehouseId !== null,
+    })),
+  });
+  return products.map((product, index) => ({
+    product,
+    stock: stocks[index].data,
+    lots: lots[index],
+  }));
 }
 
 /** A lot's dates: every list that shows or picks the product's lots reads them again. */
@@ -96,16 +126,17 @@ export function useMovementTypes(warehouseId: string | null) {
  * awaited: the form closes as soon as the API confirms; the lists catch up behind it.
  */
 function afterMovement(queryClient: QueryClient, movement: RegisteredMovement) {
-  const { productId } = movement;
   const warehouseId = movement.warehouse.id;
   void Promise.all([
-    queryClient.invalidateQueries({ queryKey: inventoryKeys.stock(productId) }),
+    ...movement.productIds.flatMap((productId) => [
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.stock(productId) }),
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.stockIn(productId, warehouseId) }),
+      queryClient.invalidateQueries({
+        queryKey: inventoryKeys.replenishment(productId, warehouseId),
+      }),
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.lots(productId, warehouseId) }),
+    ]),
     queryClient.invalidateQueries({ queryKey: inventoryKeys.warehouseStock(warehouseId) }),
-    queryClient.invalidateQueries({ queryKey: inventoryKeys.stockIn(productId, warehouseId) }),
-    queryClient.invalidateQueries({
-      queryKey: inventoryKeys.replenishment(productId, warehouseId),
-    }),
-    queryClient.invalidateQueries({ queryKey: inventoryKeys.lots(productId, warehouseId) }),
     // The movement may have raised or resolved an alert (the alerts feature, and its bell).
     queryClient.invalidateQueries({ queryKey: inventoryKeys.alerts() }),
     queryClient.invalidateQueries({ queryKey: inventoryKeys.movements() }),
@@ -117,6 +148,29 @@ export function useRegisterMovement() {
   return useMutation({
     mutationFn: registerMovement,
     onSuccess: (movement) => afterMovement(queryClient, movement),
+  });
+}
+
+/** A transfer changes the origin's stock, and the destination's when it arrives at once. */
+export function useRegisterTransfer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: registerTransfer,
+    onSuccess: (movement) => {
+      afterMovement(queryClient, movement);
+      if (movement.destination && !movement.inTransit) {
+        afterMovement(queryClient, { ...movement, warehouse: movement.destination });
+      }
+    },
+  });
+}
+
+/** Transfers on their way to `warehouseId`. Null: no warehouse chosen, or the user cannot see them. */
+export function useIncomingTransfers(warehouseId: string | null) {
+  return useQuery({
+    queryKey: inventoryKeys.incomingTransfers(warehouseId ?? ''),
+    queryFn: () => countIncomingTransfers(warehouseId ?? ''),
+    enabled: warehouseId !== null,
   });
 }
 

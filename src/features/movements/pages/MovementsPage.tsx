@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FiArrowRight, FiX } from 'react-icons/fi';
+import { FiArrowRight, FiList, FiTruck, FiX } from 'react-icons/fi';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/auth.store';
-import { hasAnyPermission } from '@/core/auth/permissions';
+import { hasAnyPermission, warehousesWithPermission } from '@/core/auth/permissions';
 import { movementTypeLabel } from '@/shared/lib/movementTypes';
 import { Button } from '@/shared/ui/components/Button';
 import { DatePicker } from '@/shared/ui/components/form/date/DatePicker';
+import { SegmentedControl } from '@/shared/ui/components/form/SegmentedControl';
 import { Select } from '@/shared/ui/components/form/select/Select';
 import type { SelectOption } from '@/shared/ui/components/form/select/select.types';
 import { PageHeader } from '@/shared/ui/PageHeader';
@@ -17,11 +18,26 @@ import {
 } from '../api/movements.queries';
 import { MovementDetailPanel } from '../components/MovementDetailPanel';
 import { MovementsTable } from '../components/MovementsTable';
+import { TransfersOnTheWay } from '../components/TransfersOnTheWay';
 import { historyWarehouses } from '../content/movement.permissions';
 import { movementsErrorMessage } from '../content/movements.errors';
 import type { Movement, Option } from '../types/movements.types';
 
 const ALL = 'all';
+
+type View = 'history' | 'incoming';
+
+/** Every transfer on its way, in one page: there are few at a time. */
+const ON_THE_WAY = {
+  productId: null,
+  warehouseId: null,
+  typeId: null,
+  from: null,
+  to: null,
+  inTransit: true,
+  page: 1,
+  pageSize: 100,
+};
 
 /**
  * US-014 / CU-05 A2: the movement history, most recent first, of every product or of one. The
@@ -34,6 +50,7 @@ export default function MovementsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const productId = searchParams.get('product');
   const openId = searchParams.get('movement');
+  const view: View = searchParams.get('view') === 'incoming' ? 'incoming' : 'history';
   const setParam = useCallback(
     (key: string, value: string | null, replace = false) =>
       setSearchParams(
@@ -108,139 +125,185 @@ export default function MovementsPage() {
 
   const open = useCallback((movement: Movement) => setParam('movement', movement.id), [setParam]);
 
+  // CU-16: transfers on their way, to receive them (or follow the ones sent).
+  const receivable = warehousesWithPermission(currentUser, 'movement.receive');
+  const canReceiveIn = useCallback(
+    (warehouseId: string) => receivable === 'all' || receivable.has(warehouseId),
+    [receivable],
+  );
+  const onTheWay = useMovements(ON_THE_WAY);
+  const transfers = onTheWay.data?.items ?? [];
+  const toReceive = transfers.filter(
+    (movement) => movement.destination && canReceiveIn(movement.destination.id),
+  ).length;
+  const views = [
+    { value: 'history' as const, label: 'Historial', icon: FiList },
+    {
+      value: 'incoming' as const,
+      label: toReceive > 0 ? `En camino (${toReceive})` : 'En camino',
+      icon: FiTruck,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Movimientos"
-        subtitle="Cada entrada y salida de inventario, con su fecha, quién la registró y de dónde vino. No se editan ni se borran."
+        subtitle="Cada entrada, salida y traslado de inventario, con su fecha, quién lo registró y de dónde vino. No se editan ni se borran."
       />
 
-      <section aria-label="Filtros" className="space-y-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          {canReadCatalog && (
-            <Select
-              aria-label="Filtrar por producto"
-              value={productId ?? ALL}
-              onChange={(value) => {
-                setParam('product', value && value !== ALL ? value : null);
-                setPage(1);
-              }}
-              options={productOptions}
-              searchable
-              searchPlaceholder="Buscar por código o nombre…"
-              emptyMessage="Ningún producto coincide"
-              className="w-full lg:w-80"
-            />
-          )}
-          {warehouses.length > 1 && (
-            <Select
-              aria-label="Filtrar por almacén"
-              value={warehouseFilter}
-              onChange={(value) => {
-                setWarehouseFilter(value || ALL);
-                setPage(1);
-              }}
-              options={[
-                { value: ALL, label: 'Todos los almacenes' },
-                ...warehouses.map((warehouse) => ({ value: warehouse.id, label: warehouse.name })),
-              ]}
-              searchable
-              searchPlaceholder="Buscar almacén…"
-              emptyMessage="Ningún almacén coincide"
-              className="w-full lg:w-56"
-            />
-          )}
-          <Select
-            aria-label="Filtrar por tipo"
-            value={typeFilter}
-            onChange={(value) => {
-              setTypeFilter(value || ALL);
-              setPage(1);
-            }}
-            options={typeOptions}
-            className="w-full lg:w-56"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-row sm:items-center">
-          <DatePicker
-            aria-label="Desde"
-            placeholder="Desde"
-            value={from}
-            max={to || undefined}
-            onChange={(value) => {
-              setFrom(value);
-              setPage(1);
-            }}
-            clearable
-            className="w-full sm:w-44"
-          />
-          <DatePicker
-            aria-label="Hasta"
-            placeholder="Hasta"
-            value={to}
-            min={from || undefined}
-            onChange={(value) => {
-              setTo(value);
-              setPage(1);
-            }}
-            clearable
-            className="w-full sm:w-44"
-          />
-          <div>
-            {filtered && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-                className="gap-1.5 self-start sm:self-auto"
-              >
-                <FiX aria-hidden className="size-4" /> Limpiar filtros
-              </Button>
-            )}
-          </div>
-        </div>
-      </section>
+      <SegmentedControl<View>
+        legend="Ver"
+        options={views}
+        value={view}
+        onChange={(next) => setParam('view', next === 'incoming' ? 'incoming' : null, true)}
+      />
 
-      {productId && product && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-fg">
-            Movimientos de <strong>{product.name}</strong>{' '}
-            <span className="text-muted">({product.sku})</span>
-          </p>
-          {canReadStock && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-primary"
-              onClick={() => navigate(`/inventory?view=product&product=${productId}`)}
-            >
-              Ver su existencia en Inventario <FiArrowRight aria-hidden className="size-4" />
-            </Button>
+      {view === 'incoming' ? (
+        <TransfersOnTheWay
+          transfers={transfers}
+          canReceiveIn={canReceiveIn}
+          isLoading={onTheWay.isLoading}
+          error={
+            onTheWay.error
+              ? movementsErrorMessage(onTheWay.error, 'No se pudieron cargar los traslados.')
+              : undefined
+          }
+          onOpen={open}
+        />
+      ) : (
+        <>
+          <section aria-label="Filtros" className="space-y-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              {canReadCatalog && (
+                <Select
+                  aria-label="Filtrar por producto"
+                  value={productId ?? ALL}
+                  onChange={(value) => {
+                    setParam('product', value && value !== ALL ? value : null);
+                    setPage(1);
+                  }}
+                  options={productOptions}
+                  searchable
+                  searchPlaceholder="Buscar por código o nombre…"
+                  emptyMessage="Ningún producto coincide"
+                  className="w-full lg:w-80"
+                />
+              )}
+              {warehouses.length > 1 && (
+                <Select
+                  aria-label="Filtrar por almacén"
+                  value={warehouseFilter}
+                  onChange={(value) => {
+                    setWarehouseFilter(value || ALL);
+                    setPage(1);
+                  }}
+                  options={[
+                    { value: ALL, label: 'Todos los almacenes' },
+                    ...warehouses.map((warehouse) => ({
+                      value: warehouse.id,
+                      label: warehouse.name,
+                    })),
+                  ]}
+                  searchable
+                  searchPlaceholder="Buscar almacén…"
+                  emptyMessage="Ningún almacén coincide"
+                  className="w-full lg:w-56"
+                />
+              )}
+              <Select
+                aria-label="Filtrar por tipo"
+                value={typeFilter}
+                onChange={(value) => {
+                  setTypeFilter(value || ALL);
+                  setPage(1);
+                }}
+                options={typeOptions}
+                className="w-full lg:w-56"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-row sm:items-center">
+              <DatePicker
+                aria-label="Desde"
+                placeholder="Desde"
+                value={from}
+                max={to || undefined}
+                onChange={(value) => {
+                  setFrom(value);
+                  setPage(1);
+                }}
+                clearable
+                className="w-full sm:w-44"
+              />
+              <DatePicker
+                aria-label="Hasta"
+                placeholder="Hasta"
+                value={to}
+                min={from || undefined}
+                onChange={(value) => {
+                  setTo(value);
+                  setPage(1);
+                }}
+                clearable
+                className="w-full sm:w-44"
+              />
+              <div>
+                {filtered && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="gap-1.5 self-start sm:self-auto"
+                  >
+                    <FiX aria-hidden className="size-4" /> Limpiar filtros
+                  </Button>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {productId && product && (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-fg">
+                Movimientos de <strong>{product.name}</strong>{' '}
+                <span className="text-muted">({product.sku})</span>
+              </p>
+              {canReadStock && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-primary"
+                  onClick={() => navigate(`/inventory?view=product&product=${productId}`)}
+                >
+                  Ver su existencia en Inventario <FiArrowRight aria-hidden className="size-4" />
+                </Button>
+              )}
+            </div>
           )}
-        </div>
+
+          <MovementsTable
+            movements={movements.data?.items ?? []}
+            productId={productId}
+            isLoading={movements.isLoading}
+            isRefreshing={movements.isPlaceholderData}
+            error={
+              movements.error
+                ? movementsErrorMessage(movements.error, 'No se pudieron cargar los movimientos.')
+                : undefined
+            }
+            emptyMessage={emptyMessage}
+            page={page}
+            pageSize={pageSize}
+            totalItems={movements.data?.total ?? 0}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+            onOpen={open}
+          />
+        </>
       )}
-
-      <MovementsTable
-        movements={movements.data?.items ?? []}
-        productId={productId}
-        isLoading={movements.isLoading}
-        isRefreshing={movements.isPlaceholderData}
-        error={
-          movements.error
-            ? movementsErrorMessage(movements.error, 'No se pudieron cargar los movimientos.')
-            : undefined
-        }
-        emptyMessage={emptyMessage}
-        page={page}
-        pageSize={pageSize}
-        totalItems={movements.data?.total ?? 0}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => {
-          setPageSize(size);
-          setPage(1);
-        }}
-        onOpen={open}
-      />
 
       {openId && (
         <MovementDetailPanel movementId={openId} onClose={() => setParam('movement', null, true)} />
