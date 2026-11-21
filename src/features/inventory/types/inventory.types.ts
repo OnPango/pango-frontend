@@ -117,16 +117,15 @@ export interface RegisterMovementInput {
 }
 
 /**
- * CU-16: one product from one warehouse to another. It stays in transit until the destination
- * receives it, unless `receiveNow` (it arrives at once; needs `movement.receive` there).
+ * CU-16: one or more products from one warehouse to another. It stays in transit until the
+ * destination receives it, unless `receiveNow` (it arrives at once; needs `movement.receive` there).
  */
 export interface RegisterTransferInput {
   movementTypeId: string;
   originId: string;
   destinationId: string;
-  productId: string;
-  quantity: number;
-  lotCode: string | null;
+  /** A product may repeat only with different lots. */
+  lines: { productId: string; quantity: number; lotCode: string | null }[];
   receiveNow: boolean;
   documentRef: string | null;
   notes: string | null;
@@ -143,7 +142,10 @@ export interface RegisteredMovement {
   destination: { id: string; name: string } | null;
   /** A transfer that has not been received yet. */
   inTransit: boolean;
+  /** The first line's product. */
   productId: string;
+  /** Every product of its lines, once each (a transfer may carry several). */
+  productIds: string[];
   /** Of every line (an adjustment may take from several locations). */
   quantity: number;
   /** Whether it took stock out (an outbound movement, or an adjustment that decreased it). */

@@ -10,6 +10,7 @@ import type {
   ProductStock,
   RegisteredMovement,
   SetReplenishmentInput,
+  StockProduct,
   UpdateLotDatesInput,
 } from '../types/inventory.types';
 import {
@@ -55,13 +56,40 @@ export function useWarehouseStock(warehouseId: string | null) {
   });
 }
 
+/** Lots of a per-lot product with stock in a warehouse. */
+export const productLotsQuery = (productId: string, warehouseId: string) =>
+  queryOptions({
+    queryKey: inventoryKeys.lots(productId, warehouseId),
+    queryFn: () => getProductLots(productId, warehouseId),
+  });
+
 /** Lots of a per-lot product with stock in a warehouse. Null: not needed yet. */
 export function useProductLots(productId: string | null, warehouseId: string | null) {
   return useQuery({
-    queryKey: inventoryKeys.lots(productId ?? '', warehouseId ?? ''),
-    queryFn: () => getProductLots(productId ?? '', warehouseId ?? ''),
+    ...productLotsQuery(productId ?? '', warehouseId ?? ''),
     enabled: productId !== null && warehouseId !== null,
   });
+}
+
+/**
+ * The stock of several products, and the lots in `warehouseId` of those that track them (a
+ * transfer's lines). Indexed by product id.
+ */
+export function useLinesStock(products: StockProduct[], warehouseId: string | null) {
+  const stocks = useQueries({
+    queries: products.map((product) => productStockQuery(product.id)),
+  });
+  const lots = useQueries({
+    queries: products.map((product) => ({
+      ...productLotsQuery(product.id, warehouseId ?? ''),
+      enabled: product.tracksLots && warehouseId !== null,
+    })),
+  });
+  return products.map((product, index) => ({
+    product,
+    stock: stocks[index].data,
+    lots: lots[index],
+  }));
 }
 
 /** A lot's dates: every list that shows or picks the product's lots reads them again. */
@@ -98,16 +126,17 @@ export function useMovementTypes(warehouseId: string | null) {
  * awaited: the form closes as soon as the API confirms; the lists catch up behind it.
  */
 function afterMovement(queryClient: QueryClient, movement: RegisteredMovement) {
-  const { productId } = movement;
   const warehouseId = movement.warehouse.id;
   void Promise.all([
-    queryClient.invalidateQueries({ queryKey: inventoryKeys.stock(productId) }),
+    ...movement.productIds.flatMap((productId) => [
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.stock(productId) }),
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.stockIn(productId, warehouseId) }),
+      queryClient.invalidateQueries({
+        queryKey: inventoryKeys.replenishment(productId, warehouseId),
+      }),
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.lots(productId, warehouseId) }),
+    ]),
     queryClient.invalidateQueries({ queryKey: inventoryKeys.warehouseStock(warehouseId) }),
-    queryClient.invalidateQueries({ queryKey: inventoryKeys.stockIn(productId, warehouseId) }),
-    queryClient.invalidateQueries({
-      queryKey: inventoryKeys.replenishment(productId, warehouseId),
-    }),
-    queryClient.invalidateQueries({ queryKey: inventoryKeys.lots(productId, warehouseId) }),
     // The movement may have raised or resolved an alert (the alerts feature, and its bell).
     queryClient.invalidateQueries({ queryKey: inventoryKeys.alerts() }),
     queryClient.invalidateQueries({ queryKey: inventoryKeys.movements() }),

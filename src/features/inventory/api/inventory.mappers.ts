@@ -112,7 +112,7 @@ export const toCreateAdjustmentDto = (input: RegisterAdjustmentInput): CreateMov
   })),
 });
 
-/** One line, from the origin's default location to the destination's. */
+/** One line per product (and lot), from the origin's default location to the destination's. */
 export const toCreateTransferDto = (input: RegisterTransferInput): CreateMovementDto => ({
   movementTypeId: Number(input.movementTypeId),
   warehouseId: Number(input.originId),
@@ -120,13 +120,11 @@ export const toCreateTransferDto = (input: RegisterTransferInput): CreateMovemen
   receiveNow: input.receiveNow,
   ...(input.documentRef?.trim() ? { documentRef: input.documentRef.trim() } : {}),
   ...(input.notes?.trim() ? { notes: input.notes.trim() } : {}),
-  lines: [
-    {
-      productId: Number(input.productId),
-      quantity: input.quantity,
-      ...(input.lotCode?.trim() ? { lotCode: input.lotCode.trim() } : {}),
-    },
-  ],
+  lines: input.lines.map((line) => ({
+    productId: Number(line.productId),
+    quantity: line.quantity,
+    ...(line.lotCode?.trim() ? { lotCode: line.lotCode.trim() } : {}),
+  })),
 });
 
 const KIND: Partial<Record<MovementNatureDto, RegisteredMovement['kind']>> = {
@@ -145,6 +143,7 @@ export const toRegisteredMovement = (dto: MovementDto): RegisteredMovement => ({
     : null,
   inTransit: dto.status === 'IN_TRANSIT',
   productId: String(dto.lines[0]?.product.id ?? ''),
+  productIds: [...new Set(dto.lines.map((line) => String(line.product.id)))],
   quantity: Number(dto.lines.reduce((sum, line) => sum + line.quantity, 0).toFixed(4)),
   removes: dto.lines.some((line) => line.originLocation && !line.destinationLocation),
 });

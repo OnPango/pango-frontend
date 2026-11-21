@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { Controller, useWatch } from 'react-hook-form';
-import { FiArrowRight } from 'react-icons/fi';
+import { FiArrowRight, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { movementTypeLabel } from '@/shared/lib/movementTypes';
 import { formatQuantity, unitLabel } from '@/shared/lib/units';
 import { Alert } from '@/shared/ui/components/Alert';
@@ -12,6 +12,7 @@ import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { Modal } from '@/shared/ui/components/Modal';
 import { useMovementTypes, useStockWarehouses } from '../api/inventory.queries';
 import { useTransferForm } from '../hooks/useTransferForm';
+import { EMPTY_TRANSFER_LINE, MAX_TRANSFER_LINES } from '../types/transfer.schema';
 import type { RegisteredMovement, StockProduct } from '../types/inventory.types';
 
 /** The product and warehouse being looked at, chosen beforehand; null: closed. */
@@ -39,7 +40,7 @@ function TransferForm({
   onClose,
   onSaved,
 }: Omit<TransferModalProps, 'target'> & { target: TransferTarget }) {
-  const { form, submit, product, available, canReceiveNow, lots, isSubmitting, serverError } =
+  const { form, lines, lineInfo, optionsFor, submit, canReceiveNow, isSubmitting, serverError } =
     useTransferForm({
       products,
       initialProductId: target.productId,
@@ -86,16 +87,18 @@ function TransferForm({
     description: warehouse.code,
   }));
   const destinationOptions = originOptions.filter((option) => option.value !== originId);
-  const productOptions = products.map((candidate) => ({
-    value: candidate.id,
-    label: `${candidate.name} · ${candidate.sku}`,
-    description: unitLabel(candidate.unit),
-  }));
+  const productOptions = (index: number) =>
+    optionsFor(index).map((candidate) => ({
+      value: candidate.id,
+      label: `${candidate.name} · ${candidate.sku}`,
+      description: unitLabel(candidate.unit),
+    }));
+  const lineCount = lines.fields.length;
 
   return (
     <Modal
       title="Registrar traslado"
-      description="Lo que pasa de un almacén a otro. Sale del origen al registrarlo y no puede ser más de lo que hay allí."
+      description="Lo que pasa de un almacén a otro, uno o varios productos. Sale del origen al registrarlo y no puede ser más de lo que hay allí."
       onClose={onClose}
       dismissible={!isSubmitting}
       size="lg"
@@ -170,72 +173,121 @@ function TransferForm({
           />
         )}
 
-        <FormSelect
-          control={control}
-          name="productId"
-          label="Producto"
-          required
-          placeholder="Busca por código o nombre"
-          options={productOptions}
-          searchable
-          searchPlaceholder="Código o nombre…"
-          emptyMessage="Ningún producto coincide"
-        />
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <TextBox
-            label="Cantidad"
-            required
-            inputMode="decimal"
-            placeholder="0"
-            trailing={
-              product ? (
-                <span className="text-xs text-muted">{unitLabel(product.unit).toLowerCase()}</span>
-              ) : undefined
-            }
-            hint={
-              product && available !== null && originName
-                ? lots?.chosen
-                  ? `Disponible en el lote ${lots.chosen.code}: ${formatQuantity(available, product.unit)}.`
-                  : `Disponible en ${originName}: ${formatQuantity(available, product.unit)}.`
-                : undefined
-            }
-            error={errors.quantity?.message}
-            {...register('quantity')}
-          />
-          {lots && (
-            <FormSelect
-              control={control}
-              name="lotCode"
-              label="Lote"
-              required
-              disabled={!originId}
-              placeholder={
-                !originId
-                  ? 'Primero elige el origen'
-                  : lots.isLoading
-                    ? 'Cargando lotes…'
-                    : lots.items.length > 0
-                      ? 'Elige el lote'
-                      : 'No hay lotes con existencia allí'
-              }
-              hint="El lote viaja con el producto; primero los que vencen antes."
-              options={lots.items.map((lot) => ({
-                value: lot.code,
-                label: lot.code,
-                description: [
-                  product ? formatQuantity(lot.onHand, product.unit) : null,
-                  lot.expiryDate ? `vence el ${formatDay(lot.expiryDate)}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · '),
-              }))}
-              searchable
-              searchPlaceholder="Buscar lote…"
-              emptyMessage="Ningún lote coincide"
-            />
+        <section aria-labelledby="transfer-lines" className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h3 id="transfer-lines" className="text-sm font-bold text-fg">
+              Productos
+            </h3>
+            <span className="text-xs text-muted">
+              {lineCount === 1 ? '1 producto' : `${lineCount} productos`}
+            </span>
+          </div>
+          {errors.lines?.root?.message && (
+            <p role="alert" className="text-xs text-danger">
+              {errors.lines.root.message}
+            </p>
           )}
-        </div>
+          <ol className="space-y-3">
+            {lines.fields.map((field, index) => {
+              const { product, available, lots } = lineInfo[index] ?? {
+                product: null,
+                available: null,
+                lots: null,
+              };
+              const lineErrors = errors.lines?.[index];
+              return (
+                <li key={field.id} className="space-y-3 rounded-xl border border-line2 p-3">
+                  <div className="flex items-start gap-2">
+                    <FormSelect
+                      control={control}
+                      name={`lines.${index}.productId`}
+                      aria-label={`Producto ${index + 1}`}
+                      placeholder="Busca por código o nombre"
+                      options={productOptions(index)}
+                      searchable
+                      searchPlaceholder="Código o nombre…"
+                      emptyMessage="Ningún producto coincide"
+                      className="min-w-0 flex-1"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => lines.remove(index)}
+                      disabled={lineCount === 1}
+                      aria-label={`Quitar el producto ${index + 1}`}
+                      title={lineCount === 1 ? 'Debe quedar al menos un producto' : 'Quitar'}
+                      className="mt-1 text-danger hover:bg-danger/10"
+                    >
+                      <FiTrash2 aria-hidden className="size-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <TextBox
+                      aria-label={`Cantidad ${index + 1}`}
+                      inputMode="decimal"
+                      placeholder="Cantidad"
+                      trailing={
+                        product ? (
+                          <span className="text-xs text-muted">
+                            {unitLabel(product.unit).toLowerCase()}
+                          </span>
+                        ) : undefined
+                      }
+                      hint={
+                        product && available !== null && originName
+                          ? lots?.chosen
+                            ? `Disponible en el lote ${lots.chosen.code}: ${formatQuantity(available, product.unit)}.`
+                            : `Disponible en ${originName}: ${formatQuantity(available, product.unit)}.`
+                          : undefined
+                      }
+                      error={lineErrors?.quantity?.message}
+                      {...register(`lines.${index}.quantity`)}
+                    />
+                    {lots && (
+                      <FormSelect
+                        control={control}
+                        name={`lines.${index}.lotCode`}
+                        aria-label={`Lote ${index + 1}`}
+                        disabled={!originId}
+                        placeholder={
+                          !originId
+                            ? 'Primero elige el origen'
+                            : lots.isLoading
+                              ? 'Cargando lotes…'
+                              : lots.items.length > 0
+                                ? 'Elige el lote'
+                                : 'No hay lotes con existencia allí'
+                        }
+                        options={lots.items.map((lot) => ({
+                          value: lot.code,
+                          label: lot.code,
+                          description: [
+                            product ? formatQuantity(lot.onHand, product.unit) : null,
+                            lot.expiryDate ? `vence el ${formatDay(lot.expiryDate)}` : null,
+                          ]
+                            .filter(Boolean)
+                            .join(' · '),
+                        }))}
+                        searchable
+                        searchPlaceholder="Buscar lote…"
+                        emptyMessage="Ningún lote coincide"
+                      />
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => lines.append(EMPTY_TRANSFER_LINE)}
+            disabled={lineCount >= MAX_TRANSFER_LINES}
+            className="gap-1"
+          >
+            <FiPlus aria-hidden className="size-4" /> Añadir producto
+          </Button>
+        </section>
 
         <Controller
           control={control}
@@ -294,7 +346,7 @@ function TransferForm({
   );
 }
 
-/** CU-16: one product from one warehouse to another. */
+/** CU-16: one or more products from one warehouse to another. */
 export function TransferModal({ target, ...props }: TransferModalProps) {
   if (!target) return null;
   return <TransferForm target={target} {...props} />;

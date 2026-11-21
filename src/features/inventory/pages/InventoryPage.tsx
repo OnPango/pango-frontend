@@ -244,6 +244,8 @@ export default function InventoryPage() {
     else setWarehouseId(movement.warehouse.id);
     const confirmed = registeredText(movement);
     setNotice(confirmed);
+    // With several products there is no single stock to show; the lists refresh on their own.
+    if (movement.productIds.length > 1) return;
     try {
       const fresh = await queryClient.query(productStockQuery(movement.productId));
       const here = fresh.warehouses.find((row) => row.warehouse.id === movement.warehouse.id);
