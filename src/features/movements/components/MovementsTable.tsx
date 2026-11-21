@@ -3,13 +3,20 @@ import type { Column } from '@/shared/types/dataTable';
 import { Button } from '@/shared/ui/components/Button';
 import { DataTable } from '@/shared/ui/components/DataTable';
 import { cn } from '@/shared/lib/cn';
+import { formatQuantity } from '@/shared/lib/units';
+import { Badge } from '@/shared/ui/components/Badge';
 import {
   formatDate,
   formatTime,
+  IN_TRANSIT_LABEL,
+  isTransfer,
+  lostQuantity,
+  plainQuantity,
   productsSummary,
   requestNumberOf,
   signedQuantity,
   SOURCE_LABELS,
+  warehousesText,
 } from '../content/movement.labels';
 import type { Movement } from '../types/movements.types';
 import { MovementTypeLabel } from './MovementTypeLabel';
@@ -78,7 +85,16 @@ export function MovementsTable({
       {
         key: 'type',
         header: 'Tipo',
-        cell: (movement) => <MovementTypeLabel type={movement.type} />,
+        cell: (movement) => (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <MovementTypeLabel type={movement.type} />
+            {movement.status === 'inTransit' && (
+              <Badge tone="secondary" size="sm">
+                {IN_TRANSIT_LABEL}
+              </Badge>
+            )}
+          </div>
+        ),
       },
       productId
         ? null
@@ -108,8 +124,29 @@ export function MovementsTable({
           if (products > 1) {
             return <span className="text-sm text-muted">{products} productos</span>;
           }
-          const quantity = signedQuantity(lines);
           const lots = [...new Set(lines.map((line) => line.lot).filter(Boolean))];
+          if (isTransfer(movement)) {
+            // It leaves one warehouse and arrives at another: no sign.
+            const lost = lines.reduce((sum, line) => sum + lostQuantity(line), 0);
+            return (
+              <div className="text-right whitespace-nowrap">
+                <span className="text-sm font-semibold text-fg tabular-nums">
+                  {plainQuantity(lines) ?? '0'}
+                </span>
+                {lost > 0 && lines[0] && (
+                  <p className="text-xs text-danger">
+                    Faltó {formatQuantity(Number(lost.toFixed(4)), lines[0].product.unit)}
+                  </p>
+                )}
+                {lost === 0 && lots.length > 0 && (
+                  <p className="text-xs text-muted">
+                    {lots.length === 1 ? `Lote ${lots[0]}` : `${lots.length} lotes`}
+                  </p>
+                )}
+              </div>
+            );
+          }
+          const quantity = signedQuantity(lines);
           return (
             <div className="text-right whitespace-nowrap">
               <span
@@ -132,7 +169,16 @@ export function MovementsTable({
       {
         key: 'warehouse',
         header: 'Almacén',
-        cell: (movement) => <span className="text-sm text-fg/90">{movement.warehouse.name}</span>,
+        cell: (movement) =>
+          movement.destination ? (
+            // A transfer: where it left from, and below it where it goes.
+            <div className="min-w-0" title={warehousesText(movement)}>
+              <p className="text-sm text-fg/90">{movement.warehouse.name}</p>
+              <p className="text-xs text-muted">→ {movement.destination.name}</p>
+            </div>
+          ) : (
+            <span className="text-sm text-fg/90">{movement.warehouse.name}</span>
+          ),
       },
       {
         key: 'registeredBy',

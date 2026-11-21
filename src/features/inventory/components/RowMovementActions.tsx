@@ -1,10 +1,10 @@
-import { FiArrowDownLeft, FiArrowUpRight, FiClipboard, FiSliders } from 'react-icons/fi';
+import { FiArrowDownLeft, FiArrowUpRight, FiClipboard, FiRepeat, FiSliders } from 'react-icons/fi';
 import { Button } from '@/shared/ui/components/Button';
 import type { StockAction } from '../types/inventory.types';
 
 /**
- * "Entrada" / "Salida" / "Ajuste" (and "Reposición") on a stock row, for its product and
- * warehouse.
+ * "Entrada" / "Salida" / "Ajuste" / "Traslado" (and "Reposición") on a stock row, for its product
+ * and warehouse.
  */
 export function RowMovementActions({
   subject,
@@ -12,6 +12,7 @@ export function RowMovementActions({
   onReplenish,
   canAdd = true,
   canRemove,
+  canTransfer = false,
 }: {
   /** "Tornillo M8 en Bodega Central", for the accessible names. */
   subject: string;
@@ -23,6 +24,8 @@ export function RowMovementActions({
   canAdd?: boolean;
   /** Nothing to take out when the row is at zero. */
   canRemove: boolean;
+  /** Only with another warehouse to send it to. */
+  canTransfer?: boolean;
 }) {
   return (
     // Wraps onto two lines when the table is short of room, instead of overflowing it.
@@ -63,6 +66,20 @@ export function RowMovementActions({
             <FiClipboard aria-hidden className="size-3.5" />
             Ajuste
           </Button>
+          {canTransfer && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onRegister('transfer')}
+              disabled={!canRemove}
+              className="gap-1 px-2 text-xs text-secondary hover:bg-secondary/10"
+              aria-label={`Trasladar ${subject} a otro almacén`}
+              title="Pasar a otro almacén"
+            >
+              <FiRepeat aria-hidden className="size-3.5" />
+              Traslado
+            </Button>
+          )}
         </>
       )}
       {onReplenish && (

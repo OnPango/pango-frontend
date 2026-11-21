@@ -13,6 +13,7 @@ import type {
   UpdateLotDatesInput,
 } from '../types/inventory.types';
 import {
+  countIncomingTransfers,
   getActiveProducts,
   getMovementTypes,
   getProductLots,
@@ -23,6 +24,7 @@ import {
   getWarehouseStock,
   registerAdjustment,
   registerMovement,
+  registerTransfer,
   setReplenishment,
   updateLotDates,
 } from './inventory.api';
@@ -117,6 +119,29 @@ export function useRegisterMovement() {
   return useMutation({
     mutationFn: registerMovement,
     onSuccess: (movement) => afterMovement(queryClient, movement),
+  });
+}
+
+/** A transfer changes the origin's stock, and the destination's when it arrives at once. */
+export function useRegisterTransfer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: registerTransfer,
+    onSuccess: (movement) => {
+      afterMovement(queryClient, movement);
+      if (movement.destination && !movement.inTransit) {
+        afterMovement(queryClient, { ...movement, warehouse: movement.destination });
+      }
+    },
+  });
+}
+
+/** Transfers on their way to `warehouseId`. Null: no warehouse chosen, or the user cannot see them. */
+export function useIncomingTransfers(warehouseId: string | null) {
+  return useQuery({
+    queryKey: inventoryKeys.incomingTransfers(warehouseId ?? ''),
+    queryFn: () => countIncomingTransfers(warehouseId ?? ''),
+    enabled: warehouseId !== null,
   });
 }
 

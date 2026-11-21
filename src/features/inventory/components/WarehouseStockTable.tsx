@@ -21,6 +21,7 @@ export function WarehouseStockTable({
   onRegister,
   onReplenish,
   onShowLots,
+  canTransfer = false,
 }: {
   rows: WarehouseStockRow[];
   warehouseName: string;
@@ -28,6 +29,8 @@ export function WarehouseStockTable({
   error?: string;
   emptyMessage: string;
   onOpenProduct: (productId: string) => void;
+  /** With another warehouse to send it to: the rows offer "Traslado". */
+  canTransfer?: boolean;
   /** Without `movement.create` there are no movement actions. */
   onRegister?: (kind: StockAction, row: WarehouseStockRow) => void;
   /** With `replenishment.manage`: edit the row's safety stock and reorder point. */
@@ -137,12 +140,13 @@ export function WarehouseStockTable({
             canAdd={row.product.isActive}
             canRemove={row.available > 0 && row.product.isActive}
             onRegister={onRegister ? (kind) => onRegister(kind, row) : undefined}
+            canTransfer={canTransfer}
             onReplenish={onReplenish ? () => onReplenish(row) : undefined}
           />
         ),
       },
     ];
-  }, [onOpenProduct, onRegister, onReplenish, onShowLots, warehouseName]);
+  }, [onOpenProduct, onRegister, onReplenish, onShowLots, warehouseName, canTransfer]);
 
   return (
     <DataTable<WarehouseStockRow>

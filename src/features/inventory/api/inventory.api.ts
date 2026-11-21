@@ -6,6 +6,7 @@ import type {
   RegisterAdjustmentInput,
   RegisteredMovement,
   RegisterMovementInput,
+  RegisterTransferInput,
   Replenishment,
   SetReplenishmentInput,
   StockProduct,
@@ -16,6 +17,7 @@ import type {
 } from '../types/inventory.types';
 import type {
   LotDto,
+  MovementCountDto,
   MovementDto,
   MovementTypeDto,
   ProductDetailDto,
@@ -28,6 +30,7 @@ import type {
 import {
   toCreateAdjustmentDto,
   toCreateMovementDto,
+  toCreateTransferDto,
   toMovementType,
   toProductStock,
   toRegisteredMovement,
@@ -102,6 +105,25 @@ export async function registerAdjustment(
     timeout: MOVEMENT_TIMEOUT_MS,
   });
   return toRegisteredMovement(data);
+}
+
+/**
+ * `POST /movements` with a transfer type (CU-16): the stock leaves the origin now, and arrives at
+ * the destination at once or when the destination receives it.
+ */
+export async function registerTransfer(input: RegisterTransferInput): Promise<RegisteredMovement> {
+  const { data } = await http.post<MovementDto>('/movements', toCreateTransferDto(input), {
+    timeout: MOVEMENT_TIMEOUT_MS,
+  });
+  return toRegisteredMovement(data);
+}
+
+/** How many transfers are on their way to the warehouse (`IN_TRANSIT`, not received yet). */
+export async function countIncomingTransfers(warehouseId: string): Promise<number> {
+  const { data } = await http.get<MovementCountDto>('/movements', {
+    params: { status: 'IN_TRANSIT', destinationWarehouseId: Number(warehouseId), pageSize: 1 },
+  });
+  return data.total;
 }
 
 /** `GET /products/:id/stock?warehouseId=`: totals and the balances by location and lot. */

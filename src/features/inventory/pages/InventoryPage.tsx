@@ -1,6 +1,16 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
-import { FiArrowDownLeft, FiArrowUpRight, FiBox, FiClipboard, FiSearch } from 'react-icons/fi';
+import {
+  FiArrowDownLeft,
+  FiArrowRight,
+  FiArrowUpRight,
+  FiBox,
+  FiClipboard,
+  FiRepeat,
+  FiSearch,
+  FiTruck,
+} from 'react-icons/fi';
+import { Link } from 'react-router-dom';
 import { MdWarehouse } from 'react-icons/md';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
@@ -17,6 +27,7 @@ import { PageHeader } from '@/shared/ui/PageHeader';
 import {
   productStockQuery,
   useActiveProducts,
+  useIncomingTransfers,
   useProductStock,
   useStockWarehouses,
   useWarehouseStock,
@@ -26,6 +37,7 @@ import { MovementModal } from '../components/MovementModal';
 import { ReplenishmentModal, type ReplenishmentTarget } from '../components/ReplenishmentModal';
 import { LotsPanel, type LotsTarget } from '../components/LotsPanel';
 import { ProductStockCard } from '../components/ProductStockCard';
+import { TransferModal, type TransferTarget } from '../components/TransferModal';
 import { WarehouseStockTable } from '../components/WarehouseStockTable';
 import { inventoryErrorMessage } from '../content/inventory.errors';
 import { adjustedText, KIND_LABELS, registeredText } from '../content/movement.labels';
@@ -90,11 +102,18 @@ export default function InventoryPage() {
   const [showZero, setShowZero] = useState(false);
   const [draft, setDraft] = useState<MovementDraft | null>(null);
   const [adjusting, setAdjusting] = useState<AdjustmentTarget | null>(null);
+  const [transferring, setTransferring] = useState<TransferTarget | null>(null);
   const [replenishing, setReplenishing] = useState<ReplenishmentTarget | null>(null);
   const [showingLots, setShowingLots] = useState<LotsTarget | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const warehouseName = warehouses.data?.find((warehouse) => warehouse.id === warehouseId)?.name;
+  /** A transfer needs somewhere else to go. */
+  const canTransfer = canRegister && (warehouses.data?.length ?? 0) > 1;
+  // CU-16: transfers on their way here wait for someone to receive them (in Movimientos).
+  const incoming = useIncomingTransfers(
+    view === 'warehouse' && warehouseId && canReadMovements ? warehouseId : null,
+  );
 
   const allRows = useMemo(() => warehouseStock.data ?? [], [warehouseStock.data]);
   const withStock = useMemo(
@@ -128,6 +147,7 @@ export default function InventoryPage() {
   const register = (kind: StockAction, target: AdjustmentTarget) => {
     setNotice(null);
     if (kind === 'adjustment') setAdjusting(target);
+    else if (kind === 'transfer') setTransferring(target);
     else setDraft({ kind, ...target });
   };
   /** From the header: the product or warehouse being looked at, the other one to choose. */
@@ -219,6 +239,7 @@ export default function InventoryPage() {
   const handleSaved = async (movement: RegisteredMovement) => {
     setDraft(null);
     setAdjusting(null);
+    setTransferring(null);
     if (view === 'product') setProductId(movement.productId);
     else setWarehouseId(movement.warehouse.id);
     const confirmed = registeredText(movement);
@@ -252,7 +273,7 @@ export default function InventoryPage() {
     <div className="space-y-6">
       <PageHeader
         title="Inventario"
-        subtitle="Consulta cuánto hay de cada producto y en qué almacén, registra lo que entra y lo que sale, y corrige la existencia con un conteo."
+        subtitle="Consulta cuánto hay de cada producto y en qué almacén, registra lo que entra, lo que sale y lo que pasa de un almacén a otro, y corrige la existencia con un conteo."
       />
 
       {notice && (
@@ -282,6 +303,12 @@ export default function InventoryPage() {
               <FiClipboard aria-hidden className="size-4" />
               Registrar ajuste
             </Button>
+            {canTransfer && (
+              <Button variant="outline" onClick={() => registerHere('transfer')} className="gap-2">
+                <FiRepeat aria-hidden className="size-4" />
+                Registrar traslado
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -321,6 +348,26 @@ export default function InventoryPage() {
             )}
           </div>
 
+          {warehouseId && (incoming.data ?? 0) > 0 && (
+            <div
+              role="status"
+              className="flex flex-col gap-2 rounded-2xl border border-secondary/30 bg-secondary/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <p className="flex items-center gap-2 text-sm text-fg">
+                <FiTruck aria-hidden className="size-4 shrink-0 text-secondary" />
+                {incoming.data === 1
+                  ? `Hay 1 traslado en camino a ${warehouseName ?? 'este almacén'}.`
+                  : `Hay ${incoming.data} traslados en camino a ${warehouseName ?? 'este almacén'}.`}{' '}
+                Su existencia se suma cuando lo reciban.
+              </p>
+              <Link
+                to="/movements?view=incoming"
+                className="inline-flex items-center gap-1.5 self-start text-sm font-semibold text-secondary hover:underline sm:self-auto"
+              >
+                Ver y recibir <FiArrowRight aria-hidden className="size-4" />
+              </Link>
+            </div>
+          )}
           {!warehouseId ? (
             <EmptyPrompt>Elige un almacén para ver sus productos y su existencia.</EmptyPrompt>
           ) : (
@@ -354,6 +401,7 @@ export default function InventoryPage() {
                 emptyMessage={warehouseEmptyMessage}
                 onOpenProduct={showProduct}
                 onRegister={canRegister ? registerFromWarehouseRow : undefined}
+                canTransfer={canTransfer}
                 onReplenish={canReplenish ? replenishFromWarehouseRow : undefined}
                 onShowLots={lotsFromWarehouseRow}
               />
@@ -388,6 +436,7 @@ export default function InventoryPage() {
               stock={productStock.data}
               onOpenWarehouse={showWarehouse}
               onRegister={canRegister ? registerFromProductRow : undefined}
+              canTransfer={canTransfer}
               onReplenish={canReplenish ? replenishFromProductRow : undefined}
               onShowLots={lotsFromProductRow}
               historyHref={canReadMovements ? `/movements?product=${productId}` : undefined}
@@ -414,6 +463,13 @@ export default function InventoryPage() {
         target={adjusting}
         products={products.data ?? []}
         onClose={() => setAdjusting(null)}
+        onSaved={(movement) => void handleSaved(movement)}
+      />
+
+      <TransferModal
+        target={transferring}
+        products={products.data ?? []}
+        onClose={() => setTransferring(null)}
         onSaved={(movement) => void handleSaved(movement)}
       />
 

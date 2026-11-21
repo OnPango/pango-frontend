@@ -1,7 +1,7 @@
 import { areas, findUserById } from '../db';
 import { authorize, error } from '../guard';
 import { numericId } from '../ids';
-import { applyStock, evaluateAlert, lotExists, onHand } from '../stock';
+import { applyStock, evaluateAlert, lotExists, onHand, trackTransferInTransit } from '../stock';
 import type { MockRoutes } from '../server';
 import { findProductRow, findUnitRow } from './catalog.handlers';
 import { findWarehouseRow } from './warehouses.handlers';
@@ -9,7 +9,8 @@ import { findWarehouseRow } from './warehouses.handlers';
 /**
  * The movement endpoints of pango-core (`docs/movements.md`): movement types, registering a
  * movement (confirmed at once, it changes the shared stock in `../stock.ts`) and the history
- * (US-014), which also holds the outbound movements that fulfil stock requests. Every role may
+ * (US-014), which also holds the outbound movements that fulfil stock requests, and transfers
+ * between warehouses (CU-16: in transit until received, or received at once). Every role may
  * register every type here; the API narrows types per role and warehouse.
  */
 
@@ -32,9 +33,11 @@ interface MovementLineRow {
   productId: number;
   lot: string | null;
   quantity: number;
-  /** Stock left the warehouse (outbound, or an adjustment that decreases). */
+  /** Stock left the warehouse (outbound, or an adjustment that decreases; a transfer's origin). */
   removes: boolean;
   unitCost: number;
+  /** Transfers: what arrived; null while in transit. */
+  receivedQuantity?: number | null;
 }
 
 /** An immutable movement of the history (RN-006): never edited nor deleted. */
@@ -44,7 +47,13 @@ interface MovementRow {
   org: string;
   source: 'MANUAL' | 'STOCK_REQUEST';
   typeId: number;
+  /** On transfers, the origin. */
   warehouseId: number;
+  status: 'CONFIRMED' | 'IN_TRANSIT';
+  /** Transfers: where the stock goes. */
+  destinationWarehouseId: number | null;
+  receivedById: string | null;
+  receivedAt: string | null;
   userId: string;
   /** The requesting area, on movements that fulfil a stock request. */
   departmentId: string | null;
@@ -58,10 +67,28 @@ const movements: MovementRow[] = [];
 
 /** Adds a confirmed movement to the history, with the next number (`MV-00000012`). */
 export function recordMovement(
-  input: Omit<MovementRow, 'id' | 'number' | 'occurredAt'> & { occurredAt?: string },
+  input: Omit<
+    MovementRow,
+    | 'id'
+    | 'number'
+    | 'occurredAt'
+    | 'status'
+    | 'destinationWarehouseId'
+    | 'receivedById'
+    | 'receivedAt'
+  > &
+    Partial<
+      Pick<MovementRow, 'status' | 'destinationWarehouseId' | 'receivedById' | 'receivedAt'>
+    > & {
+      occurredAt?: string;
+    },
 ): MovementRow {
   lastId += 1;
   const row: MovementRow = {
+    status: 'CONFIRMED',
+    destinationWarehouseId: null,
+    receivedById: null,
+    receivedAt: null,
     ...input,
     id: lastId,
     number: `MV-${String(lastId).padStart(8, '0')}`,
@@ -75,11 +102,16 @@ function toDto(row: MovementRow) {
   const type = types.find((t) => t.id === row.typeId)!;
   const warehouse = findWarehouseRow(row.org, row.warehouseId)!;
   const location = { id: warehouse.defaultLocationId, code: 'DEFAULT' };
+  const destination =
+    row.destinationWarehouseId === null
+      ? null
+      : findWarehouseRow(row.org, row.destinationWarehouseId)!;
+  const user = (id: string) => ({ id: numericId(id), name: findUserById(id)?.full_name ?? null });
   const area = row.departmentId ? areas.find((a) => a.id === row.departmentId) : undefined;
   return {
     id: row.id,
     number: row.number,
-    status: 'CONFIRMED',
+    status: row.status,
     source: row.source,
     movementType: {
       id: type.id,
@@ -88,7 +120,10 @@ function toDto(row: MovementRow) {
       countsAsDemand: type.countsAsDemand,
     },
     warehouse: { id: warehouse.id, name: warehouse.name },
-    registeredBy: { id: numericId(row.userId), name: findUserById(row.userId)?.full_name ?? null },
+    destinationWarehouse: destination ? { id: destination.id, name: destination.name } : null,
+    registeredBy: user(row.userId),
+    receivedBy: row.receivedById ? user(row.receivedById) : null,
+    receivedAt: row.receivedAt,
     department: area ? { id: numericId(area.id), name: area.name } : null,
     documentRef: row.documentRef,
     notes: row.notes,
@@ -104,9 +139,14 @@ function toDto(row: MovementRow) {
           unit: findUnitRow(product.stockUnitId)?.code ?? '',
         },
         originLocation: line.removes ? location : null,
-        destinationLocation: line.removes ? null : location,
+        destinationLocation: destination
+          ? { id: destination.defaultLocationId, code: 'DEFAULT' }
+          : line.removes
+            ? null
+            : location,
         lot: line.lot ? { id: index + 1, code: line.lot } : null,
         quantity: line.quantity,
+        receivedQuantity: line.receivedQuantity ?? null,
         unitCost: line.unitCost,
       };
     }),
@@ -152,7 +192,21 @@ export const movementsRoutes: MockRoutes = {
     const pageSize = Math.min(100, Math.max(1, Number(query.pageSize ?? 25)));
     const list = movements
       .filter((row) => row.org === auth.user.organization_id)
-      .filter((row) => !query.warehouseId || row.warehouseId === Number(query.warehouseId))
+      .filter(
+        (row) =>
+          !query.warehouseId ||
+          row.warehouseId === Number(query.warehouseId) ||
+          row.destinationWarehouseId === Number(query.warehouseId),
+      )
+      .filter(
+        (row) =>
+          !query.destinationWarehouseId ||
+          row.destinationWarehouseId === Number(query.destinationWarehouseId) ||
+          (row.destinationWarehouseId === null &&
+            row.warehouseId === Number(query.destinationWarehouseId) &&
+            row.lines.some((line) => !line.removes)),
+      )
+      .filter((row) => !query.status || row.status === query.status)
       .filter(
         (row) =>
           !query.productId || row.lines.some((line) => line.productId === Number(query.productId)),
@@ -192,6 +246,8 @@ export const movementsRoutes: MockRoutes = {
     const input = (body ?? {}) as {
       movementTypeId?: unknown;
       warehouseId?: unknown;
+      destinationWarehouseId?: unknown;
+      receiveNow?: unknown;
       documentRef?: unknown;
       notes?: unknown;
       lines?: LineInput[];
@@ -233,13 +289,43 @@ export const movementsRoutes: MockRoutes = {
 
     const type = types.find((t) => t.id === input.movementTypeId);
     if (!type) return error(400, 'MOVEMENT_TYPE_INVALID', 'The movement type does not exist');
-    if (type.nature === 'TRANSFER') {
-      return error(400, 'MOVEMENT_TYPE_NOT_SUPPORTED', 'Transfers cannot be registered yet');
+    const transfer = type.nature === 'TRANSFER';
+    if (
+      !transfer &&
+      (input.destinationWarehouseId !== undefined || input.receiveNow !== undefined)
+    ) {
+      return error(
+        400,
+        'TRANSFER_FIELDS_NOT_ALLOWED',
+        'Only transfers take a destination warehouse, destination locations or receiveNow',
+      );
     }
     const warehouse = findWarehouseRow(org, input.warehouseId as number);
     if (!warehouse?.isActive) {
       return error(400, 'WAREHOUSE_INVALID', 'The warehouse does not exist or is inactive');
     }
+    let destination: ReturnType<typeof findWarehouseRow> = undefined;
+    if (transfer) {
+      if (input.destinationWarehouseId === undefined) {
+        return error(
+          400,
+          'DESTINATION_WAREHOUSE_REQUIRED',
+          'Transfers need a destination warehouse',
+        );
+      }
+      if (input.destinationWarehouseId === warehouse.id) {
+        return error(400, 'SAME_WAREHOUSE', 'A transfer needs a destination other than its origin');
+      }
+      destination = findWarehouseRow(org, Number(input.destinationWarehouseId));
+      if (!destination?.isActive) {
+        return error(
+          400,
+          'DESTINATION_WAREHOUSE_INVALID',
+          'The destination warehouse does not exist or is inactive',
+        );
+      }
+    }
+    const receiveNow = transfer && input.receiveNow === true;
 
     // Check every line before touching the stock: the movement is all or nothing.
     const plan: { productId: number; lot: string | null; delta: number }[] = [];
@@ -273,7 +359,7 @@ export const movementsRoutes: MockRoutes = {
           `Line ${n}: only adjustment lines take a direction`,
         );
       }
-      const removes = type.nature === 'OUTBOUND' || line.direction === 'DECREASE';
+      const removes = transfer || type.nature === 'OUTBOUND' || line.direction === 'DECREASE';
       const quantity = line.quantity as number;
       if (removes) {
         if (lot && !lotExists(org, product.id, lot)) {
@@ -296,11 +382,22 @@ export const movementsRoutes: MockRoutes = {
     plan.forEach((p) => applyStock(org, p.productId, warehouse.id, p.lot, p.delta));
     // Each movement re-evaluates the alerts of its products in the warehouse (CU-12a).
     new Set(plan.map((p) => p.productId)).forEach((id) => evaluateAlert(org, id, warehouse.id));
+    if (destination && receiveNow) {
+      plan.forEach((p) => applyStock(org, p.productId, destination.id, p.lot, -p.delta));
+      new Set(plan.map((p) => p.productId)).forEach((id) => evaluateAlert(org, id, destination.id));
+    } else if (destination) {
+      trackTransferInTransit(org, [warehouse.id, destination.id], 1);
+    }
+    const now = new Date().toISOString();
     const row = recordMovement({
       org,
       source: 'MANUAL',
       typeId: type.id,
       warehouseId: warehouse.id,
+      status: destination && !receiveNow ? 'IN_TRANSIT' : 'CONFIRMED',
+      destinationWarehouseId: destination?.id ?? null,
+      receivedById: receiveNow ? auth.user.id : null,
+      receivedAt: receiveNow ? now : null,
       userId: auth.user.id,
       departmentId: null,
       documentRef: typeof input.documentRef === 'string' ? input.documentRef.trim() || null : null,
@@ -311,9 +408,70 @@ export const movementsRoutes: MockRoutes = {
         quantity: Math.abs(p.delta),
         removes: p.delta < 0,
         unitCost: typeof lines[index].unitCost === 'number' ? (lines[index].unitCost as number) : 0,
+        receivedQuantity: receiveNow ? Math.abs(p.delta) : null,
       })),
     });
     return { status: 201, data: toDto(row) };
+  },
+
+  // CU-16: what arrived is added to the destination; what is short is lost on the way.
+  'POST /movements/:id/receive': ({ params, body }) => {
+    const auth = authorize('movement.receive');
+    if (auth.error) return auth.error;
+    const org = auth.user.organization_id;
+    const row = movements.find((m) => m.org === org && m.id === Number(params.id));
+    if (!row) return error(404, 'MOVEMENT_NOT_FOUND', 'Movement not found');
+    if (row.status !== 'IN_TRANSIT' || row.destinationWarehouseId === null) {
+      return error(409, 'MOVEMENT_NOT_IN_TRANSIT', 'Only transfers in transit can be received');
+    }
+    const destination = findWarehouseRow(org, row.destinationWarehouseId);
+    if (!destination?.isActive) {
+      return error(
+        400,
+        'DESTINATION_WAREHOUSE_INVALID',
+        'The destination warehouse does not exist or is inactive',
+      );
+    }
+    const input = (body ?? {}) as {
+      lines?: { lineNumber?: unknown; receivedQuantity?: unknown }[];
+    };
+    const changes = new Map<number, number>();
+    for (const line of input.lines ?? []) {
+      const n = Number(line.lineNumber);
+      const sent = row.lines[n - 1];
+      if (!sent || changes.has(n)) {
+        return error(
+          400,
+          'RECEIPT_LINE_INVALID',
+          `Line ${n} is not a line of the transfer, or it is repeated`,
+        );
+      }
+      const q = line.receivedQuantity;
+      if (typeof q !== 'number' || q < 0 || decimals(q) > 4) {
+        return error(400, 'VALIDATION', 'receivedQuantity must not be less than 0');
+      }
+      if (q > sent.quantity) {
+        return error(
+          400,
+          'RECEIVED_QUANTITY_INVALID',
+          `Line ${n}: the received quantity cannot exceed the quantity sent`,
+        );
+      }
+      changes.set(n, q);
+    }
+    row.lines.forEach((line, index) => {
+      const received = changes.get(index + 1) ?? line.quantity;
+      line.receivedQuantity = received;
+      if (received > 0) applyStock(org, line.productId, destination.id, line.lot, received);
+    });
+    new Set(row.lines.map((line) => line.productId)).forEach((id) =>
+      evaluateAlert(org, id, destination.id),
+    );
+    trackTransferInTransit(org, [row.warehouseId, destination.id], -1);
+    row.status = 'CONFIRMED';
+    row.receivedById = auth.user.id;
+    row.receivedAt = new Date().toISOString();
+    return { status: 200, data: toDto(row) };
   },
 };
 

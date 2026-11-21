@@ -1,5 +1,5 @@
 import { authorize, error } from '../guard';
-import { warehouseHasStock } from '../stock';
+import { hasTransfersInTransit, warehouseHasStock } from '../stock';
 import type { MockRoutes } from '../server';
 
 /**
@@ -191,6 +191,13 @@ export const warehousesRoutes: MockRoutes = {
     }
     if (input.isActive === false && row.isActive && warehouseHasStock(organizationId, row.id)) {
       return error(409, 'WAREHOUSE_HAS_STOCK', 'The warehouse still has stock on hand');
+    }
+    if (input.isActive === false && row.isActive && hasTransfersInTransit(organizationId, row.id)) {
+      return error(
+        409,
+        'WAREHOUSE_HAS_TRANSFERS_IN_TRANSIT',
+        'A warehouse with transfers in transit, to or from it, cannot be deactivated',
+      );
     }
 
     if (code !== undefined) row.code = code;

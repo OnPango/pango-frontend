@@ -12,6 +12,7 @@ import type {
   MovementPageDto,
   MovementTypeDto,
   ProductPageDto,
+  ReceiveTransferDto,
   WarehouseDto,
 } from './movements.dto';
 import { toListQuery, toMovement, toMovementType } from './movements.mappers';
@@ -30,6 +31,30 @@ export async function getMovements(filters: MovementFilters): Promise<MovementPa
 /** `GET /movements/:id`; `404 MOVEMENT_NOT_FOUND` when it does not exist or is not readable. */
 export async function getMovement(id: string): Promise<Movement> {
   const { data } = await http.get<MovementDto>(`/movements/${id}`);
+  return toMovement(data);
+}
+
+/**
+ * `POST /movements/:id/receive` (CU-16): what arrived is added to the destination and the transfer
+ * is confirmed. `received` lists only the lines that differ from what was sent.
+ */
+export async function receiveTransfer(
+  id: string,
+  received: { lineNumber: number; quantity: number }[],
+): Promise<Movement> {
+  const body: ReceiveTransferDto =
+    received.length > 0
+      ? {
+          lines: received.map((line) => ({
+            lineNumber: line.lineNumber,
+            receivedQuantity: line.quantity,
+          })),
+        }
+      : {};
+  // Like registering a movement, it locks rows and re-evaluates alerts: it can take a while.
+  const { data } = await http.post<MovementDto>(`/movements/${id}/receive`, body, {
+    timeout: 60_000,
+  });
   return toMovement(data);
 }
 

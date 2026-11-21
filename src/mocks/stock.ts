@@ -104,6 +104,19 @@ export function warehouseHasStock(org: string, warehouseId: number): boolean {
   return false;
 }
 
+/** Transfers in transit per warehouse, origin and destination (CU-16): such a warehouse cannot close. */
+const transfersInTransit = new Map<string, number>();
+
+export function trackTransferInTransit(org: string, warehouseIds: number[], delta: 1 | -1) {
+  for (const id of warehouseIds) {
+    const k = `${org}|${id}`;
+    transfersInTransit.set(k, (transfersInTransit.get(k) ?? 0) + delta);
+  }
+}
+
+export const hasTransfersInTransit = (org: string, warehouseId: number) =>
+  (transfersInTransit.get(`${org}|${warehouseId}`) ?? 0) > 0;
+
 // ---- Replenishment parameters and alerts (docs/replenishment.md) ----
 
 export interface ReplenishmentParams {
