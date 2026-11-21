@@ -23,6 +23,8 @@ import {
   startLoginChallenge,
   verifyLoginChallenge,
   type ChallengeFailure,
+  isTrustedDevice,
+  trustDevice,
 } from '../loginCodes';
 import { requestContext, type MockResponse, type MockRoutes } from '../server';
 import {
@@ -283,6 +285,12 @@ export const authRoutes: MockRoutes = {
       return error(403, 'USER_DISABLED', 'This user is disabled in this organization');
     }
 
+    // A browser trusted after an earlier code skips it (pango-core's `pango_device_` cookie).
+    if (isTrustedDevice(subdomain, user.id)) {
+      user.last_login_at = new Date().toISOString();
+      persistUsers();
+      return startSession(user);
+    }
     // Second step: the session opens with the code emailed now (here, logged to the console).
     return { status: 202, data: startLoginChallenge(user, subdomain) };
   },
@@ -290,7 +298,8 @@ export const authRoutes: MockRoutes = {
   'POST /auth/login/verify': ({ body }) => {
     const subdomain = tenantOf();
     if (!subdomain) return error(400, 'TENANT_REQUIRED', 'The organization subdomain is required');
-    const code = str((body as { code?: unknown } | null)?.code);
+    const input = (body ?? {}) as { code?: unknown; rememberDevice?: unknown };
+    const code = str(input.code);
     if (!/^\d{6}$/.test(code)) {
       return error(400, 'VALIDATION_FAILED', 'The code must be six digits');
     }
@@ -304,6 +313,7 @@ export const authRoutes: MockRoutes = {
     }
     user.last_login_at = new Date().toISOString();
     persistUsers();
+    trustDevice(subdomain, user.id, input.rememberDevice === true);
     return startSession(user);
   },
 

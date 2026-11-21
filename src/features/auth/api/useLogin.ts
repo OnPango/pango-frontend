@@ -19,7 +19,8 @@ export function useLogin() {
 /** The code step: the right code starts the session. */
 export function useVerifyLoginCode() {
   return useMutation({
-    mutationFn: (code: string) => verifyLoginCode(code),
+    mutationFn: ({ code, rememberDevice }: { code: string; rememberDevice: boolean }) =>
+      verifyLoginCode(code, rememberDevice),
     onSuccess: (session) => applySession(session),
   });
 }

@@ -59,6 +59,9 @@ export const toLoginChallenge = (dto: LoginCodeRequiredDto): LoginChallenge => (
   expiresAt: dto.expiresAt,
   resendAvailableAt: dto.resendAvailableAt,
   emailSent: dto.emailSent,
+  // Older APIs did not send them: what pango-core defaults to.
+  trustedDeviceHours: dto.trustedDeviceHours ?? 12,
+  rememberDeviceDays: dto.rememberDeviceDays ?? 30,
 });
 
 export const toLoginResult = (dto: LoginResponseDto): LoginResult =>

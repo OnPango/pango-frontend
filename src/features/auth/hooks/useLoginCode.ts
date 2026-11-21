@@ -38,6 +38,8 @@ export function useLoginCode(
   const resend = useResendLoginCode();
   const [digits, setDigits] = useState(() => emptyCode(challenge.codeLength));
   const [rejections, setRejections] = useState(0);
+  /** Do not ask for the code on this browser for `challenge.rememberDeviceDays`. */
+  const [rememberDevice, setRememberDevice] = useState(false);
   const now = useNow();
 
   const expiresIn = secondsUntil(challenge.expiresAt, now);
@@ -55,18 +57,21 @@ export function useLoginCode(
   const submit = (code = digits.join('')) => {
     if (verify.isPending || code.length < challenge.codeLength) return;
     resend.reset();
-    verify.mutate(code, {
-      onSuccess: onVerified,
-      onError: (error) => {
-        const errorCode = getApiErrorCode(error);
-        if (errorCode && ENDS_LOGIN_CHALLENGE.has(errorCode)) {
-          onEnd(getAuthErrorMessage(error, 'Inicia sesión de nuevo.'));
-          return;
-        }
-        setRejections((count) => count + 1);
-        startOver();
+    verify.mutate(
+      { code, rememberDevice },
+      {
+        onSuccess: onVerified,
+        onError: (error) => {
+          const errorCode = getApiErrorCode(error);
+          if (errorCode && ENDS_LOGIN_CHALLENGE.has(errorCode)) {
+            onEnd(getAuthErrorMessage(error, 'Inicia sesión de nuevo.'));
+            return;
+          }
+          setRejections((count) => count + 1);
+          startOver();
+        },
       },
-    });
+    );
   };
 
   const sendAnother = () => {
@@ -106,6 +111,8 @@ export function useLoginCode(
   return {
     digits,
     setDigits,
+    rememberDevice,
+    setRememberDevice,
     submit,
     isVerifying: verify.isPending,
     /** Increases on every rejected code, to shake the boxes. */
