@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, loadEnv } from 'vite';
@@ -30,6 +31,18 @@ export default defineConfig(({ mode }) => {
           cookiePathRewrite: { '/auth': '/api/auth', '/auth/login': '/api/auth/login' },
         },
       },
+    },
+    test: {
+      environment: 'jsdom',
+      setupFiles: ['./src/test/setup.ts'],
+      // Fixed values, so a developer's local `.env.*` never changes what the tests see.
+      env: {
+        VITE_API_BASE_URL: '/api',
+        VITE_APP_BASE_DOMAIN: 'onpango.com',
+        VITE_DEV_TENANT: '',
+        VITE_USE_MOCK: 'false',
+      },
+      coverage: { provider: 'v8', include: ['src/**'], exclude: ['src/mocks/**', 'src/test/**'] },
     },
   };
 });

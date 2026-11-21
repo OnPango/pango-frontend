@@ -49,14 +49,21 @@ export function slugify(text: string): string {
     .slice(0, SUBDOMAIN_MAX_LENGTH);
 }
 
-/** Organization the app is being served for, or `null` on the main domain. */
-export function getCurrentTenant(): string | null {
-  if (env.devTenant) return env.devTenant;
-  const host = window.location.hostname.toLowerCase();
+/**
+ * Organization a hostname belongs to: `acme.onpango.com` → `acme`. `null` on the main domain, on a
+ * reserved name, on a nested subdomain (`a.b.onpango.com`) and on any other domain.
+ */
+export function tenantFromHostname(hostname: string): string | null {
+  const host = hostname.toLowerCase();
   const suffix = `.${env.appBaseDomain}`;
   if (!host.endsWith(suffix)) return null;
   const label = host.slice(0, -suffix.length);
   return label && !label.includes('.') && !RESERVED_SUBDOMAINS.has(label) ? label : null;
+}
+
+/** Organization the app is being served for, or `null` on the main domain. */
+export function getCurrentTenant(): string | null {
+  return env.devTenant ?? tenantFromHostname(window.location.hostname);
 }
 
 function originFor(host: string): string {

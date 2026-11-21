@@ -92,7 +92,7 @@ const noLiteralColors = {
 const pangoPlugin = { rules: { 'no-literal-colors': noLiteralColors } };
 
 export default defineConfig([
-  globalIgnores(['dist', 'node_modules']),
+  globalIgnores(['dist', 'node_modules', 'coverage']),
 
   js.configs.recommended,
   tseslint.configs.recommended,
