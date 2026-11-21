@@ -108,8 +108,11 @@ export default function InventoryPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const warehouseName = warehouses.data?.find((warehouse) => warehouse.id === warehouseId)?.name;
-  /** A transfer needs somewhere else to go. */
-  const canTransfer = canRegister && (warehouses.data?.length ?? 0) > 1;
+  /**
+   * A transfer needs somewhere else to go. Offered while the warehouses load (they can take a
+   * moment), and hidden only once it is known there is a single one.
+   */
+  const canTransfer = canRegister && !(warehouses.isSuccess && warehouses.data.length < 2);
   // CU-16: transfers on their way here wait for someone to receive them (in Movimientos).
   const incoming = useIncomingTransfers(
     view === 'warehouse' && warehouseId && canReadMovements ? warehouseId : null,

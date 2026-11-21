@@ -196,32 +196,22 @@ function TransferForm({
               };
               const lineErrors = errors.lines?.[index];
               return (
-                <li key={field.id} className="space-y-3 rounded-xl border border-line2 p-3">
+                <li
+                  key={field.id}
+                  className="grid grid-cols-1 items-start gap-3 rounded-xl bg-canvas p-3 sm:grid-cols-2"
+                >
+                  <FormSelect
+                    control={control}
+                    name={`lines.${index}.productId`}
+                    aria-label={`Producto ${index + 1}`}
+                    placeholder="Busca por código o nombre"
+                    options={productOptions(index)}
+                    searchable
+                    searchPlaceholder="Código o nombre…"
+                    emptyMessage="Ningún producto coincide"
+                  />
+                  {/* The quantity, with the button that removes the line beside it. */}
                   <div className="flex items-start gap-2">
-                    <FormSelect
-                      control={control}
-                      name={`lines.${index}.productId`}
-                      aria-label={`Producto ${index + 1}`}
-                      placeholder="Busca por código o nombre"
-                      options={productOptions(index)}
-                      searchable
-                      searchPlaceholder="Código o nombre…"
-                      emptyMessage="Ningún producto coincide"
-                      className="min-w-0 flex-1"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => lines.remove(index)}
-                      disabled={lineCount === 1}
-                      aria-label={`Quitar el producto ${index + 1}`}
-                      title={lineCount === 1 ? 'Debe quedar al menos un producto' : 'Quitar'}
-                      className="mt-1 text-danger hover:bg-danger/10"
-                    >
-                      <FiTrash2 aria-hidden className="size-4" />
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <TextBox
                       aria-label={`Cantidad ${index + 1}`}
                       inputMode="decimal"
@@ -241,39 +231,51 @@ function TransferForm({
                           : undefined
                       }
                       error={lineErrors?.quantity?.message}
+                      containerClassName="min-w-0 flex-1"
                       {...register(`lines.${index}.quantity`)}
                     />
-                    {lots && (
-                      <FormSelect
-                        control={control}
-                        name={`lines.${index}.lotCode`}
-                        aria-label={`Lote ${index + 1}`}
-                        disabled={!originId}
-                        placeholder={
-                          !originId
-                            ? 'Primero elige el origen'
-                            : lots.isLoading
-                              ? 'Cargando lotes…'
-                              : lots.items.length > 0
-                                ? 'Elige el lote'
-                                : 'No hay lotes con existencia allí'
-                        }
-                        options={lots.items.map((lot) => ({
-                          value: lot.code,
-                          label: lot.code,
-                          description: [
-                            product ? formatQuantity(lot.onHand, product.unit) : null,
-                            lot.expiryDate ? `vence el ${formatDay(lot.expiryDate)}` : null,
-                          ]
-                            .filter(Boolean)
-                            .join(' · '),
-                        }))}
-                        searchable
-                        searchPlaceholder="Buscar lote…"
-                        emptyMessage="Ningún lote coincide"
-                      />
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => lines.remove(index)}
+                      disabled={lineCount === 1}
+                      aria-label={`Quitar el producto ${index + 1}`}
+                      title={lineCount === 1 ? 'Debe quedar al menos un producto' : 'Quitar'}
+                      className="mt-1 text-danger hover:bg-danger/10"
+                    >
+                      <FiTrash2 aria-hidden className="size-4" />
+                    </Button>
                   </div>
+                  {lots && (
+                    <FormSelect
+                      control={control}
+                      name={`lines.${index}.lotCode`}
+                      aria-label={`Lote ${index + 1}`}
+                      disabled={!originId}
+                      placeholder={
+                        !originId
+                          ? 'Primero elige el origen'
+                          : lots.isLoading
+                            ? 'Cargando lotes…'
+                            : lots.items.length > 0
+                              ? 'Elige el lote'
+                              : 'No hay lotes con existencia allí'
+                      }
+                      options={lots.items.map((lot) => ({
+                        value: lot.code,
+                        label: lot.code,
+                        description: [
+                          product ? formatQuantity(lot.onHand, product.unit) : null,
+                          lot.expiryDate ? `vence el ${formatDay(lot.expiryDate)}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · '),
+                      }))}
+                      searchable
+                      searchPlaceholder="Buscar lote…"
+                      emptyMessage="Ningún lote coincide"
+                    />
+                  )}
                 </li>
               );
             })}
