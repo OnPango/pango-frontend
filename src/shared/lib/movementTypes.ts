@@ -14,7 +14,7 @@ const BASE_TYPES: Record<string, { label: string; description: string }> = {
   },
   'Consumption issue': {
     label: 'Consumo interno',
-    description: 'Sale para uso de un área. Cuenta como demanda solo cuando atiende una solicitud.',
+    description: 'Sale para uso de un área. Cuenta como demanda para el pronóstico.',
   },
   'Sales issue': {
     label: 'Venta',
@@ -34,12 +34,10 @@ interface TypeRef {
 }
 
 /**
- * Whether a movement feeds the demand history (pango-core's `docs/database.md`): its type counts
- * as demand, and a "Consumption issue" only when it fulfils a stock request, so consumption is
- * always traceable to an area. Sales count as they are.
+ * Whether a movement feeds the demand history (pango-core's `docs/demand.md`): its type counts as
+ * demand. Sales and internal consumption both count, with or without a stock request (US-013).
  */
-export const feedsDemand = (type: TypeRef, fulfilsRequest: boolean) =>
-  type.countsAsDemand && (type.name !== 'Consumption issue' || fulfilsRequest);
+export const feedsDemand = (type: TypeRef) => type.countsAsDemand;
 
 export const movementTypeLabel = (type: Pick<TypeRef, 'name'>) =>
   BASE_TYPES[type.name]?.label ?? type.name;
