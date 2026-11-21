@@ -121,8 +121,8 @@ export function useLoginCode(
     resend: {
       send: sendAnother,
       isPending: resend.isPending,
-      /** A new code went out (or not, if the email failed). */
-      sent: resend.isSuccess,
+      /** A new code was emailed: the resend answered and its email actually went out. */
+      sent: resend.isSuccess && challenge.emailSent,
       /** Seconds until another code can be asked for. */
       availableIn: resendIn,
     },

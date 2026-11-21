@@ -53,10 +53,15 @@ export function RegisterSuccess({
         <h1 className="text-3xl leading-tight font-bold">
           {pending ? 'Cuenta registrada' : 'Organización creada'}
         </h1>
-        {pending ? (
+        {pending && result.emailSent ? (
           <p className="leading-relaxed text-muted">
             Enviamos un correo a <b className="text-fg">{result.email}</b>. Confírmalo para activar
             tu espacio <b className="text-fg">{address}</b>.
+          </p>
+        ) : pending ? (
+          <p className="leading-relaxed text-muted">
+            Confirma tu correo <b className="text-fg">{result.email}</b> para activar tu espacio{' '}
+            <b className="text-fg">{address}</b>.
           </p>
         ) : (
           <p className="leading-relaxed text-muted">
