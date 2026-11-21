@@ -1,7 +1,10 @@
 /** Bodies of the stock request endpoints (`docs/stock-requests.md` in pango-core). */
 
-export type RequestTypeDto =
-  'INTERNAL_CONSUMPTION' | 'INTERNAL_REPLENISHMENT' | 'RETURN' | 'INCIDENT';
+/**
+ * The only type pango-core accepts. Its data model also lists `INTERNAL_REPLENISHMENT`, `RETURN`
+ * and `INCIDENT`, with no rules yet (RF-REQ-007): add them here when the API takes them.
+ */
+export type RequestTypeDto = 'INTERNAL_CONSUMPTION';
 
 export type RequestStatusDto = 'PENDING' | 'IN_PROGRESS' | 'FULFILLED' | 'REJECTED' | 'CANCELLED';
 

@@ -4,10 +4,10 @@ import type { UnitRef } from '@/shared/lib/units';
 export type RequestStatus = 'pending' | 'inProgress' | 'fulfilled' | 'rejected' | 'cancelled';
 
 /**
- * RF-REQ-007. Only internal consumption counts as demand (RN-008) and, for now, the only one
- * pango-core accepts; the others are enabled later.
+ * RF-REQ-007. Internal consumption is the only type pango-core accepts (and the one that counts
+ * as demand, RN-008); the others come when the API has rules for them.
  */
-export type RequestType = 'internalConsumption' | 'internalReplenishment' | 'return' | 'incident';
+export type RequestType = 'internalConsumption';
 
 /** 1 is the highest. */
 export type RequestPriority = 1 | 2 | 3;
