@@ -29,7 +29,6 @@ export function DepartmentCard({ department, onEdit, onToggleStatus }: Departmen
           <div className="flex w-full items-center justify-end gap-1">
             <Button
               variant="ghost"
-              size="sm"
               onClick={() => onToggleStatus(department)}
               className={`text-xs ${
                 department.isActive
@@ -46,7 +45,6 @@ export function DepartmentCard({ department, onEdit, onToggleStatus }: Departmen
             </Button>
             <Button
               variant="ghost"
-              size="sm"
               onClick={() => onEdit(department)}
               className="gap-1.5 p-1.5 text-muted hover:text-fg"
               aria-label={`Editar ${department.name}`}

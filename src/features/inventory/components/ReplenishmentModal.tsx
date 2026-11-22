@@ -92,14 +92,13 @@ function ReplenishmentContent({
       dismissible={!save.isPending}
       footer={
         <>
-          <Button variant="outline" size="sm" onClick={onClose} disabled={save.isPending}>
+          <Button variant="outline" onClick={onClose} disabled={save.isPending}>
             Cancelar
           </Button>
           <Button
             type="submit"
             form={FORM_ID}
             variant="primary"
-            size="sm"
             isLoading={save.isPending}
             disabled={!data || !isDirty}
           >

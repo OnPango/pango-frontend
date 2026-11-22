@@ -87,12 +87,7 @@ export function CardGrid<T>({
           </li>
         ))}
       </ul>
-      {pagination && (
-        <Pagination
-          {...pagination}
-          className="rounded-2xl border border-line2 bg-surface px-5 py-3.5"
-        />
-      )}
+      {pagination && <Pagination {...pagination} className="rounded-2xl px-5 py-3.5" />}
     </div>
   );
 }

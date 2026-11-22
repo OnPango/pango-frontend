@@ -53,7 +53,7 @@ export function FamilyCard({
       }
       footer={
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           onClick={() => onOpen(category)}
           aria-label={`Ver el detalle de ${category.name}`}

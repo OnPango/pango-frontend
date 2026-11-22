@@ -57,7 +57,7 @@ export function ProductDetailPanel({
       onClose={onClose}
       footer={
         canManage ? (
-          <Button variant="primary" size="sm" onClick={() => onEdit(product)} className="gap-2">
+          <Button variant="primary" onClick={() => onEdit(product)} className="gap-2">
             <MdEdit aria-hidden className="size-4" />
             Editar
           </Button>

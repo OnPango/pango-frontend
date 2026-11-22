@@ -29,12 +29,11 @@ export function DepartmentStatusDialog({
       dismissible={!update.isPending}
       footer={
         <>
-          <Button variant="outline" size="sm" onClick={onClose} disabled={update.isPending}>
+          <Button variant="outline" onClick={onClose} disabled={update.isPending}>
             Cancelar
           </Button>
           <Button
             variant={deactivating ? 'danger' : 'primary'}
-            size="sm"
             isLoading={update.isPending}
             onClick={() =>
               update.mutate(

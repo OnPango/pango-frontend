@@ -42,16 +42,10 @@ export function RunForecastModal({ warehouses, product, running, onClose }: RunF
       dismissible={!start.isPending}
       footer={
         <>
-          <Button variant="outline" size="sm" onClick={onClose} disabled={start.isPending}>
+          <Button variant="outline" onClick={onClose} disabled={start.isPending}>
             Cancelar
           </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={submit}
-            isLoading={start.isPending}
-            disabled={running}
-          >
+          <Button variant="primary" onClick={submit} isLoading={start.isPending} disabled={running}>
             Generar
           </Button>
         </>

@@ -107,12 +107,11 @@ function LotDatesForm({
         />
       </div>
       <div className="flex justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={onCancel} disabled={update.isPending}>
+        <Button variant="outline" onClick={onCancel} disabled={update.isPending}>
           Cancelar
         </Button>
         <Button
           variant="primary"
-          size="sm"
           onClick={save}
           isLoading={update.isPending}
           disabled={backwards || unchanged}

@@ -39,7 +39,6 @@ export function WarehouseDetailPanel({
           <>
             <Button
               variant="ghost"
-              size="sm"
               onClick={() => onToggleStatus(warehouse)}
               className={
                 warehouse.isActive
@@ -49,7 +48,7 @@ export function WarehouseDetailPanel({
             >
               {warehouse.isActive ? 'Cerrar almacén' : 'Reabrir almacén'}
             </Button>
-            <Button variant="primary" size="sm" onClick={() => onEdit(warehouse)} className="gap-2">
+            <Button variant="primary" onClick={() => onEdit(warehouse)} className="gap-2">
               <MdEdit aria-hidden className="size-4" />
               Editar
             </Button>

@@ -25,8 +25,8 @@ export function WarehouseCard({ warehouse, onOpen, onEdit, onToggleStatus }: War
       footer={
         <>
           <Button
-            variant="outline"
-            size="sm"
+            variant="ghost"
+
             onClick={() => onOpen(warehouse)}
             aria-label={`Ver detalle de ${warehouse.name}`}
             className="gap-2"
@@ -37,7 +37,6 @@ export function WarehouseCard({ warehouse, onOpen, onEdit, onToggleStatus }: War
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
-                size="sm"
                 onClick={() => onToggleStatus(warehouse)}
                 className={`text-xs ${
                   warehouse.isActive
@@ -52,7 +51,6 @@ export function WarehouseCard({ warehouse, onOpen, onEdit, onToggleStatus }: War
               </Button>
               <Button
                 variant="ghost"
-                size="sm"
                 onClick={() => onEdit(warehouse)}
                 className="gap-1.5 p-1.5 text-muted hover:text-fg"
                 aria-label={`Editar ${warehouse.name}`}

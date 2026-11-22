@@ -98,7 +98,6 @@ export function MovementDetailPanel({
               {canReceive ? (
                 <Button
                   variant="primary"
-                  size="sm"
                   onClick={() => setReceiving(true)}
                   className="w-full sm:w-auto"
                 >

@@ -59,13 +59,12 @@ export function CategoryStatusDialog({
       dismissible={!update.isPending}
       footer={
         <>
-          <Button variant="outline" size="sm" onClick={onClose} disabled={update.isPending}>
+          <Button variant="outline" onClick={onClose} disabled={update.isPending}>
             {blocker ? 'Entendido' : 'Cancelar'}
           </Button>
           {!blocker && (
             <Button
               variant={deactivating ? 'danger' : 'primary'}
-              size="sm"
               isLoading={update.isPending}
               onClick={() =>
                 update.mutate(
