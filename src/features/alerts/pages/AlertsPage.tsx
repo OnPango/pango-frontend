@@ -2,10 +2,14 @@ import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
+import { useListView } from '@/shared/hooks/useListView';
+import { CardGrid } from '@/shared/ui/components/CardGrid';
 import { Select } from '@/shared/ui/components/form/select/Select';
 import type { SelectOption } from '@/shared/ui/components/form/select/select.types';
+import { ViewModeToggle } from '@/shared/ui/components/ViewModeToggle';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { useAlertProducts, useAlerts, useAlertWarehouses } from '../api/alerts.queries';
+import { AlertCard } from '../components/AlertCard';
 import { AlertDetailPanel } from '../components/AlertDetailPanel';
 import { AlertsTable } from '../components/AlertsTable';
 import { alertWarehouses, readsStockIn } from '../content/alert.permissions';
@@ -43,6 +47,7 @@ export default function AlertsPage() {
   const [sort, setSort] = useState<AlertSort>('created');
   const [warehouseFilter, setWarehouseFilter] = useState<string>(ALL);
   const [productFilter, setProductFilter] = useState<string>(ALL);
+  const { view, setView } = useListView('pango.alerts.view', 'cards');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const alerts = useAlerts({
@@ -103,6 +108,12 @@ export default function AlertsPage() {
     [currentUser],
   );
 
+  const showInventory = (alert: StockAlert) =>
+    navigate(`/inventory?view=product&product=${alert.product.id}`);
+  const loadError = alerts.error
+    ? alertsErrorMessage(alerts.error, 'No se pudieron cargar las alertas.')
+    : undefined;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -110,7 +121,10 @@ export default function AlertsPage() {
         subtitle="Se generan solas cuando el disponible de un producto en un almacén llega a su punto de reorden, se actualizan mientras siga bajo él y se resuelven cuando vuelve a superarlo."
       />
 
-      <section aria-label="Filtros" className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <section
+        aria-label="Filtros"
+        className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center"
+      >
         <Select
           aria-label="Filtrar por estado"
           value={status}
@@ -119,7 +133,7 @@ export default function AlertsPage() {
             setPage(1);
           }}
           options={STATUS_OPTIONS}
-          className="w-full sm:w-44"
+          className="w-full sm:w-44 xl:w-40"
         />
         {warehouses.length > 1 && (
           <Select
@@ -136,7 +150,7 @@ export default function AlertsPage() {
             searchable
             searchPlaceholder="Buscar almacén…"
             emptyMessage="Ningún almacén coincide"
-            className="w-full sm:w-60"
+            className="w-full sm:w-60 xl:w-50"
           />
         )}
         {canReadCatalog && (
@@ -151,7 +165,7 @@ export default function AlertsPage() {
             searchable
             searchPlaceholder="Buscar por código o nombre…"
             emptyMessage="Ningún producto coincide"
-            className="w-full sm:w-72"
+            className="w-full sm:w-72 xl:w-60"
           />
         )}
         <Select
@@ -162,39 +176,66 @@ export default function AlertsPage() {
             setPage(1);
           }}
           options={SORT_OPTIONS}
-          className="w-full sm:ml-auto sm:w-52"
+          className="w-full sm:ml-auto sm:w-52 xl:w-44"
         />
+        <ViewModeToggle legend="Ver las alertas como" value={view} onChange={setView} />
       </section>
 
-      <AlertsTable
-        alerts={alerts.data?.items ?? []}
-        isLoading={alerts.isLoading}
-        isRefreshing={alerts.isPlaceholderData}
-        error={
-          alerts.error
-            ? alertsErrorMessage(alerts.error, 'No se pudieron cargar las alertas.')
-            : undefined
-        }
-        emptyMessage={emptyMessage}
-        page={page}
-        pageSize={pageSize}
-        totalItems={alerts.data?.total ?? 0}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => {
-          setPageSize(size);
-          setPage(1);
-        }}
-        onOpen={open}
-      />
+      {view === 'table' ? (
+        <AlertsTable
+          alerts={alerts.data?.items ?? []}
+          isLoading={alerts.isLoading}
+          isRefreshing={alerts.isPlaceholderData}
+          error={loadError}
+          emptyMessage={emptyMessage}
+          page={page}
+          pageSize={pageSize}
+          totalItems={alerts.data?.total ?? 0}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+          onOpen={open}
+        />
+      ) : (
+        <CardGrid<StockAlert>
+          ariaLabel="Alertas"
+          items={alerts.data?.items ?? []}
+          getItemKey={(alert) => alert.id}
+          isLoading={alerts.isLoading}
+          skeletonCount={4}
+          skeletonClassName="h-36"
+          className="gap-3 sm:grid-cols-1 xl:grid-cols-1"
+          error={loadError}
+          emptyMessage={emptyMessage}
+          pagination={{
+            page,
+            pageSize,
+            totalItems: alerts.data?.total ?? 0,
+            onPageChange: setPage,
+            pageSizeOptions: [10, 25, 50],
+            onPageSizeChange: (size) => {
+              setPageSize(size);
+              setPage(1);
+            },
+          }}
+          renderItem={(alert) => (
+            <AlertCard
+              alert={alert}
+              onOpen={open}
+              onShowInventory={readsStock(alert.warehouse.id) ? showInventory : undefined}
+            />
+          )}
+        />
+      )}
 
       {openId && (
         <AlertDetailPanel
           alertId={openId}
           readsStock={readsStock}
           onClose={close}
-          onShowInventory={(alert) =>
-            navigate(`/inventory?view=product&product=${alert.product.id}`)
-          }
+          onShowInventory={showInventory}
         />
       )}
     </div>
