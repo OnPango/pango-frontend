@@ -1,4 +1,6 @@
+import { findUserById } from '../db';
 import { authorize, error } from '../guard';
+import { numericId } from '../ids';
 import type { MockRoutes } from '../server';
 import { alerts, type AlertRow } from '../stock';
 import { findProductRow, findUnitRow } from './catalog.handlers';
@@ -6,7 +8,8 @@ import { findWarehouseRow } from './warehouses.handlers';
 
 /**
  * Stock alerts (`docs/replenishment.md`, CU-12): raised and resolved by `evaluateAlert` on every
- * movement, replenishment change and reservation; here they are only read, most recent first.
+ * movement, replenishment change and reservation. Here they are read, most recent first, and
+ * marked attended or pending again by hand (US-045).
  */
 
 function toDto(row: AlertRow) {
@@ -30,6 +33,10 @@ function toDto(row: AlertRow) {
     updatedAt: row.updatedAt,
     resolvedAt: row.resolvedAt,
     resolution: row.resolution,
+    attendedAt: row.attendedAt,
+    attendedBy: row.attendedBy
+      ? { id: numericId(row.attendedBy), name: findUserById(row.attendedBy)?.full_name ?? '' }
+      : null,
   };
 }
 
@@ -45,8 +52,12 @@ export const alertsRoutes: MockRoutes = {
     const auth = authorize('alert.read');
     if (auth.error) return auth.error;
     const status = query.status;
-    if (status && !['OPEN', 'RESOLVED', 'DISMISSED'].includes(status)) {
-      return error(400, 'VALIDATION_ERROR', 'status must be one of: OPEN, RESOLVED, DISMISSED');
+    if (status && !['OPEN', 'ATTENDED', 'RESOLVED', 'DISMISSED'].includes(status)) {
+      return error(
+        400,
+        'VALIDATION_ERROR',
+        'status must be one of: OPEN, ATTENDED, RESOLVED, DISMISSED',
+      );
     }
     const sort = (query.sort ?? 'CREATED') as keyof typeof ORDER;
     if (!(sort in ORDER)) {
@@ -78,6 +89,32 @@ export const alertsRoutes: MockRoutes = {
       (a) => a.org === auth.user.organization_id && a.id === Number(params.id),
     );
     if (!row) return error(404, 'ALERT_NOT_FOUND', 'Alert not found');
+    return { status: 200, data: toDto(row) };
+  },
+
+  'PATCH /alerts/:id': ({ params, body }) => {
+    const auth = authorize('alert.resolve');
+    if (auth.error) return auth.error;
+    const row = alerts.find(
+      (a) => a.org === auth.user.organization_id && a.id === Number(params.id),
+    );
+    if (!row) return error(404, 'ALERT_NOT_FOUND', 'Alert not found');
+    const status = (body as { status?: unknown } | undefined)?.status;
+    if (status !== 'OPEN' && status !== 'ATTENDED') {
+      return error(400, 'VALIDATION_ERROR', 'status must be one of: OPEN, ATTENDED');
+    }
+    if (row.status !== 'OPEN' && row.status !== 'ATTENDED') {
+      return error(409, 'ALERT_CLOSED', 'The alert is no longer in force');
+    }
+    if (row.status !== status) {
+      const now = new Date().toISOString();
+      Object.assign(row, {
+        status,
+        attendedAt: status === 'ATTENDED' ? now : null,
+        attendedBy: status === 'ATTENDED' ? auth.user.id : null,
+        updatedAt: now,
+      });
+    }
     return { status: 200, data: toDto(row) };
   },
 };

@@ -151,7 +151,7 @@ export interface AlertRow {
   productId: number;
   warehouseId: number;
   severity: 1 | 2 | 3;
-  status: 'OPEN' | 'RESOLVED' | 'DISMISSED';
+  status: 'OPEN' | 'ATTENDED' | 'RESOLVED' | 'DISMISSED';
   availableQuantity: number;
   reorderPoint: number;
   reorderPointSource: 'MANUAL' | 'CALCULATED';
@@ -161,6 +161,9 @@ export interface AlertRow {
   updatedAt: string;
   resolvedAt: string | null;
   resolution: 'STOCK_RECOVERED' | 'REORDER_POINT_CHANGED' | 'NO_REORDER_POINT' | 'INACTIVE' | null;
+  /** US-045: who marked it attended (a mock user id) and when; null while pending. */
+  attendedAt: string | null;
+  attendedBy: string | null;
 }
 export const alerts: AlertRow[] = [];
 let lastAlertId = 0;
@@ -255,13 +258,18 @@ export function evaluateAlert(org: string, productId: number, warehouseId: numbe
       updatedAt: now,
       resolvedAt: null,
       resolution: null,
+      attendedAt: null,
+      attendedBy: null,
     });
   } else if (below && open) {
     // pango-core refreshes the open alert instead of opening another; `createdAt` stays.
     const changed = (Object.keys(values) as (keyof typeof values)[]).some(
       (k) => open[k] !== values[k],
     );
+    // An attended alert that gets worse needs someone to look again.
+    const worse = open.status === 'ATTENDED' && values.severity > open.severity;
     if (changed) Object.assign(open, values, { updatedAt: now });
+    if (worse) Object.assign(open, { status: 'OPEN', attendedAt: null, attendedBy: null });
   } else if (!below && open) {
     open.status = 'RESOLVED';
     open.resolvedAt = now;
@@ -281,13 +289,19 @@ const openAlertRow = (org: string, productId: number, warehouseId: number) =>
       a.org === org &&
       a.productId === productId &&
       a.warehouseId === warehouseId &&
-      a.status === 'OPEN',
+      (a.status === 'OPEN' || a.status === 'ATTENDED'),
   );
 
 export function openAlertOf(org: string, productId: number, warehouseId: number) {
   const open = openAlertRow(org, productId, warehouseId);
   return open
-    ? { id: open.id, severity: open.severity, createdAt: open.createdAt, updatedAt: open.updatedAt }
+    ? {
+        id: open.id,
+        status: open.status,
+        severity: open.severity,
+        createdAt: open.createdAt,
+        updatedAt: open.updatedAt,
+      }
     : null;
 }
 
