@@ -6,7 +6,7 @@ export interface AlertDto {
   id: number;
   type: 'BELOW_ROP' | 'STOCKOUT' | 'OVERSTOCK';
   severity: number;
-  status: 'OPEN' | 'RESOLVED' | 'DISMISSED';
+  status: 'OPEN' | 'ATTENDED' | 'RESOLVED' | 'DISMISSED';
   /** `unit` is the stock unit's code. */
   product: { id: number; sku: string; name: string; unit: string };
   warehouse: { id: number; name: string };
@@ -22,6 +22,9 @@ export interface AlertDto {
   resolvedAt: string | null;
   /** Why it was resolved; absent before `alert_resolution`, null while open or for older ones. */
   resolution?: 'STOCK_RECOVERED' | 'REORDER_POINT_CHANGED' | 'NO_REORDER_POINT' | 'INACTIVE' | null;
+  /** Absent before `alert_attention`. */
+  attendedAt?: string | null;
+  attendedBy?: { id: number; name: string } | null;
 }
 
 export interface AlertPageDto {

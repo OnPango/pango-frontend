@@ -65,6 +65,7 @@ export function LoginForm({
             placeholder="Email"
             leadingIcon={FaUserLarge}
             required
+            size="sm"
             shape="xl2"
             error={errors.email?.message}
             {...register('email')}
@@ -77,6 +78,7 @@ export function LoginForm({
             placeholder="Contraseña"
             leadingIcon={RiLockPasswordFill}
             required
+            size="sm"
             shape="xl2"
             error={errors.password?.message}
             {...register('password')}

@@ -1,6 +1,7 @@
 import { http } from '@/core/api/http';
 import type {
   AlertFilters,
+  AlertManualStatus,
   AlertPage,
   AlertProduct,
   CurrentStock,
@@ -14,7 +15,7 @@ import type {
   ReplenishmentDto,
   WarehouseDto,
 } from './alerts.dto';
-import { toCurrentStock, toListQuery, toStockAlert } from './alerts.mappers';
+import { STATUS_DTO, toCurrentStock, toListQuery, toStockAlert } from './alerts.mappers';
 
 /**
  * `GET /alerts`, most recent first (US-044): only the organization's, and of those only the
@@ -28,6 +29,15 @@ export async function getAlerts(filters: AlertFilters): Promise<AlertPage> {
 /** `GET /alerts/:id`; `404 ALERT_NOT_FOUND` when it does not exist or the user cannot read it. */
 export async function getAlert(id: string): Promise<StockAlert> {
   const { data } = await http.get<AlertDto>(`/alerts/${id}`);
+  return toStockAlert(data);
+}
+
+/**
+ * `PATCH /alerts/:id` (US-045): attended, or pending again. Needs `alert.resolve` in the alert's
+ * warehouse; `409 ALERT_CLOSED` once it resolved.
+ */
+export async function setAlertStatus(id: string, status: AlertManualStatus): Promise<StockAlert> {
+  const { data } = await http.patch<AlertDto>(`/alerts/${id}`, { status: STATUS_DTO[status] });
   return toStockAlert(data);
 }
 

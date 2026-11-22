@@ -26,6 +26,7 @@ export const SEVERITY_EVENTS: Record<AlertSeverity, string> = {
 
 export const STATUS_LABELS: Record<AlertStatus, { label: string; tone: Tone }> = {
   open: { label: 'Pendiente', tone: 'warning' },
+  attended: { label: 'Atendida', tone: 'success' },
   resolved: { label: 'Resuelta', tone: 'neutral' },
   dismissed: { label: 'Descartada', tone: 'neutral' },
 };

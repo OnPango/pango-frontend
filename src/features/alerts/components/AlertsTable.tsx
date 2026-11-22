@@ -23,6 +23,8 @@ export interface AlertsTableProps {
   onOpen: (alert: StockAlert) => void;
 }
 
+const inForce = (alert: StockAlert) => alert.status === 'open' || alert.status === 'attended';
+
 /** CU-12: product, available stock, reorder point, severity, status and date; most recent first. */
 export function AlertsTable({
   alerts,
@@ -83,7 +85,7 @@ export function AlertsTable({
               / {formatQuantity(alert.reorderPoint, alert.product.unit)}
             </span>
             <p className="text-xs text-muted">
-              {alert.status === 'open' ? 'según la última revisión' : 'antes de resolverse'}
+              {inForce(alert) ? 'según la última revisión' : 'antes de resolverse'}
             </p>
           </div>
         ),
@@ -100,6 +102,9 @@ export function AlertsTable({
             {alert.resolvedAt && (
               <p className="mt-1 text-xs text-muted">el {formatDate(alert.resolvedAt)}</p>
             )}
+            {alert.status === 'attended' && alert.attendedBy?.name && (
+              <p className="mt-1 text-xs text-muted">por {alert.attendedBy.name}</p>
+            )}
           </div>
         ),
       },
@@ -109,7 +114,7 @@ export function AlertsTable({
         cell: (alert) => (
           <div className="text-sm whitespace-nowrap text-fg/90">
             {formatDate(alert.createdAt, true)}
-            {alert.status === 'open' && alert.updatedAt !== alert.createdAt && (
+            {inForce(alert) && alert.updatedAt !== alert.createdAt && (
               <p className="mt-1 text-xs text-muted">
                 actualizada el {formatDate(alert.updatedAt)}
               </p>

@@ -8,8 +8,15 @@ export interface Option {
 /** RF-ALT-001: 1 media (at or below the reorder point), 2 alta (safety stock), 3 crítica (none). */
 export type AlertSeverity = 1 | 2 | 3;
 
-/** RF-ALT-003: pending until stock rises above the reorder point (resolved). Dismissing is S6. */
-export type AlertStatus = 'open' | 'resolved' | 'dismissed';
+/**
+ * RF-ALT-004: pending until stock rises above the reorder point (resolved). Attended (US-045):
+ * someone took charge; it stays in force and resolves the same way, and goes back to pending by
+ * hand or when it gets worse. Dismissing is not done yet.
+ */
+export type AlertStatus = 'open' | 'attended' | 'resolved' | 'dismissed';
+
+/** What a person can set by hand. */
+export type AlertManualStatus = Extract<AlertStatus, 'open' | 'attended'>;
 
 export type ValueSource = 'manual' | 'calculated';
 
@@ -42,6 +49,9 @@ export interface StockAlert {
   updatedAt: string;
   resolvedAt: string | null;
   resolution: AlertResolution | null;
+  /** Who marked it attended and when; null while pending (kept once resolved). */
+  attendedAt: string | null;
+  attendedBy: Option | null;
 }
 
 export interface AlertFilters {
