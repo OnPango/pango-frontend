@@ -199,6 +199,10 @@ export const findUnitRow = (id: number) => units.find((unit) => unit.id === id);
 export const findCategoryRow = (organizationId: string, id: number) =>
   categories.find((row) => row.organizationId === organizationId && row.id === id);
 
+/** Every family of the organization, for the search mock. */
+export const categoriesOf = (organizationId: string) =>
+  categories.filter((row) => row.organizationId === organizationId);
+
 /** Every product of the organization, for the stock mock. */
 export const productsOf = (organizationId: string) =>
   products.filter((row) => row.organizationId === organizationId);
