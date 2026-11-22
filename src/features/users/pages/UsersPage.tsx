@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FiPlus, FiSearch } from 'react-icons/fi';
 import { hasAnyPermission } from '@/core/auth/permissions';
 import { useAuthStore } from '@/core/auth/auth.store';
@@ -66,7 +67,15 @@ export default function UsersPage() {
   const inviteUser = useInviteUser();
   const revokeInvitation = useRevokeInvitation();
 
-  const [search, setSearch] = useState('');
+  // `?search=` (the header search links here) fills the box; it follows the URL when that changes.
+  const [searchParams] = useSearchParams();
+  const urlSearch = searchParams.get('search') ?? '';
+  const [search, setSearch] = useState(urlSearch);
+  const [appliedUrlSearch, setAppliedUrlSearch] = useState(urlSearch);
+  if (urlSearch !== appliedUrlSearch) {
+    setAppliedUrlSearch(urlSearch);
+    setSearch(urlSearch);
+  }
   const [selectedRole, setSelectedRole] = useState('all');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState<StatusFilter>('all');
