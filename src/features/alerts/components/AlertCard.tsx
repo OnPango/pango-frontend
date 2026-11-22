@@ -3,7 +3,7 @@ import { formatQuantity } from '@/shared/lib/units';
 import { Badge } from '@/shared/ui/components/Badge';
 import { Button } from '@/shared/ui/components/Button';
 import { RESOLUTION_LABELS, STATUS_LABELS, timeAgo } from '../content/alert.labels';
-import type { StockAlert } from '../types/alerts.types';
+import type { AlertManualStatus, StockAlert } from '../types/alerts.types';
 import { SeverityBadge } from './SeverityBadge';
 
 /** The edge color: how serious it is while pending, neutral once it is no longer. */
@@ -16,17 +16,33 @@ export interface AlertCardProps {
   onOpen: (alert: StockAlert) => void;
   /** Only when the user reads stock in the alert's warehouse. */
   onShowInventory?: (alert: StockAlert) => void;
+  /** Only with `alert.resolve` in the alert's warehouse: attended, or pending again (US-045). */
+  onSetStatus?: (alert: StockAlert, status: AlertManualStatus) => void;
+  /** This alert's status is being changed. */
+  isSaving?: boolean;
 }
 
-/** One alert as a card: severity, product, its numbers and, while pending, what to do next. */
-export function AlertCard({ alert, onOpen, onShowInventory }: AlertCardProps) {
+/** One alert as a card: severity, product, its numbers and, while in force, what to do next. */
+export function AlertCard({
+  alert,
+  onOpen,
+  onShowInventory,
+  onSetStatus,
+  isSaving = false,
+}: AlertCardProps) {
   const isOpen = alert.status === 'open';
+  const isAttended = alert.status === 'attended';
   const { product, warehouse } = alert;
   const when = isOpen
     ? alert.updatedAt !== alert.createdAt
       ? `Actualizada ${timeAgo(alert.updatedAt)}`
       : capitalize(timeAgo(alert.createdAt))
-    : `${STATUS_LABELS[alert.status].label} ${timeAgo(alert.resolvedAt ?? alert.updatedAt)}`;
+    : isAttended && alert.attendedAt
+      ? capitalize(
+          `${alert.attendedBy?.name ? `por ${alert.attendedBy.name}, ` : ''}${timeAgo(alert.attendedAt)}`,
+        )
+      : `${STATUS_LABELS[alert.status].label} ${timeAgo(alert.resolvedAt ?? alert.updatedAt)}`;
+  const outline = 'min-h-11 border-primary px-4.5 text-[15px] text-primary hover:bg-primary/10';
 
   return (
     <article
@@ -74,16 +90,50 @@ export function AlertCard({ alert, onOpen, onShowInventory }: AlertCardProps) {
 
       {isOpen && (
         <div className="flex flex-wrap gap-2.5">
-          <Button className="min-h-11 px-4.5 text-[15px]" onClick={() => onOpen(alert)}>
+          {onSetStatus ? (
+            <>
+              <Button
+                className="min-h-11 px-4.5 text-[15px]"
+                isLoading={isSaving}
+                onClick={() => onSetStatus(alert, 'attended')}
+              >
+                Marcar atendida
+              </Button>
+              <Button variant="outline" className={outline} onClick={() => onOpen(alert)}>
+                Ver detalle
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button className="min-h-11 px-4.5 text-[15px]" onClick={() => onOpen(alert)}>
+                Ver detalle
+              </Button>
+              {onShowInventory && (
+                <Button
+                  variant="outline"
+                  className={outline}
+                  onClick={() => onShowInventory(alert)}
+                >
+                  Ver inventario
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+      {isAttended && (
+        <div className="flex flex-wrap gap-2.5">
+          <Button variant="outline" className={outline} onClick={() => onOpen(alert)}>
             Ver detalle
           </Button>
-          {onShowInventory && (
+          {onSetStatus && (
             <Button
-              variant="outline"
-              className="min-h-11 border-primary px-4.5 text-[15px] text-primary hover:bg-primary/10"
-              onClick={() => onShowInventory(alert)}
+              variant="ghost"
+              className="min-h-11 px-4.5 text-[15px] text-fg/80"
+              isLoading={isSaving}
+              onClick={() => onSetStatus(alert, 'open')}
             >
-              Ver inventario
+              Volver a pendiente
             </Button>
           )}
         </div>
