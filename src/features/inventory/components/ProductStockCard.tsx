@@ -20,12 +20,15 @@ export function ProductStockCard({
   onRegister,
   onReplenish,
   onShowLots,
+  canTransfer = false,
   historyHref,
 }: {
   stock: ProductStock;
   /** With `movement.read`: the product's movement history, which adds up to the total. */
   historyHref?: string;
   onOpenWarehouse: (warehouseId: string) => void;
+  /** With another warehouse to send it to: the rows offer "Traslado". */
+  canTransfer?: boolean;
   /** Without `movement.create` there are no movement actions. */
   onRegister?: (kind: StockAction, warehouseId: string) => void;
   /** With `replenishment.manage`: edit the warehouse's safety stock and reorder point. */
@@ -152,12 +155,13 @@ export function ProductStockCard({
             canAdd={product.isActive}
             canRemove={product.isActive && row.onHand > 0}
             onRegister={onRegister ? (kind) => onRegister(kind, row.warehouse.id) : undefined}
+            canTransfer={canTransfer}
             onReplenish={onReplenish ? () => onReplenish(row.warehouse.id) : undefined}
           />
         ),
       },
     ];
-  }, [onOpenWarehouse, onRegister, onReplenish, onShowLots, product, alerts]);
+  }, [onOpenWarehouse, onRegister, onReplenish, onShowLots, product, alerts, canTransfer]);
 
   return (
     <section aria-labelledby="stock-title" className="space-y-5 rounded-2xl">

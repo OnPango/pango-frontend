@@ -1,4 +1,5 @@
 import { useCallback, useDeferredValue, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FiPlus, FiSearch } from 'react-icons/fi';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
@@ -52,7 +53,19 @@ export default function ProductPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   // The panel keeps an id, not a copy: after an edit it shows the product as the list has it now.
-  const [openId, setOpenId] = useState<string | null>(null);
+  // The open panel lives in the URL (`?product=`), so the header search and links can open it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openId = searchParams.get('product');
+  const setOpenId = useCallback(
+    (id: string | null) =>
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (id) next.set('product', id);
+        else next.delete('product');
+        return next;
+      }),
+    [setSearchParams],
+  );
   const [notice, setNotice] = useState<string | null>(null);
   const { view, setView } = useListView('pango.products.view');
 
@@ -89,7 +102,7 @@ export default function ProductPage() {
     setEditing(null);
   };
 
-  const handleOpen = useCallback((product: Product) => setOpenId(product.id), []);
+  const handleOpen = useCallback((product: Product) => setOpenId(product.id), [setOpenId]);
   const opened = catalog?.find((product) => product.id === openId) ?? null;
   const paths = useMemo(() => categoryPaths(categories), [categories]);
 

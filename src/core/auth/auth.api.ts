@@ -57,8 +57,9 @@ export async function login(credentials: LoginDto): Promise<LoginResult> {
  * `LOGIN_CODE_INVALID` (with `attemptsLeft`), `LOGIN_CODE_EXPIRED`, `LOGIN_CODE_ATTEMPTS_EXCEEDED`
  * or `LOGIN_CHALLENGE_INVALID`; the last two end the login.
  */
-export async function verifyLoginCode(code: string): Promise<Session> {
-  const body: VerifyLoginCodeDto = { code };
+export async function verifyLoginCode(code: string, rememberDevice = false): Promise<Session> {
+  // Only when asked: an API without trusted devices rejects unknown fields.
+  const body: VerifyLoginCodeDto = rememberDevice ? { code, rememberDevice } : { code };
   const { data } = await authHttp.post<SessionResponseDto>('/auth/login/verify', body);
   return toSession(data);
 }

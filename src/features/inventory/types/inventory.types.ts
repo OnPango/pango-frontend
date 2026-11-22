@@ -91,11 +91,11 @@ export interface WarehouseOption {
   code: string;
 }
 
-/** Inbound adds stock, outbound removes it. Adjustments have their own form; transfers come later. */
+/** Inbound adds stock, outbound removes it. Adjustments and transfers have their own forms. */
 export type MovementKind = 'inbound' | 'outbound';
 
-/** What a stock row offers to register: a movement, or an adjustment from a count. */
-export type StockAction = MovementKind | 'adjustment';
+/** What a stock row offers to register: a movement, an adjustment from a count, or a transfer. */
+export type StockAction = MovementKind | 'adjustment' | 'transfer';
 
 /** The reason of a movement (`Purchase receipt`, `Consumption issue`…). */
 export interface MovementType {
@@ -116,13 +116,36 @@ export interface RegisterMovementInput {
   documentRef: string | null;
 }
 
+/**
+ * CU-16: one or more products from one warehouse to another. It stays in transit until the
+ * destination receives it, unless `receiveNow` (it arrives at once; needs `movement.receive` there).
+ */
+export interface RegisterTransferInput {
+  movementTypeId: string;
+  originId: string;
+  destinationId: string;
+  /** A product may repeat only with different lots. */
+  lines: { productId: string; quantity: number; lotCode: string | null }[];
+  receiveNow: boolean;
+  documentRef: string | null;
+  notes: string | null;
+}
+
 export interface RegisteredMovement {
   id: string;
   /** `MV-00000012`. */
   number: string;
-  kind: MovementKind | 'adjustment';
+  kind: MovementKind | 'adjustment' | 'transfer';
+  /** Where it was registered; on transfers, the origin. */
   warehouse: { id: string; name: string };
+  /** Transfers: where the stock goes. */
+  destination: { id: string; name: string } | null;
+  /** A transfer that has not been received yet. */
+  inTransit: boolean;
+  /** The first line's product. */
   productId: string;
+  /** Every product of its lines, once each (a transfer may carry several). */
+  productIds: string[];
   /** Of every line (an adjustment may take from several locations). */
   quantity: number;
   /** Whether it took stock out (an outbound movement, or an adjustment that decreased it). */

@@ -27,9 +27,6 @@ const STATUS_DTO = Object.fromEntries(
 
 const TYPE: Record<RequestTypeDto, RequestType> = {
   INTERNAL_CONSUMPTION: 'internalConsumption',
-  INTERNAL_REPLENISHMENT: 'internalReplenishment',
-  RETURN: 'return',
-  INCIDENT: 'incident',
 };
 const TYPE_DTO = Object.fromEntries(
   Object.entries(TYPE).map(([dto, type]) => [type, dto]),

@@ -5,11 +5,25 @@ export const KIND_LABELS: Record<MovementKind, { title: string; noun: string }> 
   outbound: { title: 'Registrar salida', noun: 'Salida' },
 };
 
-/** "Entrada MV-00000012 registrada." / "Ajuste MV-00000013 registrado." */
-export const registeredText = ({ kind, number }: Pick<RegisteredMovement, 'kind' | 'number'>) =>
-  kind === 'adjustment'
-    ? `Ajuste ${number} registrado.`
-    : `${KIND_LABELS[kind].noun} ${number} registrada.`;
+/**
+ * "Entrada MV-00000012 registrada." / "Ajuste MV-00000013 registrado." / "Traslado MV-00000014
+ * registrado: va en camino a Bodega Norte."
+ */
+export function registeredText({
+  kind,
+  number,
+  destination,
+  inTransit,
+}: Pick<RegisteredMovement, 'kind' | 'number' | 'destination' | 'inTransit'>) {
+  if (kind === 'adjustment') return `Ajuste ${number} registrado.`;
+  if (kind === 'transfer') {
+    const to = destination?.name ?? 'el destino';
+    return inTransit
+      ? `Traslado ${number} registrado: va en camino a ${to}, que debe recibirlo.`
+      : `Traslado ${number} registrado: ya está en ${to}.`;
+  }
+  return `${KIND_LABELS[kind].noun} ${number} registrada.`;
+}
 
 /** "Se suman 3 unidades" / "Se suma 1 unidad"; past: "Se sumaron…" / "Se sumó…". */
 export function adjustedText(removes: boolean, quantity: number, amount: string, past = false) {

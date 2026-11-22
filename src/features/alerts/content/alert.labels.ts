@@ -17,6 +17,13 @@ export const SEVERITY_LABELS: Record<
   1: { label: 'Media', long: 'En o bajo el punto de reorden', tone: 'warning', appearance: 'soft' },
 };
 
+/** What happened, after the product's name: "Tornillo M8 se quedó sin disponible". */
+export const SEVERITY_EVENTS: Record<AlertSeverity, string> = {
+  3: 'se quedó sin disponible',
+  2: 'llegó a su stock de seguridad',
+  1: 'llegó a su punto de reorden',
+};
+
 export const STATUS_LABELS: Record<AlertStatus, { label: string; tone: Tone }> = {
   open: { label: 'Pendiente', tone: 'warning' },
   resolved: { label: 'Resuelta', tone: 'neutral' },

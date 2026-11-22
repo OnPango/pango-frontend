@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { FiPlus, FiSearch } from 'react-icons/fi';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
 import { useListView } from '@/shared/hooks/useListView';
@@ -49,18 +49,30 @@ export default function WarehousesPage() {
   const visible = useMemo(() => filterWarehouses(warehouses ?? [], filters), [warehouses, filters]);
 
   // The panel and the dialogs keep an id, not a copy: they show the warehouse as the list has it now.
-  const [openId, setOpenId] = useState<string | null>(null);
   const [formFor, setFormFor] = useState<'new' | string | null>(null);
   const [statusId, setStatusId] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const { view, setView } = useListView('pango.warehouses.view');
+  // The open panel lives in the URL (`?warehouse=`), so the header search and links can open it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openId = searchParams.get('warehouse');
+  const setOpenId = useCallback(
+    (id: string | null) =>
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (id) next.set('warehouse', id);
+        else next.delete('warehouse');
+        return next;
+      }),
+    [setSearchParams],
+  );
 
   const byId = (id: string | null) => warehouses?.find((warehouse) => warehouse.id === id) ?? null;
   const opened = byId(openId);
   const editing = formFor && formFor !== 'new' ? byId(formFor) : null;
   const changingStatus = byId(statusId);
 
-  const handleOpen = useCallback((warehouse: Warehouse) => setOpenId(warehouse.id), []);
+  const handleOpen = useCallback((warehouse: Warehouse) => setOpenId(warehouse.id), [setOpenId]);
   const handleEdit = useCallback((warehouse: Warehouse) => {
     setNotice(null);
     setFormFor(warehouse.id);

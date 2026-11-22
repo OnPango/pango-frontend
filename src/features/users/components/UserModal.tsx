@@ -156,16 +156,10 @@ function UserModalContent({
       dismissible={!isSubmitting}
       footer={
         <>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            disabled={isSubmitting}
-          >
+          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancelar
           </Button>
-          <Button type="submit" form={formId} variant="primary" size="sm" isLoading={isSubmitting}>
+          <Button type="submit" form={formId} variant="primary" isLoading={isSubmitting}>
             Guardar cambios
           </Button>
         </>
@@ -249,7 +243,7 @@ function UserModalContent({
               </Button>
             </div>
           ))}
-          <Button type="button" variant="outline" size="sm" onClick={addRow}>
+          <Button type="button" variant="ghost" onClick={addRow}>
             <FiPlus className="mr-1 size-4" /> Añadir rol
           </Button>
         </fieldset>

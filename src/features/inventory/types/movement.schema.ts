@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** CU-05: a quantity greater than zero, with up to 4 decimals (a comma works too). */
-const quantity = z
+export const quantity = z
   .string()
   .trim()
   .refine(

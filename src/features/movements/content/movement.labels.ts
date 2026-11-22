@@ -14,6 +14,28 @@ export const NATURE_LABELS: Record<
   transfer: { label: 'Traslado', icon: FiRepeat, className: 'text-muted' },
 };
 
+/** A transfer on its way, in a badge; confirmed movements show none. */
+export const IN_TRANSIT_LABEL = 'En camino';
+
+export const isTransfer = (movement: Pick<Movement, 'type'>) => movement.type.nature === 'transfer';
+
+/** "Bodega Central → Bodega Norte" for a transfer; the warehouse otherwise. */
+export const warehousesText = (movement: Pick<Movement, 'warehouse' | 'destination'>) =>
+  movement.destination
+    ? `${movement.warehouse.name} → ${movement.destination.name}`
+    : movement.warehouse.name;
+
+/** What was lost on the way on a received transfer line; 0 when everything arrived. */
+export const lostQuantity = (line: MovementLine) =>
+  line.receivedQuantity === null ? 0 : Number((line.quantity - line.receivedQuantity).toFixed(4));
+
+/** "4 unidades": what some lines moved, without a sign (a transfer leaves and arrives). */
+export function plainQuantity(lines: MovementLine[]): string | null {
+  if (lines.length === 0) return null;
+  const total = Number(lines.reduce((sum, line) => sum + line.quantity, 0).toFixed(4));
+  return formatQuantity(total, lines[0].product.unit);
+}
+
 export const SOURCE_LABELS = {
   manual: 'Manual',
   stockRequest: 'Solicitud',

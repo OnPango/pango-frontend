@@ -1,7 +1,6 @@
 import { RxHamburgerMenu } from 'react-icons/rx';
 import { TbLayoutSidebarLeftCollapseFilled } from 'react-icons/tb';
 import { TbLayoutSidebarRightCollapseFilled } from 'react-icons/tb';
-import { FiSearch } from 'react-icons/fi';
 
 import { useState, type ReactNode } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
@@ -14,7 +13,6 @@ import { NavContext, useCurrentNavItem } from './nav.context';
 import type { NavSection } from './nav';
 import { cn } from '../lib/cn';
 import { useAuthStore } from '@/core/auth/auth.store';
-import { TextBox } from '../ui/components/form/TextBox';
 import { AvatarButton } from '../ui/components/AvatarButton';
 import { Logo } from '../ui/Logo';
 
@@ -26,18 +24,23 @@ interface AppLayoutProps {
    * passes them in: shared code does not import features.
    */
   headerActions?: ReactNode;
+  /** The header's search box (a feature), right after the page title. */
+  headerSearch?: ReactNode;
 }
 
 /** Provides the menu to the shell: the title in the header reads it from the context too. */
-export function AppLayout({ navSections, headerActions }: AppLayoutProps) {
+export function AppLayout({ navSections, headerActions, headerSearch }: AppLayoutProps) {
   return (
     <NavContext value={navSections}>
-      <AppShell headerActions={headerActions} />
+      <AppShell headerActions={headerActions} headerSearch={headerSearch} />
     </NavContext>
   );
 }
 
-function AppShell({ headerActions }: { headerActions?: ReactNode }) {
+function AppShell({
+  headerActions,
+  headerSearch,
+}: Pick<AppLayoutProps, 'headerActions' | 'headerSearch'>) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const isCollapsed = useSidebarStore((state) => state.isCollapsed);
   const toggle = useSidebarStore((state) => state.toggle);
@@ -73,17 +76,7 @@ function AppShell({ headerActions }: { headerActions?: ReactNode }) {
             </Button>
           )}
           <span className="hidden font-light text-muted lg:block">{location.pathname}</span>
-          <TextBox
-            type="search"
-            name="search"
-            id="header-search"
-            aria-label="Buscar"
-            placeholder="Buscar producto, código o alerta..."
-            leadingIcon={FiSearch}
-            size="sm"
-            shape="full"
-            containerClassName="hidden w-md lg:block"
-          />
+          {headerSearch}
           <Button
             variant="ghost"
             size="sm"

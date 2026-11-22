@@ -5,15 +5,20 @@ import { useShake } from '@/shared/hooks/useShake';
 import { cn } from '@/shared/lib/cn';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Button } from '@/shared/ui/components/Button';
+import { Checkbox } from '@/shared/ui/components/form/Checkbox';
 import { CodeInput, type CodeInputHandle } from '@/shared/ui/components/form/CodeInput';
 import { useLoginCode, type LoginCodeOptions } from '../hooks/useLoginCode';
 import { AuthCard } from './AuthPageShell';
 
 const CODE_HINT_ID = 'login-code-hint';
+const REMEMBER_HINT_ID = 'login-remember-hint';
 
 /** `0:42` */
 const clock = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+
+const days = (n: number) => (n === 1 ? '1 día' : `${n} días`);
+const hours = (n: number) => (n === 1 ? '1 hora' : `${n} horas`);
 
 function expiryText(seconds: number) {
   if (seconds > 60) return `El código vence en ${Math.ceil(seconds / 60)} minutos.`;
@@ -23,10 +28,10 @@ function expiryText(seconds: number) {
 /** An envelope with Pango's shield on it: the code is in the inbox. */
 function InboxBadge() {
   return (
-    <span aria-hidden className="relative grid size-16 shrink-0 place-items-center">
+    <span aria-hidden className="relative grid size-12 shrink-0 place-items-center sm:size-16">
       <span className="absolute inset-0 animate-ring rounded-full bg-primary/25" />
-      <span className="relative grid size-16 animate-pop-in place-items-center rounded-full bg-primary/12 text-primary">
-        <FiMail className="size-7" strokeWidth={1.75} />
+      <span className="relative grid size-12 animate-pop-in place-items-center rounded-full bg-primary/12 text-primary sm:size-16">
+        <FiMail className="size-6 sm:size-7" strokeWidth={1.75} />
       </span>
       <span className="absolute -right-1 -bottom-1 grid size-7 animate-pop-in place-items-center rounded-full bg-surface text-primary shadow-sm [animation-delay:250ms]">
         <RiShieldCheckFill className="size-5" />
@@ -81,6 +86,23 @@ export function LoginCodeStep({ onBack, ...options }: LoginCodeStepProps) {
         )}
 
         <div className="space-y-3">
+          {/* Before the boxes: a complete code is sent at once, so the choice comes first. */}
+          <div>
+            <Checkbox
+              label={`Recordar este dispositivo por ${days(challenge.rememberDeviceDays)}`}
+              checked={code.rememberDevice}
+              onChange={(event) => code.setRememberDevice(event.target.checked)}
+              disabled={code.isVerifying}
+              aria-describedby={REMEMBER_HINT_ID}
+            />
+            {/* Room is short on a phone, and phones are rarely shared. */}
+            <p id={REMEMBER_HINT_ID} className="mt-0.5 hidden pl-7 text-xs text-muted sm:block">
+              {challenge.trustedDeviceHours > 0
+                ? `Si no, te lo pediremos de nuevo en ${hours(challenge.trustedDeviceHours)}. `
+                : 'Si no, te lo pediremos cada vez. '}
+              No lo marques en un computador compartido.
+            </p>
+          </div>
           <div ref={boxes}>
             <CodeInput
               ref={input}

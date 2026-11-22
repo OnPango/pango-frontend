@@ -48,13 +48,21 @@ export type LoginCodeRequiredDto = {
   resendAvailableAt: string;
   /** False if the email could not be sent; resending retries. */
   emailSent: boolean;
+  /** After the code, this browser is not asked again for this many hours (0: every time)… */
+  trustedDeviceHours: number;
+  /** …or for this many days with `rememberDevice`. */
+  rememberDeviceDays: number;
 };
 
 /** The second step is asked for, unless the backend has it turned off: then the session. */
 export type LoginResponseDto = LoginCodeRequiredDto | SessionResponseDto;
 
 /** `POST /auth/login/verify` */
-export type VerifyLoginCodeDto = { code: string };
+export type VerifyLoginCodeDto = {
+  code: string;
+  /** Do not ask for the code on this browser for `rememberDeviceDays`. */
+  rememberDevice?: boolean;
+};
 
 /** `POST /auth/signup`: the owner and the organization created with the account. */
 export type SignupDto = {

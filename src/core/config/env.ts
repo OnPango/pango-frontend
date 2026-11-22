@@ -7,6 +7,16 @@ export const env = {
   /** Domain organizations hang from: `<subdomain>.<appBaseDomain>` (production: `onpango.com`). */
   appBaseDomain: (import.meta.env.VITE_APP_BASE_DOMAIN ?? 'localhost').toLowerCase(),
   /**
+   * Host of the app without an organization: login search and registration. In production the
+   * base domain is the landing (`onpango.com`), so the app lives on its own host
+   * (`pango.onpango.com`). Without it, the base domain itself.
+   */
+  appMainHost: (
+    import.meta.env.VITE_APP_MAIN_HOST ||
+    import.meta.env.VITE_APP_BASE_DOMAIN ||
+    'localhost'
+  ).toLowerCase(),
+  /**
    * Pins the organization instead of reading it from the hostname. For development on a single
    * host (`localhost:5173`) and for the mock backend, where subdomains are not available.
    */

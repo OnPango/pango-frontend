@@ -10,26 +10,11 @@ export const STATUS_LABELS: Record<RequestStatus, { label: string; tone: Tone }>
   cancelled: { label: 'Cancelada', tone: 'neutral' },
 };
 
-/** RF-REQ-007. `available`: pango-core accepts it today (only internal consumption, for the MVP). */
-export const TYPE_LABELS: Record<
-  RequestType,
-  { label: string; description: string; available: boolean }
-> = {
+/** RF-REQ-007: the types pango-core accepts (only internal consumption, for now). */
+export const TYPE_LABELS: Record<RequestType, { label: string; description: string }> = {
   internalConsumption: {
     label: 'Consumo interno',
     description: 'El área usa los productos. Cuenta como demanda para el pronóstico.',
-    available: true,
-  },
-  internalReplenishment: {
-    label: 'Reposición interna',
-    description: 'Disponible más adelante.',
-    available: false,
-  },
-  return: { label: 'Devolución', description: 'Disponible más adelante.', available: false },
-  incident: {
-    label: 'Novedad (daño, pérdida, vencimiento)',
-    description: 'Disponible más adelante.',
-    available: false,
   },
 };
 

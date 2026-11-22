@@ -11,6 +11,7 @@ import { ForbiddenPage } from '@/fallbacks/error-pages/ForbiddenPage';
 import { NotFoundPage } from '@/fallbacks/error-pages/NotFoundPage';
 import { RouteErrorPage } from '@/fallbacks/error-pages/RouteErrorPage';
 import { AlertsBell } from '@/features/alerts/components/AlertsBell';
+import { GlobalSearch } from '@/features/search/components/GlobalSearch';
 import { AppLayout } from '@/shared/layout/AppLayout';
 
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
@@ -55,7 +56,13 @@ export const router = createBrowserRouter(
           element: <RequireAuth loadingFallback={<SessionCheck />} />,
           children: [
             {
-              element: <AppLayout navSections={NAV_SECTIONS} headerActions={<AlertsBell />} />,
+              element: (
+                <AppLayout
+                  navSections={NAV_SECTIONS}
+                  headerActions={<AlertsBell />}
+                  headerSearch={<GlobalSearch />}
+                />
+              ),
               // An unknown address is answered inside the app, with the header and the menu at hand.
               // Signed out, it goes through the login first and comes back here.
               children: [...APP_ROUTES.map(toRoute), { path: '*', element: <NotFoundPage /> }],

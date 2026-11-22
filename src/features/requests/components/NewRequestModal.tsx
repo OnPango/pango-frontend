@@ -8,14 +8,9 @@ import { FormSelect } from '@/shared/ui/components/form/FormSelect';
 import { TextArea } from '@/shared/ui/components/form/TextArea';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { Modal } from '@/shared/ui/components/Modal';
-import { PRIORITY_LABELS, today, TYPE_LABELS } from '../content/request.labels';
+import { PRIORITY_LABELS, today } from '../content/request.labels';
 import { useRequestForm } from '../hooks/useRequestForm';
-import type {
-  Option,
-  RequestableProduct,
-  RequestType,
-  StockRequest,
-} from '../types/requests.types';
+import type { Option, RequestableProduct, StockRequest } from '../types/requests.types';
 import { EMPTY_LINE, MAX_LINES } from '../types/request.schema';
 
 interface NewRequestModalProps {
@@ -30,14 +25,6 @@ interface NewRequestModalProps {
 }
 
 const FORM_ID = 'request-form';
-
-// Only the types pango-core accepts can be chosen; the others show what is coming.
-const TYPE_OPTIONS = (Object.keys(TYPE_LABELS) as RequestType[]).map((type) => ({
-  value: type,
-  label: TYPE_LABELS[type].label,
-  description: TYPE_LABELS[type].description,
-  disabled: !TYPE_LABELS[type].available,
-}));
 
 const PRIORITY_OPTIONS = ([1, 2, 3] as const).map((value) => ({
   value: String(value),
@@ -91,10 +78,10 @@ function NewRequestForm({
       dismissible={!isSubmitting}
       footer={
         <>
-          <Button variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancelar
           </Button>
-          <Button type="submit" form={FORM_ID} variant="primary" size="sm" isLoading={isSubmitting}>
+          <Button type="submit" form={FORM_ID} variant="primary" isLoading={isSubmitting}>
             Enviar solicitud
           </Button>
         </>
@@ -107,13 +94,6 @@ function NewRequestForm({
           <h3 id="request-header" className="sr-only">
             Datos de la solicitud
           </h3>
-          <FormSelect
-            control={control}
-            name="type"
-            label="Tipo de solicitud"
-            required
-            options={TYPE_OPTIONS}
-          />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-semibold text-fg">Área solicitante</span>
@@ -227,7 +207,7 @@ function NewRequestForm({
             })}
           </ol>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => lines.append(EMPTY_LINE)}
             disabled={lines.fields.length >= MAX_LINES || lines.fields.length >= products.length}

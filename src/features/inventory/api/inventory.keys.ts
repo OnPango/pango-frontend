@@ -24,4 +24,10 @@ export const inventoryKeys = {
   requestLots: (productId: string) => ['stock-requests', 'lots', productId] as const,
   /** The movements feature's root (`['movements']`): a new movement joins its history. */
   movements: () => ['movements'] as const,
+  /**
+   * Transfers on their way to a warehouse. Under the movements root: receiving one there (in
+   * Movimientos) invalidates that root, and this count with it.
+   */
+  incomingTransfers: (warehouseId: string) =>
+    [...inventoryKeys.movements(), 'incoming', warehouseId] as const,
 };

@@ -28,7 +28,6 @@ function StatusButton({
   return (
     <Button
       variant="ghost"
-      size="sm"
       onClick={() => onChangeStatus(category)}
       className={`text-xs ${
         category.isActive ? 'text-danger hover:bg-danger/10' : 'text-success hover:bg-success/10'
@@ -86,12 +85,7 @@ export function FamilyDetailPanel({
         actions && (
           <>
             <StatusButton category={category} onChangeStatus={actions.onChangeStatus} />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => actions.onEdit(category)}
-              className="gap-2"
-            >
+            <Button variant="outline" onClick={() => actions.onEdit(category)} className="gap-2">
               <MdEdit aria-hidden className="size-4" /> Editar familia
             </Button>
           </>

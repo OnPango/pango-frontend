@@ -77,7 +77,7 @@ export function WarehousesTable({
           <div className="flex items-center justify-end gap-1">
             <Button
               variant="ghost"
-              size="sm"
+
               onClick={() => onToggleStatus(warehouse)}
               className={`text-xs ${
                 warehouse.isActive
@@ -92,13 +92,12 @@ export function WarehousesTable({
             </Button>
             <Button
               variant="ghost"
-              size="sm"
               onClick={() => onEdit(warehouse)}
-              className="gap-2 p-1.5 text-muted hover:text-fg"
+              className="gap-2 text-muted hover:text-fg"
               aria-label={`Editar ${warehouse.name}`}
             >
               Editar
-              <MdEdit aria-hidden className="size-4" />
+              <MdEdit aria-hidden className="size-3" />
             </Button>
           </div>
         ),

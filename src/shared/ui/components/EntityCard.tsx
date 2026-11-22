@@ -60,7 +60,7 @@ export function EntityCard({
   return (
     <article
       className={cn(
-        'flex w-full min-w-0 flex-col overflow-clip rounded-2xl border border-line2 bg-surface transition-transform duration-300 hover:scale-105',
+        'flex w-full min-w-0 flex-col overflow-clip rounded-4xl border border-line2 bg-surface transition-transform duration-300 hover:scale-105',
         className,
       )}
     >

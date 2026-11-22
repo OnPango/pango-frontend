@@ -124,14 +124,13 @@ function AdjustmentForm({
       dismissible={!isSubmitting}
       footer={
         <>
-          <Button variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancelar
           </Button>
           <Button
             type="submit"
             form={FORM_ID}
             variant="primary"
-            size="sm"
             isLoading={isSubmitting}
             disabled={noTypes}
           >

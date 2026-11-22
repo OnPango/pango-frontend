@@ -1,20 +1,31 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { FiTruck } from 'react-icons/fi';
+import { useAuthStore } from '@/core/auth/auth.store';
+import { hasPermissionIn } from '@/core/auth/permissions';
 import { cn } from '@/shared/lib/cn';
+import { formatQuantity } from '@/shared/lib/units';
 import { feedsDemand, movementTypeLabel } from '@/shared/lib/movementTypes';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Badge } from '@/shared/ui/components/Badge';
+import { Button } from '@/shared/ui/components/Button';
 import { Drawer } from '@/shared/ui/components/Drawer';
 import { Spinner } from '@/shared/ui/components/Spinner';
 import { useMovement } from '../api/movements.queries';
 import {
   formatDate,
+  IN_TRANSIT_LABEL,
+  isTransfer,
+  lostQuantity,
   NATURE_LABELS,
+  plainQuantity,
   requestNumberOf,
   signedQuantity,
   SOURCE_LABELS,
+  warehousesText,
 } from '../content/movement.labels';
 import { movementsErrorMessage } from '../content/movements.errors';
 import { MovementTypeLabel } from './MovementTypeLabel';
+import { ReceiveTransferModal } from './ReceiveTransferModal';
 
 function Item({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -25,7 +36,10 @@ function Item({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** One movement: its data and every line, with lot and location. It is never edited (RN-006). */
+/**
+ * One movement: its data and every line, with lot and location. It is never edited (RN-006); a
+ * transfer on its way is received from here (CU-16).
+ */
 export function MovementDetailPanel({
   movementId,
   onClose,
@@ -33,14 +47,21 @@ export function MovementDetailPanel({
   movementId: string;
   onClose: () => void;
 }) {
+  const user = useAuthStore((state) => state.user);
   const { data: movement, error } = useMovement(movementId);
+  const [receiving, setReceiving] = useState(false);
   const requestNumber = movement ? requestNumberOf(movement) : null;
+  const transfer = movement ? isTransfer(movement) : false;
+  const canReceive =
+    movement?.status === 'inTransit' &&
+    movement.destination !== null &&
+    hasPermissionIn(user, 'movement.receive', movement.destination.id);
 
   return (
     <Drawer
       title={movement ? movement.number : 'Movimiento'}
       description={
-        movement ? `${movementTypeLabel(movement.type)} · ${movement.warehouse.name}` : undefined
+        movement ? `${movementTypeLabel(movement.type)} · ${warehousesText(movement)}` : undefined
       }
       onClose={onClose}
     >
@@ -60,10 +81,36 @@ export function MovementDetailPanel({
             <Badge appearance="outline" className="rounded-lg font-medium">
               <MovementTypeLabel type={movement.type} />
             </Badge>
-            {feedsDemand(movement.type, movement.source === 'stockRequest') && (
-              <Badge tone="primary">Cuenta como demanda</Badge>
-            )}
+            {movement.status === 'inTransit' && <Badge tone="secondary">{IN_TRANSIT_LABEL}</Badge>}
+            {feedsDemand(movement.type) && <Badge tone="primary">Cuenta como demanda</Badge>}
           </div>
+
+          {movement.status === 'inTransit' && (
+            <div className="space-y-3 rounded-2xl border border-secondary/30 bg-secondary/10 px-4 py-3">
+              <p className="flex items-start gap-2 text-sm text-fg">
+                <FiTruck aria-hidden className="mt-0.5 size-4 shrink-0 text-secondary" />
+                <span>
+                  Salió de {movement.warehouse.name} y va en camino a{' '}
+                  {movement.destination?.name ?? 'su destino'}. Mientras tanto no está disponible en
+                  ningún almacén.
+                </span>
+              </p>
+              {canReceive ? (
+                <Button
+                  variant="primary"
+                  onClick={() => setReceiving(true)}
+                  className="w-full sm:w-auto"
+                >
+                  Recibir traslado
+                </Button>
+              ) : (
+                <p className="text-xs text-muted">
+                  Lo recibe alguien con permiso para recibir en{' '}
+                  {movement.destination?.name ?? 'el destino'}.
+                </p>
+              )}
+            </div>
+          )}
 
           <section aria-labelledby="movement-data">
             <h3 id="movement-data" className="sr-only">
@@ -71,8 +118,21 @@ export function MovementDetailPanel({
             </h3>
             <dl className="divide-y divide-line2">
               <Item label="Fecha">{formatDate(movement.occurredAt, true)}</Item>
-              <Item label="Almacén">{movement.warehouse.name}</Item>
+              {transfer ? (
+                <>
+                  <Item label="Sale de">{movement.warehouse.name}</Item>
+                  <Item label="Va a">{movement.destination?.name ?? '—'}</Item>
+                </>
+              ) : (
+                <Item label="Almacén">{movement.warehouse.name}</Item>
+              )}
               <Item label="Registró">{movement.registeredBy ?? '—'}</Item>
+              {movement.received && (
+                <Item label="Recibió">
+                  {movement.received.by ?? '—'}
+                  <span className="text-muted"> · {formatDate(movement.received.at, true)}</span>
+                </Item>
+              )}
               <Item label="Fuente">
                 {movement.source === 'stockRequest' ? (
                   requestNumber ? (
@@ -101,7 +161,8 @@ export function MovementDetailPanel({
             </h3>
             <ul className="divide-y divide-line2 rounded-xl border border-line2">
               {movement.lines.map((line) => {
-                const quantity = signedQuantity([line]);
+                const quantity = transfer ? null : signedQuantity([line]);
+                const lost = lostQuantity(line);
                 return (
                   <li
                     key={line.lineNumber}
@@ -113,21 +174,35 @@ export function MovementDetailPanel({
                         {[
                           line.product.sku,
                           line.lot && `Lote ${line.lot}`,
-                          line.location &&
+                          !transfer &&
+                            line.location &&
                             `${line.removes ? 'Desde' : 'En'} ${line.location === 'DEFAULT' ? 'la ubicación principal' : line.location}`,
                         ]
                           .filter(Boolean)
                           .join(' · ')}
                       </p>
-                    </div>
-                    <span
-                      className={cn(
-                        'text-sm font-semibold whitespace-nowrap tabular-nums',
-                        quantity?.sign === 1 ? 'text-success' : 'text-danger',
+                      {line.receivedQuantity !== null && (
+                        <p className={cn('text-xs', lost > 0 ? 'text-danger' : 'text-success')}>
+                          {lost > 0
+                            ? `Llegó ${formatQuantity(line.receivedQuantity, line.product.unit)}; faltó ${formatQuantity(lost, line.product.unit)}.`
+                            : 'Llegó completo.'}
+                        </p>
                       )}
-                    >
-                      {quantity?.text}
-                    </span>
+                    </div>
+                    {transfer ? (
+                      <span className="text-sm font-semibold whitespace-nowrap text-fg tabular-nums">
+                        {plainQuantity([line])}
+                      </span>
+                    ) : (
+                      <span
+                        className={cn(
+                          'text-sm font-semibold whitespace-nowrap tabular-nums',
+                          quantity?.sign === 1 ? 'text-success' : 'text-danger',
+                        )}
+                      >
+                        {quantity?.text}
+                      </span>
+                    )}
                   </li>
                 );
               })}
@@ -137,8 +212,16 @@ export function MovementDetailPanel({
           <p className="text-xs text-muted">
             Los movimientos no se editan ni se borran. Un error se corrige con un movimiento de{' '}
             {NATURE_LABELS.adjustment.label.toLowerCase()}.
+            {transfer && ' Un traslado se recibe una sola vez.'}
           </p>
         </div>
+      )}
+      {receiving && movement && (
+        <ReceiveTransferModal
+          movement={movement}
+          onClose={() => setReceiving(false)}
+          onReceived={() => setReceiving(false)}
+        />
       )}
     </Drawer>
   );
