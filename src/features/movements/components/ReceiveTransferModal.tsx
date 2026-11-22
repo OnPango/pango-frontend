@@ -80,16 +80,10 @@ export function ReceiveTransferModal({
       dismissible={!receive.isPending}
       footer={
         <>
-          <Button variant="outline" size="sm" onClick={onClose} disabled={receive.isPending}>
+          <Button variant="outline" onClick={onClose} disabled={receive.isPending}>
             Cancelar
           </Button>
-          <Button
-            type="submit"
-            form={FORM_ID}
-            variant="primary"
-            size="sm"
-            isLoading={receive.isPending}
-          >
+          <Button type="submit" form={FORM_ID} variant="primary" isLoading={receive.isPending}>
             {anyLost ? 'Recibir con faltantes' : 'Recibir todo'}
           </Button>
         </>

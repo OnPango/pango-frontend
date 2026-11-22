@@ -33,13 +33,12 @@ export function DeleteRoleDialog({
       dismissible={!remove.isPending}
       footer={
         <>
-          <Button variant="outline" size="sm" onClick={onClose} disabled={remove.isPending}>
+          <Button variant="outline" onClick={onClose} disabled={remove.isPending}>
             {blocker ? 'Entendido' : 'Cancelar'}
           </Button>
           {!blocker && (
             <Button
               variant="danger"
-              size="sm"
               isLoading={remove.isPending}
               onClick={() => remove.mutate(role.id, { onSuccess: () => onDeleted(role) })}
             >

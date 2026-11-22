@@ -66,16 +66,10 @@ function InviteModalContent({
       dismissible={!isSubmitting}
       footer={
         <>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            disabled={isSubmitting}
-          >
+          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancelar
           </Button>
-          <Button type="submit" form={formId} variant="primary" size="sm" isLoading={isSubmitting}>
+          <Button type="submit" form={formId} variant="primary" isLoading={isSubmitting}>
             Enviar invitación
           </Button>
         </>

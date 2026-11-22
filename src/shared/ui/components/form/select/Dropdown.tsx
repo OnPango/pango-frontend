@@ -23,7 +23,8 @@ export interface DropdownProps {
   required?: boolean;
   optional?: boolean;
   disabled?: boolean;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
+  shape?: 'xl' | 'xl2' | 'xl3' | 'xl4' | 'xl5' | 'xl6' | 'full';
   className?: string;
   'aria-label'?: string;
   options: SelectOption[];
@@ -55,7 +56,8 @@ export function Dropdown({
   required,
   optional,
   disabled = false,
-  size = 'md',
+  size = 'lg',
+  shape = 'xl2',
   className,
   'aria-label': ariaLabel,
   options,
@@ -218,7 +220,7 @@ export function Dropdown({
           onKeyDown={onKeyDown}
           onKeyUp={() => setTimeout(() => (suppressClick.current = false), 0)}
           className={cn(
-            controlStyles({ size, invalid: !!error, disabled }),
+            controlStyles({ size, invalid: !!error, disabled, shape }),
             'cursor-pointer text-left',
             open && !error && 'border-primary ring-2 ring-primary/25',
           )}
@@ -244,7 +246,7 @@ export function Dropdown({
         {open && (
           <div
             className={cn(
-              'absolute left-0 z-50 w-full min-w-48 overflow-hidden rounded-xl border border-line2 bg-surface shadow-lg',
+              'absolute left-0 z-50 w-full min-w-48 overflow-hidden rounded-2xl border border-line2 bg-surface shadow-lg',
               placement === 'top' ? 'bottom-full mb-1.5' : 'top-full mt-1.5',
             )}
           >
@@ -299,7 +301,7 @@ export function Dropdown({
                     onMouseMove={() => !option.disabled && setActive(index)}
                     onClick={() => choose(option)}
                     className={cn(
-                      'flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-fg',
+                      'flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-3 text-sm text-fg',
                       index === activeIndex && 'bg-fg/8',
                       isSelected && 'font-semibold',
                       option.disabled && 'cursor-not-allowed opacity-50',

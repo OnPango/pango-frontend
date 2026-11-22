@@ -34,7 +34,6 @@ export function RowMovementActions({
         <>
           <Button
             variant="ghost"
-            size="sm"
             onClick={() => onRegister('inbound')}
             disabled={!canAdd}
             className="gap-1 px-2 text-xs text-success hover:bg-success/10"
@@ -45,7 +44,6 @@ export function RowMovementActions({
           </Button>
           <Button
             variant="ghost"
-            size="sm"
             onClick={() => onRegister('outbound')}
             disabled={!canRemove}
             className="gap-1 px-2 text-xs text-danger hover:bg-danger/10"
@@ -56,7 +54,6 @@ export function RowMovementActions({
           </Button>
           <Button
             variant="ghost"
-            size="sm"
             onClick={() => onRegister('adjustment')}
             disabled={!canAdd}
             className="gap-1 px-2 text-xs text-primary hover:bg-primary/10"
@@ -69,7 +66,6 @@ export function RowMovementActions({
           {canTransfer && (
             <Button
               variant="ghost"
-              size="sm"
               onClick={() => onRegister('transfer')}
               disabled={!canRemove}
               className="gap-1 px-2 text-xs text-secondary hover:bg-secondary/10"
@@ -85,7 +81,6 @@ export function RowMovementActions({
       {onReplenish && (
         <Button
           variant="ghost"
-          size="sm"
           onClick={onReplenish}
           disabled={!canAdd}
           className="gap-1 px-2 text-xs text-muted hover:text-fg"

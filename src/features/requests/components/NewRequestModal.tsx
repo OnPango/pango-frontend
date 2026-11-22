@@ -78,10 +78,10 @@ function NewRequestForm({
       dismissible={!isSubmitting}
       footer={
         <>
-          <Button variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancelar
           </Button>
-          <Button type="submit" form={FORM_ID} variant="primary" size="sm" isLoading={isSubmitting}>
+          <Button type="submit" form={FORM_ID} variant="primary" isLoading={isSubmitting}>
             Enviar solicitud
           </Button>
         </>
@@ -207,7 +207,7 @@ function NewRequestForm({
             })}
           </ol>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => lines.append(EMPTY_LINE)}
             disabled={lines.fields.length >= MAX_LINES || lines.fields.length >= products.length}

@@ -142,7 +142,7 @@ export function AlertDetailPanel({
       onClose={onClose}
       footer={
         alert && showsStock ? (
-          <Button variant="primary" size="sm" onClick={() => onShowInventory(alert)}>
+          <Button variant="primary" onClick={() => onShowInventory(alert)}>
             Ver en Inventario <FiArrowRight aria-hidden className="ml-1.5 size-4" />
           </Button>
         ) : undefined

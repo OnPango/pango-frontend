@@ -86,10 +86,10 @@ export function NewCategoryInline({
         size="sm"
       />
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={close} disabled={createCategory.isPending}>
+        <Button variant="ghost" onClick={close} disabled={createCategory.isPending}>
           Cancelar
         </Button>
-        <Button variant="primary" size="sm" onClick={create} isLoading={createCategory.isPending}>
+        <Button variant="primary" onClick={create} isLoading={createCategory.isPending}>
           Crear familia
         </Button>
       </div>

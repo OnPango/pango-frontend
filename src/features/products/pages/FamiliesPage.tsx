@@ -212,7 +212,7 @@ export default function FamiliesPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => open({ kind: 'new', parentId: category.id })}
-                    className="gap-1 p-1.5 text-xs text-muted hover:text-fg"
+                    className="gap-1 text-xs text-muted hover:text-fg"
                     aria-label={`Nueva subfamilia en ${category.name}`}
                     title="Nueva subfamilia"
                   >
@@ -221,7 +221,6 @@ export default function FamiliesPage() {
                 )}
                 <Button
                   variant="ghost"
-                  size="sm"
                   onClick={() => {
                     setNotice(null);
                     setStatusId(category.id);
@@ -239,7 +238,6 @@ export default function FamiliesPage() {
                 </Button>
                 <Button
                   variant="ghost"
-                  size="sm"
                   onClick={() => open({ kind: 'edit', id: category.id })}
                   className="gap-2 p-1.5 text-muted hover:text-fg"
                   aria-label={`Editar ${category.name}`}

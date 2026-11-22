@@ -35,12 +35,11 @@ export function WarehouseStatusDialog({
       dismissible={!update.isPending}
       footer={
         <>
-          <Button variant="outline" size="sm" onClick={onClose} disabled={update.isPending}>
+          <Button variant="outline" onClick={onClose} disabled={update.isPending}>
             Cancelar
           </Button>
           <Button
             variant={closing ? 'danger' : 'primary'}
-            size="sm"
             onClick={confirm}
             isLoading={update.isPending}
           >

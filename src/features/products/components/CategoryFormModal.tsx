@@ -122,14 +122,13 @@ function CategoryForm({ category, parentId, categories, onClose, onSaved }: Cate
       dismissible={!mutation.isPending}
       footer={
         <>
-          <Button variant="outline" size="sm" onClick={onClose} disabled={mutation.isPending}>
+          <Button variant="outline" onClick={onClose} disabled={mutation.isPending}>
             Cancelar
           </Button>
           <Button
             type="submit"
             form={FORM_ID}
             variant="primary"
-            size="sm"
             isLoading={mutation.isPending}
             disabled={isEdit && !isDirty}
           >

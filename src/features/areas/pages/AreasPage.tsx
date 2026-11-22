@@ -103,7 +103,6 @@ export default function AreasPage() {
               <div className="flex items-center justify-end gap-1">
                 <Button
                   variant="ghost"
-                  size="sm"
                   onClick={() => {
                     setNotice(null);
                     setStatusId(department.id);
@@ -123,7 +122,6 @@ export default function AreasPage() {
                 </Button>
                 <Button
                   variant="ghost"
-                  size="sm"
                   onClick={() => {
                     setNotice(null);
                     setFormFor(department.id);

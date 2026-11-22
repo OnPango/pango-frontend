@@ -35,7 +35,7 @@ export function ProductCard({ product, familyPath, onOpen, onEdit }: ProductCard
       footer={
         <>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => onOpen(product)}
             aria-label={`Ver detalle de ${product.name}`}

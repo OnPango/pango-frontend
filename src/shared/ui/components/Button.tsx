@@ -20,7 +20,7 @@ const buttonStyles = cva(
       size: {
         sm: 'px-3 py-1.5 text-xs',
         md: 'px-4 py-2 text-sm',
-        lg: 'px-5 py-2.5 text-base',
+        lg: 'px-5 py-3 text-base',
       },
     },
     defaultVariants: { variant: 'primary', size: 'md' },
@@ -33,7 +33,16 @@ export interface ButtonProps
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant, size, isLoading = false, disabled, className, type = 'button', children, ...props },
+  {
+    variant,
+    size = 'md',
+    isLoading = false,
+    disabled,
+    className,
+    type = 'button',
+    children,
+    ...props
+  },
   ref,
 ) {
   return (

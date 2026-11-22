@@ -104,14 +104,13 @@ function TransferForm({
       size="lg"
       footer={
         <>
-          <Button variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancelar
           </Button>
           <Button
             type="submit"
             form={FORM_ID}
             variant="primary"
-            size="sm"
             isLoading={isSubmitting}
             disabled={noReasons || tooFewWarehouses}
           >
@@ -281,7 +280,7 @@ function TransferForm({
             })}
           </ol>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => lines.append(EMPTY_TRANSFER_LINE)}
             disabled={lineCount >= MAX_TRANSFER_LINES}

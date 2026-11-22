@@ -19,7 +19,7 @@ export interface TextBoxProps extends Omit<InputHTMLAttributes<HTMLInputElement>
   leadingIcon?: IconType;
   /** Element at the end of the control (a unit, a button…). */
   trailing?: ReactNode;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   shape?: 'xl' | 'xl2' | 'xl3' | 'xl4' | 'xl5' | 'xl6' | 'full';
   /** Class for the outer wrapper (width, margins). `className` goes to the `<input>`. */
   containerClassName?: string;
@@ -35,8 +35,8 @@ export const TextBox = forwardRef<HTMLInputElement, TextBoxProps>(function TextB
     invalid = false,
     leadingIcon: LeadingIcon,
     trailing,
-    size = 'md',
-    shape = 'xl',
+    size = 'lg',
+    shape = 'xl2',
     containerClassName,
     className,
     id: idProp,

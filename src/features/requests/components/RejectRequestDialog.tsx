@@ -37,10 +37,10 @@ export function RejectRequestDialog({
       dismissible={!reject.isPending}
       footer={
         <>
-          <Button variant="outline" size="sm" onClick={onClose} disabled={reject.isPending}>
+          <Button variant="outline" onClick={onClose} disabled={reject.isPending}>
             Volver
           </Button>
-          <Button variant="danger" size="sm" isLoading={reject.isPending} onClick={confirm}>
+          <Button variant="danger" isLoading={reject.isPending} onClick={confirm}>
             Rechazar solicitud
           </Button>
         </>

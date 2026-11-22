@@ -187,7 +187,6 @@ export default function RolesPermissionsPage() {
                   <Button
                     type="button"
                     variant="accent"
-                    size="sm"
                     disabled={heldByYou}
                     onClick={() => {
                       startAction();
@@ -195,14 +194,12 @@ export default function RolesPermissionsPage() {
                     }}
                     aria-label={`Editar el rol ${roleLabel(role.name)}`}
                     title="Editar nombre y descripción"
-                    className="gap-1.5 p-3"
                   >
                     <FiEdit2 aria-hidden className="size-4" />
                   </Button>
                   <Button
                     type="button"
                     variant="danger"
-                    size="sm"
                     disabled={heldByYou}
                     onClick={() => {
                       startAction();
@@ -210,7 +207,6 @@ export default function RolesPermissionsPage() {
                     }}
                     aria-label={`Eliminar el rol ${roleLabel(role.name)}`}
                     title="Eliminar rol"
-                    className="gap-1.5 p-3"
                   >
                     <FiTrash2 aria-hidden className="size-4" />
                   </Button>
@@ -271,19 +267,12 @@ export default function RolesPermissionsPage() {
         >
           <span className="text-sm">Tienes cambios sin guardar.</span>
           <span className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleDiscard}
-              disabled={isSaving}
-            >
+            <Button type="button" variant="outline" onClick={handleDiscard} disabled={isSaving}>
               Descartar
             </Button>
             <Button
               type="button"
               variant="primary"
-              size="sm"
               onClick={() => void handleSave()}
               isLoading={isSaving}
             >
