@@ -299,12 +299,13 @@ npm run dev        # http://localhost:5173 — proxies /api → http://localhost
 | `pnpm test` / `npm run test:watch`         | Vitest (single run / watch mode)                |
 | `pnpm run test:coverage`                   | Vitest with a V8 coverage report in `coverage/` |
 
-| Variable               | Description                                                                                                                                                                            | Default     |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| `VITE_API_BASE_URL`    | Base URL of `pango-core` (no trailing slash). In development `/api`: Vite proxies it to `VITE_DEV_API_TARGET` (default `http://localhost:3000`) so the session cookies are same-origin | `/api`      |
-| `VITE_APP_BASE_DOMAIN` | Domain organizations hang from: `<subdomain>.<domain>`. Must equal `APP_BASE_DOMAIN` in core                                                                                           | `localhost` |
-| `VITE_DEV_TENANT`      | Pins the organization instead of reading it from the hostname (single-host dev, mock)                                                                                                  | _(empty)_   |
-| `VITE_USE_MOCK`        | `true` = in-browser mock backend instead of `pango-core`                                                                                                                               | `false`     |
+| Variable               | Description                                                                                                                                                                            | Default                |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `VITE_API_BASE_URL`    | Base URL of `pango-core` (no trailing slash). In development `/api`: Vite proxies it to `VITE_DEV_API_TARGET` (default `http://localhost:3000`) so the session cookies are same-origin | `/api`                 |
+| `VITE_APP_BASE_DOMAIN` | Domain organizations hang from: `<subdomain>.<domain>`. Must equal `APP_BASE_DOMAIN` in core                                                                                           | `localhost`            |
+| `VITE_APP_MAIN_HOST`   | Host of the app without an organization (find your workspace, register). Production: `pango.onpango.com`, because `onpango.com` is the landing                                         | `VITE_APP_BASE_DOMAIN` |
+| `VITE_DEV_TENANT`      | Pins the organization instead of reading it from the hostname (single-host dev, mock)                                                                                                  | _(empty)_              |
+| `VITE_USE_MOCK`        | `true` = in-browser mock backend instead of `pango-core`                                                                                                                               | `false`                |
 
 ### Authentication and organizations
 
