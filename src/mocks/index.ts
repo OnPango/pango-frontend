@@ -40,6 +40,7 @@ export function enableMocking(): void {
     ...forecastingRoutes,
     ...searchRoutes,
     ...dashboardRoutes,
+    ...importsRoutes,
   });
   http.defaults.adapter = adapter;
   authHttp.defaults.adapter = adapter;
