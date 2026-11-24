@@ -40,6 +40,8 @@ interface ProductRow {
   weightKg: number | null;
   volumeL: number | null;
   tracksLots: boolean;
+  /** Weighted average cost of one stock unit; set by entries with a unit cost. */
+  averageCost?: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -184,10 +186,35 @@ function toProductDto(row: ProductRow) {
     weightKg: row.weightKg,
     volumeL: row.volumeL,
     tracksLots: row.tracksLots,
+    averageCost: row.averageCost ?? 0,
     isActive: row.isActive,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
+}
+
+/** For the movement mock: the product's current average cost. */
+export const averageCostOf = (organizationId: string, id: number) =>
+  findProductRow(organizationId, id)?.averageCost ?? 0;
+
+/**
+ * pango-core's weighted average: the stock already there (negative counts as none) at the current
+ * average, plus the entry at its cost. Call it before the entry's stock is added.
+ */
+export function addEntryCost(
+  organizationId: string,
+  id: number,
+  quantity: number,
+  unitCost: number,
+) {
+  const row = findProductRow(organizationId, id);
+  if (!row || quantity <= 0) return;
+  let onHand = 0;
+  for (const value of stockByWarehouse(organizationId, id).values()) onHand += value;
+  const base = Math.max(onHand, 0);
+  row.averageCost = Number(
+    ((base * (row.averageCost ?? 0) + quantity * unitCost) / (base + quantity)).toFixed(4),
+  );
 }
 
 /** For the movement mock: a product of the organization by its numeric id. */

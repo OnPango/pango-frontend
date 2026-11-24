@@ -27,6 +27,11 @@ export interface MovementLine {
   location: string | null;
   /** Transfers: what arrived; null while in transit and on other movements. */
   receivedQuantity: number | null;
+  /**
+   * Cost of one unit: what an entry declared, or the average cost the stock left at. 0 when no
+   * cost was known yet.
+   */
+  unitCost: number;
 }
 
 /**

@@ -26,6 +26,7 @@ import {
 import { movementsErrorMessage } from '../content/movements.errors';
 import { MovementTypeLabel } from './MovementTypeLabel';
 import { ReceiveTransferModal } from './ReceiveTransferModal';
+import { formatMoney, formatUnitCost } from '@/shared/lib/money';
 
 function Item({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -52,6 +53,13 @@ export function MovementDetailPanel({
   const [receiving, setReceiving] = useState(false);
   const requestNumber = movement ? requestNumberOf(movement) : null;
   const transfer = movement ? isTransfer(movement) : false;
+  // What the movement is worth: what arrived on transfers, every unit at the cost it moved at.
+  const totalValue = movement
+    ? movement.lines.reduce(
+        (sum, line) => sum + (line.receivedQuantity ?? line.quantity) * line.unitCost,
+        0,
+      )
+    : 0;
   const canReceive =
     movement?.status === 'inTransit' &&
     movement.destination !== null &&
@@ -189,24 +197,39 @@ export function MovementDetailPanel({
                         </p>
                       )}
                     </div>
-                    {transfer ? (
-                      <span className="text-sm font-semibold whitespace-nowrap text-fg tabular-nums">
-                        {plainQuantity([line])}
-                      </span>
-                    ) : (
-                      <span
-                        className={cn(
-                          'text-sm font-semibold whitespace-nowrap tabular-nums',
-                          quantity?.sign === 1 ? 'text-success' : 'text-danger',
-                        )}
-                      >
-                        {quantity?.text}
-                      </span>
-                    )}
+                    <div className="shrink-0 text-right">
+                      {transfer ? (
+                        <span className="text-sm font-semibold whitespace-nowrap text-fg tabular-nums">
+                          {plainQuantity([line])}
+                        </span>
+                      ) : (
+                        <span
+                          className={cn(
+                            'text-sm font-semibold whitespace-nowrap tabular-nums',
+                            quantity?.sign === 1 ? 'text-success' : 'text-danger',
+                          )}
+                        >
+                          {quantity?.text}
+                        </span>
+                      )}
+                      {line.unitCost > 0 && (
+                        <p className="text-xs whitespace-nowrap text-muted tabular-nums">
+                          {formatUnitCost(line.unitCost)} c/u
+                        </p>
+                      )}
+                    </div>
                   </li>
                 );
               })}
             </ul>
+            {totalValue > 0 && (
+              <p className="flex justify-between gap-3 px-1 text-sm">
+                <span className="text-muted">Valor del movimiento</span>
+                <span className="font-semibold text-fg tabular-nums">
+                  {formatMoney(totalValue)}
+                </span>
+              </p>
+            )}
           </section>
 
           <p className="text-xs text-muted">

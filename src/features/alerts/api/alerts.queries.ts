@@ -101,6 +101,8 @@ export function useSetAlertStatus() {
       return Promise.all([
         queryClient.invalidateQueries({ queryKey: alertsKeys.all }),
         queryClient.invalidateQueries({ queryKey: ['inventory'] }),
+        // "Stock bajo" and its list on the dashboard.
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
       ]);
     },
   });

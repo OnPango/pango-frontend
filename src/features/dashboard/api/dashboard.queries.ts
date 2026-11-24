@@ -3,8 +3,9 @@ import type { LevelDays } from '../types/dashboard.types';
 import { getInventoryLevel, getSummary } from './dashboard.api';
 
 /**
- * Everything lives under `['dashboard']`. The figures summarize other modules, so they are not
- * invalidated by name: they refresh on their own after a minute, and when the page opens again.
+ * Everything lives under `['dashboard']`. Registering movements, receiving transfers, attending
+ * requests and changing alerts invalidate this root by name; otherwise the figures refresh on their
+ * own after a minute.
  */
 export const dashboardKeys = {
   all: ['dashboard'] as const,

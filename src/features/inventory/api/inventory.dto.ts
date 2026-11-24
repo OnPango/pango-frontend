@@ -17,6 +17,8 @@ export interface ProductDto {
   stockUnit: UnitDto;
   category: { id: number; name: string };
   tracksLots: boolean;
+  /** Weighted average cost of one stock unit; absent before pango-core exposed it. */
+  averageCost?: number;
   isActive: boolean;
 }
 
@@ -93,6 +95,8 @@ export interface CreateMovementDto {
     quantity: number;
     lotCode?: string;
     locationId?: number;
+    /** Lines that add stock: updates the product's weighted average cost. */
+    unitCost?: number;
     /** Only on adjustment lines, and required there. */
     direction?: 'INCREASE' | 'DECREASE';
   }[];
