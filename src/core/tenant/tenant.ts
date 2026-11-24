@@ -53,6 +53,7 @@ export function slugify(text: string): string {
 export function getCurrentTenant(): string | null {
   if (env.devTenant) return env.devTenant;
   const host = window.location.hostname.toLowerCase();
+  if (host === env.appMainHost) return null;
   const suffix = `.${env.appBaseDomain}`;
   if (!host.endsWith(suffix)) return null;
   const label = host.slice(0, -suffix.length);
@@ -73,10 +74,13 @@ export function buildTenantUrl(subdomain: string, path = '/'): string {
   return `${originFor(`${subdomain}.${env.appBaseDomain}`)}${path}`;
 }
 
-/** URL of `path` on the main domain (where organizations are created and found). */
+/**
+ * URL of `path` on the app's main host, where organizations are created and found:
+ * `VITE_APP_MAIN_HOST` (`pango.onpango.com`), not the base domain, which may be the landing.
+ */
 export function buildMainUrl(path = '/'): string {
   if (env.devTenant) return path;
-  return `${originFor(env.appBaseDomain)}${path}`;
+  return `${originFor(env.appMainHost)}${path}`;
 }
 
 /**

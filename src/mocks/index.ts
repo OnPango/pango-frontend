@@ -3,6 +3,7 @@ import { http } from '@/core/api/http';
 import { alertsRoutes } from './handlers/alerts.handlers';
 import { authRoutes } from './handlers/auth.handlers';
 import { catalogRoutes } from './handlers/catalog.handlers';
+import { dashboardRoutes } from './handlers/dashboard.handlers';
 import { departmentsRoutes } from './handlers/departments.handlers';
 import { forecastingRoutes } from './handlers/forecasting.handlers';
 import { movementsRoutes } from './handlers/movements.handlers';
@@ -37,6 +38,7 @@ export function enableMocking(): void {
     ...alertsRoutes,
     ...forecastingRoutes,
     ...searchRoutes,
+    ...dashboardRoutes,
   });
   http.defaults.adapter = adapter;
   authHttp.defaults.adapter = adapter;

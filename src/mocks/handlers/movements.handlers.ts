@@ -65,6 +65,10 @@ interface MovementRow {
 
 const movements: MovementRow[] = [];
 
+/** For the dashboard mock: the organization's movements and the nature of their type. */
+export const movementsOf = (org: string) => movements.filter((m) => m.org === org);
+export const movementTypeOf = (typeId: number) => types.find((t) => t.id === typeId);
+
 /** Adds a confirmed movement to the history, with the next number (`MV-00000012`). */
 export function recordMovement(
   input: Omit<

@@ -1,4 +1,4 @@
-import { useMemo, useSyncExternalStore } from 'react';
+import { useMemo } from 'react';
 import {
   Area,
   Bar,
@@ -12,6 +12,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useThemeColors } from '@/shared/hooks/useThemeColors';
 import { formatNumber, formatQuantity, type UnitRef } from '@/shared/lib/units';
 import { formatWeek, isCurrentWeek } from '../content/forecast.labels';
 import type { DemandPeriod, ForecastPeriod } from '../types/forecast.types';
@@ -43,28 +44,16 @@ function toRows(history: DemandPeriod[], forecast: ForecastPeriod[]): Row[] {
   return [...rows.values()].sort((a, b) => a.start.localeCompare(b.start));
 }
 
-// Recharts draws plain SVG attributes, where CSS variables do not resolve: read the theme's
-// tokens, again whenever the `dark` class of the page changes.
-const watchTheme = (onChange: () => void) => {
-  const observer = new MutationObserver(onChange);
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-  return () => observer.disconnect();
-};
-const isDark = () => document.documentElement.classList.contains('dark');
-
+/** The chart's colors, from the theme. */
 function useChartColors() {
-  const dark = useSyncExternalStore(watchTheme, isDark);
-  return useMemo(() => {
-    const css = getComputedStyle(document.documentElement);
-    const token = (name: string) => css.getPropertyValue(name).trim();
-    return {
-      dark,
-      history: token('--secondary'),
-      forecast: token('--primary'),
-      grid: token('--line2'),
-      text: token('--muted'),
-    };
-  }, [dark]);
+  const theme = useThemeColors();
+  return {
+    dark: theme.dark,
+    history: theme.secondary,
+    forecast: theme.primary,
+    grid: theme.line,
+    text: theme.muted,
+  };
 }
 
 function ChartTooltip({
