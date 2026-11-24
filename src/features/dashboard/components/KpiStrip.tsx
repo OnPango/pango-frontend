@@ -140,7 +140,7 @@ export function KpiStrip({
           <div
             key={kpi.key}
             className={cn(
-              'flex min-w-0 flex-col gap-3 pl-5 py-2',
+              'flex min-w-0 flex-col gap-3 py-2 pl-5',
               // A divider before every figure but the first of its row.
               index % 2 === 1 && 'border-l border-line2',
               index % 4 !== 0 && 'xl:border-l xl:border-line2',
