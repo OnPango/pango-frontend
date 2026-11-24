@@ -1,7 +1,7 @@
 import { lazy } from 'react';
 import { FaBoxes, FaSitemap, /*FaTruck,*/ FaWarehouse } from 'react-icons/fa';
 import { FaBoxArchive } from 'react-icons/fa6';
-//import { FiUpload } from 'react-icons/fi';
+import { FiUpload } from 'react-icons/fi';
 import { BsShieldFillCheck } from 'react-icons/bs';
 import { GoGraph, GoHomeFill } from 'react-icons/go';
 import { HiBellAlert, HiUserGroup, HiUsers } from 'react-icons/hi2';
@@ -98,15 +98,15 @@ export const APP_ROUTES: AppRoute[] = [
     anyOf: ['movement.read'],
     Page: lazy(() => import('@/features/movements/pages/MovementsPage')),
   },
-  // {
-  //   path: '/import-history',
-  //   label: 'Importar historial',
-  //   icon: FiUpload,
-  //   section: 'data',
-  //   // The backend has no import permission yet: admin-only until it does.
-  //   anyOf: ['settings.manage'],
-  //   Page: placeholder('Import History'),
-  // },
+  {
+    path: '/import-data',
+    label: 'Importar datos',
+    icon: FiUpload,
+    section: 'data',
+    // The backend has no import permission yet: admin-only until it does.
+    anyOf: ['settings.manage'],
+    Page: lazy(() => import('@/features/imports/pages/ImportDataPage')),
+  },
   {
     path: '/users',
     label: 'Usuarios',

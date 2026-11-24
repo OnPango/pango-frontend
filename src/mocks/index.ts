@@ -6,6 +6,7 @@ import { catalogRoutes } from './handlers/catalog.handlers';
 import { dashboardRoutes } from './handlers/dashboard.handlers';
 import { departmentsRoutes } from './handlers/departments.handlers';
 import { forecastingRoutes } from './handlers/forecasting.handlers';
+import { importsRoutes } from './handlers/imports.handlers';
 import { movementsRoutes } from './handlers/movements.handlers';
 import { organizationsRoutes } from './handlers/organizations.handlers';
 import { replenishmentRoutes } from './handlers/replenishment.handlers';
