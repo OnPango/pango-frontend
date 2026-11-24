@@ -45,6 +45,9 @@ interface RequestRow {
 
 const requests: RequestRow[] = [];
 
+/** For the dashboard mock: the organization's stock requests. */
+export const requestsOf = (org: string) => requests.filter((r) => r.organizationId === org);
+
 const userRef = (id: string) => ({ id: numericId(id), name: findUserById(id)?.full_name ?? null });
 
 function toDto(row: RequestRow) {
