@@ -16,6 +16,13 @@ export function alertWarehouses(user: User | null): 'all' | Option[] {
   return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, 'es'));
 }
 
+/** Whether the user may mark the alerts of a warehouse attended or pending (`alert.resolve`). */
+export function resolvesAlertsIn(user: User | null, warehouseId: string): boolean {
+  return grantsWith(user, 'alert.resolve').some(
+    (grant) => grant.warehouse === null || grant.warehouse.id === warehouseId,
+  );
+}
+
 /** Whether the user may read the stock (and so the current situation) in a warehouse. */
 export function readsStockIn(user: User | null, warehouseId: string): boolean {
   return grantsWith(user, 'stock.read').some(

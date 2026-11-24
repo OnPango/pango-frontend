@@ -10,6 +10,8 @@ export interface StockProduct {
   family: string;
   /** Each inbound and outbound movement asks for the lot. */
   tracksLots: boolean;
+  /** Weighted average cost of one stock unit, across every warehouse; 0 before the first cost. */
+  averageCost: number;
   isActive: boolean;
 }
 
@@ -114,6 +116,8 @@ export interface RegisterMovementInput {
   quantity: number;
   lotCode: string | null;
   documentRef: string | null;
+  /** Inbound only: what one unit cost. Null keeps the current average cost. */
+  unitCost: number | null;
 }
 
 /**

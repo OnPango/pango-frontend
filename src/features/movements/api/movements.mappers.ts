@@ -67,6 +67,7 @@ export function toMovement(dto: MovementDto): Movement {
         lot: line.lot?.code ?? null,
         location: (removes ? line.originLocation : line.destinationLocation)?.code ?? null,
         receivedQuantity: line.receivedQuantity ?? null,
+        unitCost: line.unitCost ?? 0,
       };
     }),
   };

@@ -37,6 +37,8 @@ export interface ProductDto {
   weightKg: number | null;
   volumeL: number | null;
   tracksLots: boolean;
+  /** Absent before pango-core exposed it. */
+  averageCost?: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

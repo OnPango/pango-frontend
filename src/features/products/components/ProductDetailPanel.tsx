@@ -3,6 +3,7 @@ import { FiArrowRight, FiLayers } from 'react-icons/fi';
 import { MdEdit } from 'react-icons/md';
 import { TbHash } from 'react-icons/tb';
 import { Link } from 'react-router-dom';
+import { formatMoney, formatUnitCost } from '@/shared/lib/money';
 import { formatQuantity, unitLabel } from '@/shared/lib/units';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Badge } from '@/shared/ui/components/Badge';
@@ -85,6 +86,37 @@ export function ProductDetailPanel({
           </p>
         )}
         <p className="text-xs text-muted">Suma de todos los almacenes.</p>
+        {detail.data && (
+          <dl className="grid grid-cols-2 gap-3 border-t border-line2 pt-3">
+            <div>
+              <dt className="text-xs font-semibold text-muted">Costo promedio</dt>
+              <dd className="text-sm font-semibold text-fg tabular-nums">
+                {detail.data.averageCost > 0 ? (
+                  <>
+                    {formatUnitCost(detail.data.averageCost)}{' '}
+                    <span className="font-normal text-muted">
+                      por {unitLabel(product.stockUnit).toLowerCase()}
+                    </span>
+                  </>
+                ) : (
+                  <span className="font-normal text-muted">Sin costo registrado</span>
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-semibold text-muted">Valor en existencia</dt>
+              <dd className="text-sm font-semibold text-fg tabular-nums">
+                {formatMoney(Math.max(detail.data.totalOnHand, 0) * detail.data.averageCost)}
+              </dd>
+            </div>
+          </dl>
+        )}
+        {detail.data && detail.data.averageCost === 0 && detail.data.totalOnHand > 0 && (
+          <p className="text-xs text-muted">
+            Se calcula con el costo unitario de las entradas. Registra la próxima entrada con su
+            costo para valorar este producto.
+          </p>
+        )}
         {canSeeStockPerWarehouse && (
           <Link
             to={`/inventory?product=${product.id}`}

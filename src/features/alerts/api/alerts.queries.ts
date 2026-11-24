@@ -1,11 +1,12 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import type { AlertFilters } from '../types/alerts.types';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { AlertFilters, AlertManualStatus } from '../types/alerts.types';
 import {
   getAlert,
   getAlertProducts,
   getAlerts,
   getAlertWarehouses,
   getCurrentStock,
+  setAlertStatus,
 } from './alerts.api';
 
 /**
@@ -83,5 +84,26 @@ export function useAlertProducts(enabled: boolean) {
     queryFn: getAlertProducts,
     enabled,
     staleTime: 300_000,
+  });
+}
+
+/**
+ * US-045: marks an alert attended or pending again. Everything under `['alerts']` refreshes (lists,
+ * the bell, the detail); the inventory shows the alert in force, so its root refreshes too.
+ */
+export function useSetAlertStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: AlertManualStatus }) =>
+      setAlertStatus(id, status),
+    onSuccess: (alert) => {
+      queryClient.setQueryData(alertsKeys.detail(alert.id), alert);
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: alertsKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ['inventory'] }),
+        // "Stock bajo" and its list on the dashboard.
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+      ]);
+    },
   });
 }

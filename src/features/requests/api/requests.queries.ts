@@ -33,6 +33,8 @@ export const requestsKeys = {
   alerts: () => ['alerts'] as const,
   /** The movements feature's root (`['movements']`): fulfilling registers an outbound movement. */
   movements: () => ['movements'] as const,
+  /** The dashboard's root (`['dashboard']`): it counts waiting requests. */
+  dashboard: () => ['dashboard'] as const,
 };
 
 /** `enabled: false` while the default filter (the user's area) is still unknown. */
@@ -102,7 +104,10 @@ export function useCreateRequest() {
   return useMutation({
     mutationFn: createRequest,
     // Not awaited: the form closes as soon as the API confirms.
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: requestsKeys.lists() }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: requestsKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: requestsKeys.dashboard() });
+    },
   });
 }
 
@@ -113,6 +118,7 @@ export function useCancelRequest() {
     onSuccess: (request) => {
       queryClient.setQueryData(requestsKeys.detail(request.id), request);
       void queryClient.invalidateQueries({ queryKey: requestsKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: requestsKeys.dashboard() });
     },
   });
 }
@@ -142,6 +148,8 @@ function useTransition<T>(fn: (input: T) => Promise<StockRequest>) {
       // Reserving, releasing or taking stock out re-evaluates the alerts.
       void queryClient.invalidateQueries({ queryKey: requestsKeys.alerts() });
       void queryClient.invalidateQueries({ queryKey: requestsKeys.movements() });
+      // Waiting requests, stock and alerts are on the dashboard.
+      void queryClient.invalidateQueries({ queryKey: requestsKeys.dashboard() });
     },
   });
 }

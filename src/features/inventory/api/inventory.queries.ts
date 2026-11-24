@@ -140,6 +140,7 @@ function afterMovement(queryClient: QueryClient, movement: RegisteredMovement) {
     // The movement may have raised or resolved an alert (the alerts feature, and its bell).
     queryClient.invalidateQueries({ queryKey: inventoryKeys.alerts() }),
     queryClient.invalidateQueries({ queryKey: inventoryKeys.movements() }),
+    queryClient.invalidateQueries({ queryKey: inventoryKeys.dashboard() }),
   ]);
 }
 

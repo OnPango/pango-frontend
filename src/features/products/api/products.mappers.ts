@@ -53,6 +53,7 @@ export const toProduct = (dto: ProductDto): Product => ({
   weightKg: dto.weightKg,
   volumeL: dto.volumeL,
   tracksLots: dto.tracksLots,
+  averageCost: dto.averageCost ?? 0,
   isActive: dto.isActive,
   createdAt: dto.createdAt,
 });

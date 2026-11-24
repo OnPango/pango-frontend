@@ -1,44 +1,71 @@
 import { useAuthStore } from '@/core/auth/auth.store';
+import { hasAnyPermission } from '@/core/auth/permissions';
+import { Alert } from '@/shared/ui/components/Alert';
 import { PageHeader } from '@/shared/ui/PageHeader';
+import { useDashboardSummary } from '../api/dashboard.queries';
+import { InventoryLevelCard } from '../components/InventoryLevelCard';
+import { KpiStrip } from '../components/KpiStrip';
+import { LowStockCard } from '../components/LowStockCard';
+import { RecentActivity } from '../components/RecentActivity';
 import { buildGreeting, DashboardContent } from '../content/content';
-import { StatOverviewCard } from '../components/StatOverviewCard';
-import { RecentActivityCard } from '../components/RecentActivityCard';
-import { InventoryLevel } from '../components/InventoryLevel';
-import { ReplenishmentTable } from '../components/ReplenishmentTable';
-import {
-  mockDashboardMetrics,
-  mockRecentActivities,
-  mockInventoryLevels,
-  mockReplenishmentProducts,
-} from '../content/dashboard.mock';
 
+/**
+ * US-047: the organization at a glance. The key figures with "Nivel de inventario" and
+ * "Productos con bajo stock" below them, and the recent activity on the right. Each block shows
+ * only with the read permission of its module.
+ */
 export default function DashboardPage() {
-  const userName = useAuthStore((state) => state.user?.name);
+  const user = useAuthStore((state) => state.user);
+  const readsStock = hasAnyPermission(user, ['stock.read']);
+  const summary = useDashboardSummary(null);
+
+  const data = summary.data;
+  const isLoading = summary.isPending;
+  const showsLowStock = isLoading || data?.lowStockItems != null;
+  const showsActivity = isLoading || data?.recentActivity != null;
 
   return (
-    <div className="flex min-w-0 flex-col gap-10 pb-10">
-      {/* Greeting Header */}
-      <PageHeader title={buildGreeting(userName)} subtitle={DashboardContent.message} />
+    <div className="flex min-w-0 flex-col gap-4 pb-10">
+      <PageHeader title={buildGreeting(user?.name)} subtitle={DashboardContent.message} />
 
-      {/* Top Section: Subdivided Statistics & Recent Activity */}
-      <section
-        className="grid grid-cols-1 items-start gap-3 lg:grid-cols-12"
-        aria-label="Resumen de estadísticas y actividad"
+      {summary.isError && !data && (
+        <Alert tone="danger">No se pudo cargar el panel. Intenta de nuevo en un momento.</Alert>
+      )}
+
+      <div
+        className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-4"
+        aria-busy={summary.isFetching || undefined}
       >
-        <div className="flex min-w-0 flex-col gap-3 lg:col-span-8 xl:col-span-9">
-          <StatOverviewCard metrics={mockDashboardMetrics} />
-          <InventoryLevel items={mockInventoryLevels} />
+        <div
+          className={
+            showsActivity
+              ? 'flex min-w-0 flex-col gap-4 xl:col-span-3'
+              : 'flex min-w-0 flex-col gap-4 xl:col-span-4'
+          }
+        >
+          <KpiStrip kpis={data?.kpis} currency={data?.currency ?? 'COP'} isLoading={isLoading} />
+          {(readsStock || showsLowStock) && (
+            <div className="grid flex-1 grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+              {readsStock && (
+                <InventoryLevelCard
+                  warehouseId={null}
+                  className={showsLowStock ? undefined : 'lg:col-span-2'}
+                />
+              )}
+              {showsLowStock && (
+                <LowStockCard
+                  block={data?.lowStockItems ?? undefined}
+                  isLoading={isLoading}
+                  className={readsStock ? undefined : 'lg:col-span-2'}
+                />
+              )}
+            </div>
+          )}
         </div>
-
-        <div className="flex h-full min-w-0 flex-col lg:col-span-4 xl:col-span-3">
-          <RecentActivityCard activities={mockRecentActivities} />
-        </div>
-      </section>
-
-      {/* Bottom Section: Replenishment Table */}
-      <section aria-label="Productos por reponer" className="min-w-0">
-        <ReplenishmentTable products={mockReplenishmentProducts} />
-      </section>
+        {showsActivity && (
+          <RecentActivity items={data?.recentActivity ?? undefined} isLoading={isLoading} />
+        )}
+      </div>
     </div>
   );
 }

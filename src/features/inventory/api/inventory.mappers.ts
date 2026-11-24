@@ -37,6 +37,7 @@ export const toStockProduct = (dto: ProductDto): StockProduct => ({
   unit: { code: dto.stockUnit.code, name: dto.stockUnit.name },
   family: dto.category.name,
   tracksLots: dto.tracksLots,
+  averageCost: dto.averageCost ?? 0,
   isActive: dto.isActive,
 });
 
@@ -93,6 +94,7 @@ export const toCreateMovementDto = (input: RegisterMovementInput): CreateMovemen
       productId: Number(input.productId),
       quantity: input.quantity,
       ...(input.lotCode?.trim() ? { lotCode: input.lotCode.trim() } : {}),
+      ...(input.unitCost !== null ? { unitCost: input.unitCost } : {}),
     },
   ],
 });
