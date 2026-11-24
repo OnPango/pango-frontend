@@ -22,6 +22,8 @@ export const inventoryKeys = {
   alerts: () => ['alerts'] as const,
   /** The requests feature's lots of a product (`['stock-requests', 'lots', id]`): attending picks one. */
   requestLots: (productId: string) => ['stock-requests', 'lots', productId] as const,
+  /** The dashboard's root (`['dashboard']`): its figures summarize stock, alerts and movements. */
+  dashboard: () => ['dashboard'] as const,
   /** The movements feature's root (`['movements']`): a new movement joins its history. */
   movements: () => ['movements'] as const,
   /**

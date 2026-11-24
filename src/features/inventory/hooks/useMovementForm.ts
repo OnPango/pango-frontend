@@ -6,7 +6,13 @@ import { formatQuantity } from '@/shared/lib/units';
 import { useProductLots, useProductStock, useRegisterMovement } from '../api/inventory.queries';
 import { inventoryErrorMessage } from '../content/inventory.errors';
 import type { MovementKind, RegisteredMovement, StockProduct } from '../types/inventory.types';
-import { movementSchema, toQuantity, type MovementFormValues } from '../types/movement.schema';
+import {
+  isMoney,
+  movementSchema,
+  toMoney,
+  toQuantity,
+  type MovementFormValues,
+} from '../types/movement.schema';
 
 /** API errors shown on their field instead of the banner. */
 const FIELD_ERRORS = {
@@ -25,6 +31,27 @@ const fieldOf = (error: unknown) => {
   const code = getApiErrorCode(error);
   return code && code in FIELD_ERRORS ? FIELD_ERRORS[code as keyof typeof FIELD_ERRORS] : null;
 };
+
+/** A number typed in the form, or null while it is not one yet. */
+function parsed(value: string, parse: (text: string) => number): number | null {
+  if (!value.trim()) return null;
+  const number = parse(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+/** The weighted average cost after an entry, or null when something is still missing. */
+export function nextAverage(
+  onHand: number | null,
+  average: number | null,
+  quantity: number | null,
+  unitCost: number | null,
+): number | null {
+  if (onHand === null || average === null || !quantity || quantity <= 0 || unitCost === null) {
+    return null;
+  }
+  const base = Math.max(onHand, 0);
+  return Number(((base * average + quantity * unitCost) / (base + quantity)).toFixed(4));
+}
 
 /**
  * State and rules of "Registrar entrada" / "Registrar salida" (CU-05): validation, the stock the
@@ -55,6 +82,7 @@ export function useMovementForm({
       quantity: '',
       lotCode: '',
       documentRef: '',
+      unitCost: '',
     },
   });
 
@@ -81,6 +109,25 @@ export function useMovementForm({
     : null;
   /** What can go out: the chosen lot's stock, or the warehouse's. */
   const available = lot ? lot.onHand : inWarehouse;
+
+  // An entry with a unit cost moves the product's weighted average cost (pango-core's rule:
+  // existing stock at the current average plus the entry at its cost; negative stock costs 0).
+  const quantityText = useWatch({ control: form.control, name: 'quantity' });
+  const unitCostText = useWatch({ control: form.control, name: 'unitCost' });
+  const fresh = stock.data?.product.id === productId ? stock.data : null;
+  const currentCost = fresh?.product.averageCost ?? product?.averageCost ?? null;
+  const cost =
+    kind === 'inbound' && product
+      ? {
+          current: currentCost,
+          next: nextAverage(
+            fresh?.totalOnHand ?? null,
+            currentCost,
+            parsed(quantityText, toQuantity),
+            parsed(unitCostText, (text) => (isMoney(text) ? toMoney(text) : Number.NaN)),
+          ),
+        }
+      : null;
 
   // A lot that is not in the new warehouse (or product) cannot stay chosen.
   useEffect(() => {
@@ -125,6 +172,7 @@ export function useMovementForm({
         quantity,
         lotCode: product?.tracksLots ? values.lotCode : null,
         documentRef: values.documentRef || null,
+        unitCost: kind === 'inbound' && values.unitCost ? toMoney(values.unitCost) : null,
       },
       {
         onSuccess: onSaved,
@@ -146,6 +194,8 @@ export function useMovementForm({
     available,
     /** For outbound movements of per-lot products: the lots to choose from, and the chosen one. */
     lots: picksLot ? { items: lots.data ?? [], isLoading: lots.isLoading, chosen: lot } : null,
+    /** Entries: the current average cost and what it becomes with this entry's cost. */
+    cost,
     isSubmitting: register.isPending,
     /** Errors that are not about one field (permissions, network…). */
     serverError:

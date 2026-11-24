@@ -37,7 +37,8 @@ export function useMovement(id: string) {
 
 /**
  * Receiving adds stock to the destination: its stock (Inventario), its alerts and this history
- * change. Other features' roots are named, not imported (`['inventory']`, `['alerts']`).
+ * change, and the dashboard with them. Other features' roots are named, not imported
+ * (`['inventory']`, `['alerts']`, `['dashboard']`).
  */
 export function useReceiveTransfer() {
   const queryClient = useQueryClient();
@@ -55,6 +56,7 @@ export function useReceiveTransfer() {
         queryClient.invalidateQueries({ queryKey: movementsKeys.all }),
         queryClient.invalidateQueries({ queryKey: ['inventory'] }),
         queryClient.invalidateQueries({ queryKey: ['alerts'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
       ]);
     },
   });

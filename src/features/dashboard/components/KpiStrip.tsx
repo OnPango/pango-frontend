@@ -120,7 +120,7 @@ export function KpiStrip({
     return (
       <div aria-hidden className={frame}>
         {Array.from({ length: 4 }, (_, index) => (
-          <div key={index} className="space-y-3 px-4">
+          <div key={index} className="space-y-3 px-4 py-5">
             <Skeleton className="size-10 rounded-full" />
             <Skeleton className="h-3.5 w-24" />
             <Skeleton className="h-8 w-20" />

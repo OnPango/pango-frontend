@@ -28,7 +28,6 @@ type Org = string;
 
 function positions(org: Org, warehouseId: number | null) {
   const warehouses = activeWarehousesOf(org).filter((w) => !warehouseId || w.id === warehouseId);
-  const costs = averageCosts(org);
   return productsOf(org).flatMap((product) => {
     const stock = stockByWarehouse(org, product.id);
     const ids = new Set([...stock.keys(), ...enabledWarehouses(org, product.id)]);
@@ -40,21 +39,10 @@ function positions(org: Org, warehouseId: number | null) {
         warehouse: w,
         onHand: stock.get(w.id) ?? 0,
         available: availableOf(org, product.id, w.id),
-        cost: costs.get(product.id) ?? 0,
+        cost: product.averageCost ?? 0,
         maxStock: replenishmentOf(org, product.id, w.id).maxStock,
       }));
   });
-}
-
-/** The last inbound unit cost of each product: the mock keeps no average cost. */
-function averageCosts(org: Org) {
-  const costs = new Map<number, number>();
-  for (const movement of movementsOf(org)) {
-    for (const line of movement.lines) {
-      if (!line.removes && line.unitCost > 0) costs.set(line.productId, line.unitCost);
-    }
-  }
-  return costs;
 }
 
 const productRef = (product: { id: number; sku: string; name: string }, unit: string) => ({

@@ -3,7 +3,7 @@ import { authorize, error } from '../guard';
 import { numericId } from '../ids';
 import { applyStock, evaluateAlert, lotExists, onHand, trackTransferInTransit } from '../stock';
 import type { MockRoutes } from '../server';
-import { findProductRow, findUnitRow } from './catalog.handlers';
+import { addEntryCost, averageCostOf, findProductRow, findUnitRow } from './catalog.handlers';
 import { findWarehouseRow } from './warehouses.handlers';
 
 /**
@@ -383,6 +383,15 @@ export const movementsRoutes: MockRoutes = {
       plan.push({ productId: product.id, lot, delta: removes ? -quantity : quantity });
     }
 
+    // Each line moves at a cost: what an entry declares, otherwise the current average. A
+    // declared cost moves the average before the stock arrives (pango-core's order).
+    const costs = plan.map((p, index) => {
+      const given = lines[index].unitCost;
+      const declared = p.delta > 0 && !transfer && typeof given === 'number' ? given : null;
+      const cost = declared ?? averageCostOf(org, p.productId);
+      if (declared !== null) addEntryCost(org, p.productId, p.delta, declared);
+      return cost;
+    });
     plan.forEach((p) => applyStock(org, p.productId, warehouse.id, p.lot, p.delta));
     // Each movement re-evaluates the alerts of its products in the warehouse (CU-12a).
     new Set(plan.map((p) => p.productId)).forEach((id) => evaluateAlert(org, id, warehouse.id));
@@ -411,7 +420,7 @@ export const movementsRoutes: MockRoutes = {
         lot: p.lot,
         quantity: Math.abs(p.delta),
         removes: p.delta < 0,
-        unitCost: typeof lines[index].unitCost === 'number' ? (lines[index].unitCost as number) : 0,
+        unitCost: costs[index],
         receivedQuantity: receiveNow ? Math.abs(p.delta) : null,
       })),
     });

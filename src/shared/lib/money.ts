@@ -11,6 +11,20 @@ export function formatMoney(value: number, currency = 'COP'): string {
   }
 }
 
+/** "$ 1.112,5": a unit cost, with its cents when it has them (up to two). */
+export function formatUnitCost(value: number, currency = 'COP'): string {
+  try {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    return formatMoney(value, currency);
+  }
+}
+
 /** "$ 4,8 M", "$ 950 mil": for figures that must fit a card. */
 export function formatMoneyShort(value: number, currency = 'COP'): string {
   try {
