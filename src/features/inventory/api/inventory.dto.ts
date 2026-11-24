@@ -29,6 +29,9 @@ export interface ProductPageDto {
 
 /** `GET /products/:id`. */
 export type ValueSourceDto = 'MANUAL' | 'CALCULATED';
+export type ReplenishmentMethodDto = 'MIN_MAX' | 'FIXED_ROP' | 'FORECAST_ROP';
+export type ReorderMethodDto = 'FIXED_ROP' | 'FORECAST_ROP';
+export type CalculationIssueDto = 'NO_FORECAST' | 'NO_INTERVAL' | 'NO_LEAD_TIME';
 
 export interface ProductDetailDto extends ProductDto {
   totalOnHand: number;
@@ -46,11 +49,18 @@ export interface ReplenishmentDto {
   onHand: number;
   reserved: number;
   available: number;
+  replenishmentMethod: ReplenishmentMethodDto;
+  leadTimeDays: number;
   safetyStock: number;
   reorderPoint: number;
+  manualSafetyStock: number;
+  manualReorderPoint: number;
   minStock: number | null;
   maxStock: number | null;
   valueSource: ValueSourceDto;
+  baseForecastId: number | null;
+  calculatedAt: string | null;
+  calculationIssue: CalculationIssueDto | null;
   openAlert: { id: number; severity: number; createdAt: string } | null;
 }
 
@@ -59,6 +69,21 @@ export interface SetReplenishmentDto {
   reorderPoint: number;
   minStock: number | null;
   maxStock: number | null;
+  replenishmentMethod: ReorderMethodDto;
+  leadTimeDays: number;
+}
+
+/** Minimal slice of `GET /products/:id/forecasts` for live system reorder preview. */
+export interface ForecastPreviewPageDto {
+  items: {
+    id: number;
+    status: 'OK' | 'ERROR' | 'NO_FORECAST';
+    isCurrent: boolean;
+    historyEnd: string;
+    createdAt: string;
+    total: { estimate: number; lower: number; upper: number } | null;
+    periods: { periodStart: string }[];
+  }[];
 }
 
 /** `GET /warehouses`. */

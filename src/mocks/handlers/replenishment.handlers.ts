@@ -1,3 +1,8 @@
+import {
+  DEFAULT_LEAD_TIME_DAYS,
+  MAX_LEAD_TIME_DAYS,
+  MIN_LEAD_TIME_DAYS,
+} from '@/shared/lib/reorderPoint';
 import { authorize, error } from '../guard';
 import type { MockRoutes } from '../server';
 import {
@@ -5,15 +10,18 @@ import {
   reservedOf,
   openAlertOf,
   replenishmentOf,
+  resolveReplenishmentParams,
   setReplenishment,
   stockByWarehouse,
 } from '../stock';
 import { findProductRow, findUnitRow } from './catalog.handlers';
+import { currentOkForecastOf } from './forecasting.handlers';
 import { findWarehouseRow } from './warehouses.handlers';
 
 /**
  * Replenishment parameters per product and warehouse (`docs/replenishment.md`): read them with the
- * stock and the open alert, or set them by hand (saved as `MANUAL`, alert re-evaluated).
+ * stock and the open alert, or set manual fallback, method (`FIXED_ROP`/`FORECAST_ROP`) and lead
+ * time (alert re-evaluated).
  */
 
 const decimals = (value: number) => (String(value).split('.')[1] ?? '').length;
@@ -79,6 +87,24 @@ export const replenishmentRoutes: MockRoutes = {
     quantity('reorderPoint', false);
     quantity('minStock', true);
     quantity('maxStock', true);
+    if (
+      input.replenishmentMethod !== undefined &&
+      input.replenishmentMethod !== 'FIXED_ROP' &&
+      input.replenishmentMethod !== 'FORECAST_ROP'
+    ) {
+      problems.push('replenishmentMethod must be FIXED_ROP or FORECAST_ROP');
+    }
+    if (
+      input.leadTimeDays !== undefined &&
+      (typeof input.leadTimeDays !== 'number' ||
+        !Number.isInteger(input.leadTimeDays) ||
+        input.leadTimeDays < MIN_LEAD_TIME_DAYS ||
+        input.leadTimeDays > MAX_LEAD_TIME_DAYS)
+    ) {
+      problems.push(
+        `leadTimeDays must be an integer between ${MIN_LEAD_TIME_DAYS} and ${MAX_LEAD_TIME_DAYS}`,
+      );
+    }
     if (problems.length > 0) return error(400, 'VALIDATION', problems.join(', '));
 
     const safetyStock = input.safetyStock as number;
@@ -99,13 +125,34 @@ export const replenishmentRoutes: MockRoutes = {
       return error(400, 'REPLENISHMENT_INVALID', 'The reorder point cannot exceed the max stock');
     }
 
-    setReplenishment(org, found.product.id, found.warehouse.id, {
-      safetyStock,
-      reorderPoint,
-      minStock,
-      maxStock,
-      valueSource: 'MANUAL',
-    });
+    const current = replenishmentOf(org, found.product.id, found.warehouse.id);
+    const method =
+      (input.replenishmentMethod as 'FIXED_ROP' | 'FORECAST_ROP' | undefined) ??
+      (current.replenishmentMethod === 'FORECAST_ROP' ? 'FORECAST_ROP' : 'FIXED_ROP');
+    const leadTimeDays =
+      (input.leadTimeDays as number | undefined) ?? current.leadTimeDays ?? DEFAULT_LEAD_TIME_DAYS;
+
+    const forecast =
+      method === 'FORECAST_ROP'
+        ? currentOkForecastOf(org, found.product.id, found.warehouse.id)
+        : null;
+
+    setReplenishment(
+      org,
+      found.product.id,
+      found.warehouse.id,
+      resolveReplenishmentParams(
+        {
+          replenishmentMethod: method,
+          leadTimeDays,
+          manualSafetyStock: safetyStock,
+          manualReorderPoint: reorderPoint,
+          minStock,
+          maxStock,
+        },
+        forecast,
+      ),
+    );
     return { status: 200, data: toDto(org, found.product.id, found.warehouse.id) };
   },
 };
