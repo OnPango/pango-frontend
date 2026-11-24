@@ -41,7 +41,7 @@ import { TransferModal, type TransferTarget } from '../components/TransferModal'
 import { WarehouseStockTable } from '../components/WarehouseStockTable';
 import { inventoryErrorMessage } from '../content/inventory.errors';
 import { adjustedText, KIND_LABELS, registeredText } from '../content/movement.labels';
-import { ALERT_LABELS } from '../content/replenishment.labels';
+import { formatReplenishmentNotice } from '../content/replenishment.labels';
 import { useInventoryView, type InventoryView } from '../hooks/useInventoryView';
 import type {
   MovementKind,
@@ -222,18 +222,11 @@ export default function InventoryPage() {
     [stockData],
   );
 
-  // US-016, third criterion: the next alerts use the new values; say what that means right now.
+  // US-016 / US-040: confirm which mode/values are in force and whether an alert opened/resolved.
   const handleReplenished = (target: ReplenishmentTarget, saved: Replenishment) => {
     setReplenishing(null);
-    const amount = (value: number) => formatQuantity(value, target.unit);
-    const outcome =
-      saved.reorderPoint === 0
-        ? 'Sin punto de reorden: no habrá alertas.'
-        : saved.openAlert
-          ? `Disponible ${amount(saved.available)} ≤ punto de reorden ${amount(saved.reorderPoint)}: alerta abierta (${ALERT_LABELS[saved.openAlert.severity].toLowerCase()}).`
-          : `Disponible ${amount(saved.available)} > punto de reorden ${amount(saved.reorderPoint)}: sin alerta.`;
     setNotice(
-      `Reposición de «${target.productName}» en ${target.warehouseName} guardada. ${outcome}`,
+      formatReplenishmentNotice(target.productName, target.warehouseName, target.unit, saved),
     );
   };
 
