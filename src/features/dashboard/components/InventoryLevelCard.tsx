@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { FiChevronDown } from 'react-icons/fi';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useThemeColors } from '@/shared/hooks/useThemeColors';
+import { Select } from '@/shared/ui/components/form/select/Select';
 import { Skeleton } from '@/shared/ui/components/Skeleton';
 import { useInventoryLevel } from '../api/dashboard.queries';
 import { formatShortDay, LEVEL_OPTIONS } from '../content/dashboard.labels';
@@ -26,53 +26,56 @@ function LevelChart({ points, weekly }: { points: LevelPoint[]; weekly: boolean 
     : '';
   return (
     <div className="flex flex-1 flex-col gap-3">
-      <div className="h-56 w-full" role="img" aria-label={summary}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }} barGap={2}>
-            <CartesianGrid vertical={false} stroke={colors.line} strokeDasharray="3 3" />
-            <XAxis
-              dataKey="label"
-              tick={{ fill: colors.muted, fontSize: 11 }}
-              axisLine={{ stroke: colors.line }}
-              tickLine={false}
-              interval="preserveStartEnd"
-              minTickGap={12}
-            />
-            <YAxis
-              allowDecimals={false}
-              tick={{ fill: colors.muted, fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <Tooltip
-              cursor={{ fill: colors.line, fillOpacity: colors.dark ? 0.25 : 0.4 }}
-              contentStyle={{
-                background: colors.surface,
-                border: `1px solid ${colors.line}`,
-                borderRadius: 12,
-                fontSize: 12,
-                color: colors.fg,
-              }}
-              labelStyle={{ color: colors.fg, fontWeight: 600 }}
-            />
-            <Bar
-              dataKey="inStock"
-              name="Productos en stock"
-              fill={stockColor}
-              radius={[4, 4, 0, 0]}
-              maxBarSize={22}
-            />
-            {showsLow && (
+      {/* Grows with the card (the row is as tall as the recent activity), never below 14rem. */}
+      <div className="relative min-h-56 w-full flex-1" role="img" aria-label={summary}>
+        <div className="absolute inset-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }} barGap={2}>
+              <CartesianGrid vertical={false} stroke={colors.line} strokeDasharray="3 3" />
+              <XAxis
+                dataKey="label"
+                tick={{ fill: colors.muted, fontSize: 11 }}
+                axisLine={{ stroke: colors.line }}
+                tickLine={false}
+                interval="preserveStartEnd"
+                minTickGap={12}
+              />
+              <YAxis
+                allowDecimals={false}
+                tick={{ fill: colors.muted, fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                cursor={{ fill: colors.line, fillOpacity: colors.dark ? 0.25 : 0.4 }}
+                contentStyle={{
+                  background: colors.surface,
+                  border: `1px solid ${colors.line}`,
+                  borderRadius: 12,
+                  fontSize: 12,
+                  color: colors.fg,
+                }}
+                labelStyle={{ color: colors.fg, fontWeight: 600 }}
+              />
               <Bar
-                dataKey="lowStock"
-                name="Productos en stock bajo"
-                fill={lowColor}
+                dataKey="inStock"
+                name="Productos en stock"
+                fill={stockColor}
                 radius={[4, 4, 0, 0]}
                 maxBarSize={22}
               />
-            )}
-          </BarChart>
-        </ResponsiveContainer>
+              {showsLow && (
+                <Bar
+                  dataKey="lowStock"
+                  name="Productos en stock bajo"
+                  fill={lowColor}
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={22}
+                />
+              )}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
       <ul className="mt-auto flex flex-wrap gap-x-8 gap-y-1 text-xs text-fg" aria-hidden>
         <li className="flex items-center gap-2">
@@ -91,7 +94,7 @@ function LevelChart({ points, weekly }: { points: LevelPoint[]; weekly: boolean 
 
 /**
  * Products with stock, and in low stock, at the end of each day (or week, for 90 days). Each
- * product counts once per warehouse; one in low stock is not counted again as in stock.
+ * product counts once; one in low stock is not counted again as in stock.
  */
 export function InventoryLevelCard({
   warehouseId,
@@ -107,24 +110,17 @@ export function InventoryLevelCard({
       title="Nivel de inventario"
       className={className}
       aside={
-        <label className="relative inline-flex shrink-0 items-center">
-          <span className="sr-only">Periodo del nivel de inventario</span>
-          <select
-            value={days}
-            onChange={(event) => setDays(Number(event.target.value) as LevelDays)}
-            className="min-h-9 cursor-pointer appearance-none rounded-md bg-transparent py-1 pr-7 pl-2 text-sm text-fg hover:bg-canvas focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-hidden"
-          >
-            {LEVEL_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <FiChevronDown
-            aria-hidden
-            className="pointer-events-none absolute right-1.5 size-4 text-muted"
-          />
-        </label>
+        <Select
+          aria-label="Periodo del nivel de inventario"
+          value={String(days)}
+          onChange={(value) => setDays((Number(value) || 7) as LevelDays)}
+          options={LEVEL_OPTIONS.map((option) => ({
+            value: String(option.value),
+            label: option.label,
+          }))}
+          size="sm"
+          className="w-44 shrink-0"
+        />
       }
     >
       {level.isError && !level.data ? (
@@ -134,7 +130,7 @@ export function InventoryLevelCard({
           <LevelChart points={level.data.points} weekly={level.data.granularity === 'week'} />
         </div>
       ) : (
-        <Skeleton className="h-64 w-full" />
+        <Skeleton className="min-h-64 w-full flex-1" />
       )}
     </DashboardCard>
   );
