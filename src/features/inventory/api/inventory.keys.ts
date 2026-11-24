@@ -15,6 +15,8 @@ export const inventoryKeys = {
   productLots: (productId: string) => [...inventoryKeys.all, 'lots', productId] as const,
   replenishment: (productId: string, warehouseId: string) =>
     [...inventoryKeys.all, 'replenishment', productId, warehouseId] as const,
+  forecastPreview: (productId: string, warehouseId: string) =>
+    [...inventoryKeys.all, 'forecast-preview', productId, warehouseId] as const,
   warehouses: () => [...inventoryKeys.all, 'warehouses'] as const,
   movementTypes: (warehouseId: string) =>
     [...inventoryKeys.all, 'movement-types', warehouseId] as const,
