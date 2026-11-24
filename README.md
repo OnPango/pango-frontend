@@ -21,24 +21,25 @@ Pango web application (SPA), a multi-organization SaaS platform for intelligent 
 
 ## 1. Project status
 
-| Area                                                                                                                                                    | Status                               |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| Skeleton (Vite + React + TS), feature-based structure, CI                                                                                               | ✅ Done                              |
-| Light / dark / system theme with Tailwind v4                                                                                                            | ✅ Done                              |
-| Session (HttpOnly cookies + refresh rotation), permission-based route guards, layout                                                                    | ✅ Done                              |
-| Module screens                                                                                                                                          | ⏳ Placeholders                      |
-| Owner sign-up, login, email confirmation, invitations (US-001 / CU-13)                                                                                  | ✅ Against `pango-core` and the mock |
-| User management (CU-02, US-005): list, job title, roles, (de)activate, invitations; create, rename and delete roles                                     | ✅ Against `pango-core` and the mock |
-| Products (CU-03, US-008, US-011): list, search, filter by family and status, register, edit; families: tree, create, rename, move, (de)activate         | ✅ Against `pango-core` and the mock |
-| Warehouses (CU-04, US-017): list, search, filter, detail, register, edit, close, reopen                                                                 | ✅ Against `pango-core` and the mock |
-| Inventory (CU-05, US-012, US-013, US-015, US-016): inbound, outbound and adjustments, stock by warehouse and by product, safety stock and reorder point | ✅ Against `pango-core` and the mock |
-| Areas and internal requests (CU-08, CU-09, US-028, US-030, US-031, US-032): areas, create, cancel and attend requests, history                          | ✅ Against the mock and pango-core   |
-| Alerts (CU-12, US-043, US-044): list with filters, detail with the current situation, header bell                                                       | ✅ Against the mock and pango-core   |
-| Movement history (CU-05 A2, US-014): every movement, filters by product, warehouse, type and dates, detail                                              | ✅ Against the mock and pango-core   |
-| Base components (table, modal, status badges, form fields)                                                                                              | ⏳ Pending                           |
-| Login with the pangolin illustration and "under construction" screen                                                                                    | ⏳ Pending                           |
-| ESLint + Prettier, tests (Vitest + Testing Library)                                                                                                     | ⏳ Pending                           |
-| API contract and final permission catalog                                                                                                               | ⏳ To be agreed with the backend     |
+| Area                                                                                                                                                              | Status                                           |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Skeleton (Vite + React + TS), feature-based structure, CI                                                                                                         | ✅ Done                                          |
+| Light / dark / system theme with Tailwind v4                                                                                                                      | ✅ Done                                          |
+| Session (HttpOnly cookies + refresh rotation), permission-based route guards, layout                                                                              | ✅ Done                                          |
+| Module screens                                                                                                                                                    | ⏳ Placeholders                                  |
+| Owner sign-up, login, email confirmation, invitations (US-001 / CU-13)                                                                                            | ✅ Against `pango-core` and the mock             |
+| User management (CU-02, US-005): list, job title, roles, (de)activate, invitations; create, rename and delete roles                                               | ✅ Against `pango-core` and the mock             |
+| Products (CU-03, US-008, US-011): list, search, filter by family and status, register, edit; families: tree, create, rename, move, (de)activate                   | ✅ Against `pango-core` and the mock             |
+| Warehouses (CU-04, US-017): list, search, filter, detail, register, edit, close, reopen                                                                           | ✅ Against `pango-core` and the mock             |
+| Inventory (CU-05, US-012, US-013, US-015, US-016): inbound, outbound and adjustments, stock by warehouse and by product, safety stock and reorder point           | ✅ Against `pango-core` and the mock             |
+| Areas and internal requests (CU-08, CU-09, US-028, US-030, US-031, US-032): areas, create, cancel and attend requests, history                                    | ✅ Against the mock and pango-core               |
+| Alerts (CU-12, US-043, US-044): list with filters, detail with the current situation, header bell                                                                 | ✅ Against the mock and pango-core               |
+| Movement history (CU-05 A2, US-014): every movement, filters by product, warehouse, type and dates, detail                                                        | ✅ Against the mock and pango-core               |
+| Data import (inventory and movements): hub with previous loads, 5-step wizard (file, columns, preview, which data to keep, confirmation, result), history quality | ✅ Against the mock only (contract to be agreed) |
+| Base components (table, modal, status badges, form fields)                                                                                                        | ⏳ Pending                                       |
+| Login with the pangolin illustration and "under construction" screen                                                                                              | ⏳ Pending                                       |
+| ESLint + Prettier, tests (Vitest + Testing Library)                                                                                                               | ⏳ Pending                                       |
+| API contract and final permission catalog                                                                                                                         | ⏳ To be agreed with the backend                 |
 
 ## 2. Scope
 
@@ -160,7 +161,7 @@ pango-frontend/
 └─ .env.example
 ```
 
-Current features: `auth`, `dashboard`, `products`, `warehouses`, `inventory`, `requests`, `suppliers`, `forecast`, `alerts`, `areas`, `users`.
+Current features: `auth`, `dashboard`, `products`, `warehouses`, `inventory`, `movements`, `requests`, `suppliers`, `forecast`, `alerts`, `areas`, `users`, `imports`, `search`.
 
 ### Dependency rules
 
