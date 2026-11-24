@@ -80,12 +80,12 @@ function toKpis(kpis: SummaryKpis, currency: string): Kpi[] {
 function TrendLine({ kpi }: { kpi: Kpi }) {
   const trend = trendOf(kpi.trend.current, kpi.trend.previous);
   if (!trend) {
-    return <p className="text-xs text-muted">Igual que el mes anterior</p>;
+    return <p className="text-sm text-muted">Igual que el mes anterior</p>;
   }
   const good = (trend.direction === 'up') !== Boolean(kpi.upIsBad);
   const Arrow = trend.direction === 'up' ? FiArrowUp : FiArrowDown;
   return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
       <span
         className={cn(
           'inline-flex items-center gap-1 font-semibold tabular-nums',
@@ -140,7 +140,7 @@ export function KpiStrip({
           <div
             key={kpi.key}
             className={cn(
-              'flex min-w-0 flex-col gap-3 px-4',
+              'flex min-w-0 flex-col gap-3 pl-5 py-2',
               // A divider before every figure but the first of its row.
               index % 2 === 1 && 'border-l border-line2',
               index % 4 !== 0 && 'xl:border-l xl:border-line2',
@@ -159,7 +159,7 @@ export function KpiStrip({
             <div className="min-w-0">
               <p className="text-sm leading-snug text-muted">{kpi.label}</p>
               <p
-                className="mt-1 truncate font-display text-3xl font-medium tracking-tight text-fg tabular-nums xl:text-4xl"
+                className="mt-1 mb-4 truncate font-display text-3xl font-medium tracking-tight text-fg tabular-nums xl:text-4xl"
                 title={kpi.title}
               >
                 {kpi.value}
