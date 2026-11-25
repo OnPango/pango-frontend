@@ -125,6 +125,42 @@ export function dataRowCount(sheet: SheetData): number {
   return sheet.rows.slice(1).filter((row) => !isEmptyRow(row)).length;
 }
 
+/** `Código de Bodega ` → `codigo_de_bodega`: lower case, no accents, words joined by `_`. */
+export function normalizeHeader(header: string): string {
+  return header
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+const pad = (n: number) => String(n).padStart(2, '0');
+
+/** A date as `YYYY-MM-DD`, from its UTC parts (Excel dates carry no time zone). */
+export function isoDate(date: Date): string {
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+}
+
+/** Excel serial day (days since 1899-12-30) to a date. */
+export function excelSerialToDate(serial: number): Date {
+  return new Date(Math.round((serial - 25569) * 86_400_000));
+}
+
+/** A date written as text, in the template format when it is recognized. */
+export function normalizeDateText(text: string): string {
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T].*)?$/.exec(text);
+  if (iso) return `${iso[1]}-${pad(Number(iso[2]))}-${pad(Number(iso[3]))}`;
+  const dmy = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})(?:\s.*)?$/.exec(text);
+  if (dmy) return `${dmy[3]}-${pad(Number(dmy[2]))}-${pad(Number(dmy[1]))}`;
+  return text;
+}
+
+/** A number without the float noise Excel can leave (`0.30000000000000004` → `0.3`). */
+export function numberText(value: number): string {
+  return String(Number(value.toPrecision(15)));
+}
+
 /** Reads a .csv or .xlsx in the browser. Nothing leaves the device here. */
 export async function readSpreadsheet(file: File): Promise<Spreadsheet> {
   const lower = file.name.toLowerCase();
@@ -152,7 +188,7 @@ export async function readSpreadsheet(file: File): Promise<Spreadsheet> {
   sheets = sheets.filter((sheet) => sheet.rows.length > 0);
   if (sheets.length === 0 || sheets.every((sheet) => dataRowCount(sheet) === 0)) {
     throw new SpreadsheetError(
-      'El archivo está vacío o solo tiene encabezados. La primera fila debe tener los nombres de las columnas y las siguientes, los movimientos.',
+      'El archivo está vacío o solo tiene encabezados. La primera fila debe tener los nombres de las columnas y las siguientes, los datos.',
     );
   }
   return { fileName: file.name, sizeBytes: file.size, sheets };

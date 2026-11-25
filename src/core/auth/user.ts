@@ -36,6 +36,7 @@ export const PERMISSION_SCOPES = {
   'movement.receive': 'WAREHOUSE',
   'movement.void': 'WAREHOUSE',
   'movement.import': 'WAREHOUSE',
+  'inventory.import': 'WAREHOUSE',
   'stock_request.read': 'WAREHOUSE',
   'stock_request.create': 'WAREHOUSE',
   'stock_request.approve': 'WAREHOUSE',

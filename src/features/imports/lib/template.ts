@@ -1,38 +1,29 @@
 import type { ImportKind } from '../types/imports.types';
 import { TEMPLATE_COLUMNS } from '../types/movementImports.types';
+import { INVENTORY_TEMPLATE_FILE_NAME, INVENTORY_TEMPLATE_URL } from './inventoryTemplate';
+
+function download(href: string, fileName: string): void {
+  const link = document.createElement('a');
+  link.href = href;
+  link.download = fileName;
+  link.click();
+}
 
 /**
- * Headers of the templates. Movements: the v1 template of pango-core
- * (`docs/templates/pango-standard-kardex-movement-history-import-v1.csv`).
+ * Downloads the template of a load. Inventory: the published workbook (`public/templates/`), with
+ * its instructions sheet. Movements: the v1 headers of pango-core
+ * (`docs/templates/pango-standard-kardex-movement-history-import-v1.csv`) as a CSV.
  */
-const HEADERS: Record<ImportKind, string[]> = {
-  inventory: [
-    'Código producto',
-    'Producto',
-    'Categoría',
-    'Unidad de medida',
-    'Bodega',
-    'Seguimiento',
-    'Saldo inicial',
-    'Código de lote',
-    'Costo unitario',
-  ],
-  movements: [...TEMPLATE_COLUMNS],
-};
-
-const FILE_NAME: Record<ImportKind, string> = {
-  inventory: 'Plantilla_Inventario_PANGO.csv',
-  movements: 'Plantilla_Movimientos_PANGO.csv',
-};
-
-/** Downloads the template of a load as a CSV with only its headers. */
 export function downloadTemplate(kind: ImportKind): void {
+  if (kind === 'inventory') {
+    download(INVENTORY_TEMPLATE_URL, INVENTORY_TEMPLATE_FILE_NAME);
+    return;
+  }
   // The BOM makes Excel read the accents as UTF-8.
-  const blob = new Blob([`\uFEFF${HEADERS[kind].join(',')}\n`], { type: 'text/csv;charset=utf-8' });
+  const blob = new Blob([`\uFEFF${TEMPLATE_COLUMNS.join(',')}\n`], {
+    type: 'text/csv;charset=utf-8',
+  });
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = FILE_NAME[kind];
-  link.click();
+  download(url, 'Plantilla_Movimientos_PANGO.csv');
   URL.revokeObjectURL(url);
 }
