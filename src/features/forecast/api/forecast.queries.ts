@@ -66,6 +66,22 @@ export function useForecastRuns(page: number, pageSize: number, enabled: boolean
   });
 }
 
+/** What `useLatestRun` remembers of the run it saw last. */
+export interface SeenRun {
+  signature: string | null;
+  running: boolean;
+}
+
+/**
+ * The forecast results on screen are out of date: the latest run just finished. That is a run
+ * seen running that is no longer, and also a run that was already over the first time it was seen
+ * (a small run can finish before the first poll catches it running). Never on the first read.
+ */
+export function runJustFinished(before: SeenRun | null, now: SeenRun): boolean {
+  if (!before || now.running || now.signature === null) return false;
+  return before.running || before.signature !== now.signature;
+}
+
 /** A run takes minutes: while one is running, its status is checked this often. */
 const RUN_POLL_MS = 4000;
 
@@ -94,7 +110,7 @@ export function useLatestRun(enabled: boolean) {
       queryKey: forecastKeys.runs(),
       predicate: (q) => q.queryKey[2] !== 'latest',
     });
-    if (before.running && !running) {
+    if (runJustFinished(before, { signature, running })) {
       void queryClient.invalidateQueries({ queryKey: forecastKeys.results() });
       void queryClient.invalidateQueries({ queryKey: forecastKeys.inventory() });
       void queryClient.invalidateQueries({ queryKey: forecastKeys.alerts() });
@@ -108,7 +124,15 @@ export function useStartForecastRun() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: StartRunInput) => startForecastRun(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: forecastKeys.runs() }),
+    onSuccess: (run) => {
+      // The answer is the new run, already running: polling starts from it right away.
+      queryClient.setQueryData(forecastKeys.latestRun(), run);
+      // Not awaited: the dialog closes as soon as the API accepts the run.
+      void queryClient.invalidateQueries({
+        queryKey: forecastKeys.runs(),
+        predicate: (q) => q.queryKey[2] !== 'latest',
+      });
+    },
   });
 }
 
