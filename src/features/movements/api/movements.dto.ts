@@ -68,3 +68,33 @@ export interface ProductPageDto {
   items: { id: number; sku: string; name: string }[];
   total: number;
 }
+
+/** `GET /historical-movements` item (pango-core `HistoricalMovementDto`). */
+export interface HistoricalMovementDto {
+  id: number;
+  date: string;
+  movementType: string;
+  product: { id: number; sku: string; name: string; unit: string };
+  warehouse: { id: number; code: string; name: string };
+  quantityIn: number | null;
+  quantityOut: number | null;
+  balance: number | null;
+  documentRef: string | null;
+  locationCode: string | null;
+  lotCode: string | null;
+  unitCost: number | null;
+  afterCutover: boolean;
+  source: {
+    importId: number;
+    sourceNamespace: string;
+    externalMovementId: string;
+    lineNumber: number;
+  };
+}
+
+export interface HistoricalMovementPageDto {
+  items: HistoricalMovementDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+}

@@ -103,8 +103,8 @@ export const APP_ROUTES: AppRoute[] = [
     label: 'Importar datos',
     icon: FiUpload,
     section: 'data',
-    // The backend has no import permission yet: admin-only until it does.
-    anyOf: ['settings.manage'],
+    // Owner and Admin hold it (a warehouse permission): the API narrows it per warehouse.
+    anyOf: ['movement.import'],
     Page: lazy(() => import('@/features/imports/pages/ImportDataPage')),
   },
   {

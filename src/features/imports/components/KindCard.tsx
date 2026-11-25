@@ -9,11 +9,13 @@ export interface KindCardProps {
   kind: ImportKind;
   /** "Paso 1 recomendado" on the first load of an organization. */
   badge?: string;
+  /** Not available yet: the card is shown, its buttons are not usable. */
+  disabled?: boolean;
   onStart: () => void;
 }
 
 /** One of the two things that can be loaded, with what its file needs. */
-export function KindCard({ kind, badge, onStart }: KindCardProps) {
+export function KindCard({ kind, badge, disabled = false, onStart }: KindCardProps) {
   const copy = KIND_COPY[kind];
   return (
     <article className="flex flex-col rounded-3xl border border-line2 bg-surface p-6">
@@ -38,8 +40,10 @@ export function KindCard({ kind, badge, onStart }: KindCardProps) {
       </ul>
       <p className="mt-4 flex-1 text-sm text-muted">{copy.usage}</p>
       <div className="mt-5 flex flex-wrap gap-3">
-        <Button onClick={onStart}>{copy.cta}</Button>
-        <Button variant="outline" onClick={() => downloadTemplate(kind)}>
+        <Button onClick={onStart} disabled={disabled}>
+          {copy.cta}
+        </Button>
+        <Button variant="outline" onClick={() => downloadTemplate(kind)} disabled={disabled}>
           <FiDownload aria-hidden className="mr-2" />
           Plantilla
         </Button>

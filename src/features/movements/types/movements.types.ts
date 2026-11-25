@@ -89,3 +89,53 @@ export interface HistoryProduct {
   sku: string;
   name: string;
 }
+
+/** Movement codes of the imported history (the kardex template of pango-core). */
+export type ImportedMovementCode =
+  | 'OPENING_BALANCE'
+  | 'PURCHASE_RECEIPT'
+  | 'SALE'
+  | 'INTERNAL_CONSUMPTION'
+  | 'ADJUSTMENT_IN'
+  | 'ADJUSTMENT_OUT'
+  | 'TRANSFER_OUT'
+  | 'TRANSFER_IN';
+
+/**
+ * A line of the history imported from the company's previous system (`GET /historical-movements`).
+ * It never changed stock; it feeds demand and the forecast until the first movement in Pango.
+ */
+export interface ImportedMovement {
+  id: string;
+  /** Business date of the source, `YYYY-MM-DD`. */
+  date: string;
+  code: ImportedMovementCode;
+  product: { id: string; sku: string; name: string; unit: string };
+  warehouse: Option & { code: string };
+  quantityIn: number | null;
+  quantityOut: number | null;
+  /** Balance after the line, as the file gave it. */
+  balance: number | null;
+  documentRef: string | null;
+  lotCode: string | null;
+  unitCost: number | null;
+  /** On or after the first Pango movement of the product in the warehouse: shown, not counted. */
+  afterCutover: boolean;
+  source: { importId: string; system: string; movementId: string; line: number };
+}
+
+export interface ImportedMovementFilters {
+  productId: string | null;
+  warehouseId: string | null;
+  code: ImportedMovementCode | null;
+  /** Business days, `YYYY-MM-DD`, both included. */
+  from: string | null;
+  to: string | null;
+  page: number;
+  pageSize: number;
+}
+
+export interface ImportedMovementPage {
+  items: ImportedMovement[];
+  total: number;
+}

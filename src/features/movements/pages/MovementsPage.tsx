@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FiArrowRight, FiList, FiTruck, FiX } from 'react-icons/fi';
+import { FiArrowRight, FiArchive, FiList, FiTruck, FiX } from 'react-icons/fi';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission, warehousesWithPermission } from '@/core/auth/permissions';
@@ -13,19 +13,24 @@ import { PageHeader } from '@/shared/ui/PageHeader';
 import {
   useHistoryProducts,
   useHistoryWarehouses,
+  useImportedMovements,
   useMovements,
   useMovementTypes,
 } from '../api/movements.queries';
+import { ImportedMovementsTable } from '../components/ImportedMovementsTable';
 import { MovementDetailPanel } from '../components/MovementDetailPanel';
 import { MovementsTable } from '../components/MovementsTable';
 import { TransfersOnTheWay } from '../components/TransfersOnTheWay';
+import { IMPORTED_CODE_LABELS } from '../content/movement.labels';
 import { historyWarehouses } from '../content/movement.permissions';
 import { movementsErrorMessage } from '../content/movements.errors';
-import type { Movement, Option } from '../types/movements.types';
+import type { ImportedMovementCode, Movement, Option } from '../types/movements.types';
 
 const ALL = 'all';
 
-type View = 'history' | 'incoming';
+type View = 'history' | 'imported' | 'incoming';
+
+const VIEWS: readonly View[] = ['history', 'imported', 'incoming'];
 
 /** Every transfer on its way, in one page: there are few at a time. */
 const ON_THE_WAY = {
@@ -50,7 +55,9 @@ export default function MovementsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const productId = searchParams.get('product');
   const openId = searchParams.get('movement');
-  const view: View = searchParams.get('view') === 'incoming' ? 'incoming' : 'history';
+  const viewParam = searchParams.get('view') as View | null;
+  const view: View = viewParam && VIEWS.includes(viewParam) ? viewParam : 'history';
+  const imported = view === 'imported';
   const setParam = useCallback(
     (key: string, value: string | null, replace = false) =>
       setSearchParams(
@@ -68,6 +75,8 @@ export default function MovementsPage() {
   // Filters (A2: by dates or type; the API also takes the warehouse).
   const [warehouseFilter, setWarehouseFilter] = useState<string>(ALL);
   const [typeFilter, setTypeFilter] = useState<string>(ALL);
+  // The imported history has its own movement codes (the kardex template), not Pango's types.
+  const [codeFilter, setCodeFilter] = useState<string>(ALL);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [page, setPage] = useState(1);
@@ -81,6 +90,18 @@ export default function MovementsPage() {
     page,
     pageSize,
   });
+  const importedMovements = useImportedMovements(
+    {
+      productId,
+      warehouseId: warehouseFilter === ALL ? null : warehouseFilter,
+      code: codeFilter === ALL ? null : (codeFilter as ImportedMovementCode),
+      from: from || null,
+      to: to || null,
+      page,
+      pageSize,
+    },
+    imported,
+  );
 
   const reading = historyWarehouses(currentUser);
   const everyWarehouse = useHistoryWarehouses(reading === 'all');
@@ -109,19 +130,33 @@ export default function MovementsPage() {
     [types.data],
   );
 
-  const filtered = warehouseFilter !== ALL || typeFilter !== ALL || !!from || !!to;
+  const codeOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: ALL, label: 'Todos los tipos' },
+      ...Object.entries(IMPORTED_CODE_LABELS).map(([value, label]) => ({ value, label })),
+    ],
+    [],
+  );
+
+  const filtered =
+    warehouseFilter !== ALL || (imported ? codeFilter : typeFilter) !== ALL || !!from || !!to;
   const clearFilters = () => {
     setWarehouseFilter(ALL);
     setTypeFilter(ALL);
+    setCodeFilter(ALL);
     setFrom('');
     setTo('');
     setPage(1);
   };
   const emptyMessage = filtered
     ? 'Ningún movimiento coincide con los filtros.'
-    : productId
-      ? 'Este producto aún no tiene movimientos.'
-      : 'Aún no hay movimientos.';
+    : imported
+      ? productId
+        ? 'Este producto no tiene movimientos importados.'
+        : 'Aún no se ha importado historial. Cárgalo desde Importar datos.'
+      : productId
+        ? 'Este producto aún no tiene movimientos.'
+        : 'Aún no hay movimientos.';
 
   const open = useCallback((movement: Movement) => setParam('movement', movement.id), [setParam]);
 
@@ -138,6 +173,7 @@ export default function MovementsPage() {
   ).length;
   const views = [
     { value: 'history' as const, label: 'Historial', icon: FiList },
+    { value: 'imported' as const, label: 'Importados', icon: FiArchive },
     {
       value: 'incoming' as const,
       label: toReceive > 0 ? `En camino (${toReceive})` : 'En camino',
@@ -156,7 +192,10 @@ export default function MovementsPage() {
         legend="Ver"
         options={views}
         value={view}
-        onChange={(next) => setParam('view', next === 'incoming' ? 'incoming' : null, true)}
+        onChange={(next) => {
+          setParam('view', next === 'history' ? null : next, true);
+          setPage(1);
+        }}
       />
 
       {view === 'incoming' ? (
@@ -213,12 +252,12 @@ export default function MovementsPage() {
               )}
               <Select
                 aria-label="Filtrar por tipo"
-                value={typeFilter}
+                value={imported ? codeFilter : typeFilter}
                 onChange={(value) => {
-                  setTypeFilter(value || ALL);
+                  (imported ? setCodeFilter : setTypeFilter)(value || ALL);
                   setPage(1);
                 }}
-                options={typeOptions}
+                options={imported ? codeOptions : typeOptions}
                 className="w-full lg:w-56"
               />
             </div>
@@ -281,27 +320,61 @@ export default function MovementsPage() {
             </div>
           )}
 
-          <MovementsTable
-            movements={movements.data?.items ?? []}
-            productId={productId}
-            isLoading={movements.isLoading}
-            isRefreshing={movements.isPlaceholderData}
-            error={
-              movements.error
-                ? movementsErrorMessage(movements.error, 'No se pudieron cargar los movimientos.')
-                : undefined
-            }
-            emptyMessage={emptyMessage}
-            page={page}
-            pageSize={pageSize}
-            totalItems={movements.data?.total ?? 0}
-            onPageChange={setPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size);
-              setPage(1);
-            }}
-            onOpen={open}
-          />
+          {imported && (
+            <p className="text-sm text-muted">
+              Lo que se cargó del sistema anterior. No cambió tus existencias: alimenta la demanda y
+              los pronósticos hasta el primer movimiento de cada producto en Pango. Los marcados «No
+              cuenta» son de ese día o después.
+            </p>
+          )}
+
+          {imported ? (
+            <ImportedMovementsTable
+              movements={importedMovements.data?.items ?? []}
+              productId={productId}
+              isLoading={importedMovements.isLoading}
+              isRefreshing={importedMovements.isPlaceholderData}
+              error={
+                importedMovements.error
+                  ? movementsErrorMessage(
+                      importedMovements.error,
+                      'No se pudieron cargar los movimientos importados.',
+                    )
+                  : undefined
+              }
+              emptyMessage={emptyMessage}
+              page={page}
+              pageSize={pageSize}
+              totalItems={importedMovements.data?.total ?? 0}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+              }}
+            />
+          ) : (
+            <MovementsTable
+              movements={movements.data?.items ?? []}
+              productId={productId}
+              isLoading={movements.isLoading}
+              isRefreshing={movements.isPlaceholderData}
+              error={
+                movements.error
+                  ? movementsErrorMessage(movements.error, 'No se pudieron cargar los movimientos.')
+                  : undefined
+              }
+              emptyMessage={emptyMessage}
+              page={page}
+              pageSize={pageSize}
+              totalItems={movements.data?.total ?? 0}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+              }}
+              onOpen={open}
+            />
+          )}
         </>
       )}
 

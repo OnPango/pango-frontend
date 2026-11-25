@@ -140,6 +140,11 @@ export const PERMISSION_CATALOG: Record<Permission, PermissionMeta> = {
     description: 'Anular movimientos confirmados',
     category: 'movements',
   },
+  'movement.import': {
+    label: 'Importar historial de movimientos',
+    description: 'Cargar movimientos pasados desde un archivo para los pronósticos',
+    category: 'movements',
+  },
   'stock_request.read': {
     label: 'Ver solicitudes',
     description: 'Consultar las solicitudes de productos',

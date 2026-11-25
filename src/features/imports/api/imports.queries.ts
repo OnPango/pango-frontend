@@ -16,8 +16,8 @@ export const importsKeys = {
   quality: () => [...importsKeys.all, 'quality'] as const,
 };
 
-export function useImports() {
-  return useQuery({ queryKey: importsKeys.list(), queryFn: getImports });
+export function useImports(enabled = true) {
+  return useQuery({ queryKey: importsKeys.list(), queryFn: getImports, enabled });
 }
 
 export function useQuality() {
