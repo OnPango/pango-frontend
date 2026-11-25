@@ -135,11 +135,11 @@ export function createMockAdapter(routes: MockRoutes): AxiosAdapter {
           method,
           path,
           params: matched.params,
+          // Like Axios on the wire, `undefined` and `null` params are not sent.
           query: Object.fromEntries(
-            Object.entries((config.params ?? {}) as Record<string, unknown>).map(([k, v]) => [
-              k,
-              String(v),
-            ]),
+            Object.entries((config.params ?? {}) as Record<string, unknown>)
+              .filter(([, v]) => v !== undefined && v !== null)
+              .map(([k, v]) => [k, String(v)]),
           ),
           headers,
           body: parseBody(config.data),
