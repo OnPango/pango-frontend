@@ -1,6 +1,10 @@
 import type { ImportKind } from '../types/imports.types';
+import { TEMPLATE_COLUMNS } from '../types/movementImports.types';
 
-/** Headers of the templates. Keep them in sync with what the backend joins by name. */
+/**
+ * Headers of the templates. Movements: the v1 template of pango-core
+ * (`docs/templates/pango-standard-kardex-movement-history-import-v1.csv`).
+ */
 const HEADERS: Record<ImportKind, string[]> = {
   inventory: [
     'Código producto',
@@ -13,7 +17,7 @@ const HEADERS: Record<ImportKind, string[]> = {
     'Código de lote',
     'Costo unitario',
   ],
-  movements: ['Producto', 'Fecha', 'Tipo', 'Cantidad', 'Almacén'],
+  movements: [...TEMPLATE_COLUMNS],
 };
 
 const FILE_NAME: Record<ImportKind, string> = {
