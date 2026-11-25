@@ -26,6 +26,9 @@ export const forecastKeys = {
     [...forecastKeys.results(), 'warehouse', filters] as const,
   warehouses: () => [...forecastKeys.all, 'warehouses'] as const,
   products: () => [...forecastKeys.all, 'products'] as const,
+  /** Roots of other features whose calculated thresholds and alerts refresh when a run finishes. */
+  inventory: () => ['inventory'] as const,
+  alerts: () => ['alerts'] as const,
 };
 
 export function useDemand(productId: string, warehouseId: string, from: string) {
@@ -93,6 +96,8 @@ export function useLatestRun(enabled: boolean) {
     });
     if (before.running && !running) {
       void queryClient.invalidateQueries({ queryKey: forecastKeys.results() });
+      void queryClient.invalidateQueries({ queryKey: forecastKeys.inventory() });
+      void queryClient.invalidateQueries({ queryKey: forecastKeys.alerts() });
     }
   }, [signature, run?.status, queryClient]);
 
