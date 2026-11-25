@@ -90,6 +90,12 @@ describe('movement imports mock', () => {
 
     expect(call('POST /movement-imports/:id/confirm', { id }, { revision: 0 }).status).toBe(409);
     const confirmed = call('POST /movement-imports/:id/confirm', { id }, { revision: 1 });
+    const history = call('GET /historical-movements').data as {
+      items: { movementType: string; quantityOut: number | null; source: { importId: number } }[];
+    };
+    const mine = history.items.filter((line) => line.source.importId === Number(id));
+    expect(mine.map((line) => line.movementType)).toEqual(['SALE', 'OPENING_BALANCE']);
+    expect(mine[0].quantityOut).toBe(4);
     expect(confirmed.data).toMatchObject({ status: 'CONFIRMED', savedCount: 2, skippedCount: 0 });
   });
 

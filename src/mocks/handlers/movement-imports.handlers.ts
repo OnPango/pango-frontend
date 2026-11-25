@@ -56,6 +56,15 @@ interface ImportState {
 const imports = new Map<number, ImportState>();
 /** Lines saved into the history: `org|namespace|id|line` → the row's values, as JSON. */
 const history = new Map<string, string>();
+/** The saved lines, as `GET /historical-movements` lists them. */
+interface SavedLine {
+  id: number;
+  org: string;
+  importId: number;
+  namespace: string;
+  checked: CheckedRow;
+}
+const saved: SavedLine[] = [];
 let lastId = 0;
 
 const text = (value: string | null | undefined) => value?.trim() || null;
@@ -434,22 +443,29 @@ export const movementImportsRoutes: MockRoutes = {
     const valid = state.checked.filter((r) => r.status === 'VALID');
     if (valid.length === 0)
       return error(409, 'IMPORT_NOTHING_VALID', 'The import has no valid row to save');
-    let saved = 0;
+    let savedCount = 0;
     let skipped = 0;
-    for (const { row } of valid) {
-      const key = lineKey(state.org, state.data.sourceNamespace, row.values);
+    for (const checked of valid) {
+      const key = lineKey(state.org, state.data.sourceNamespace, checked.row.values);
       if (history.has(key)) {
         skipped++;
       } else {
-        history.set(key, content(row.values));
-        saved++;
+        history.set(key, content(checked.row.values));
+        saved.push({
+          id: saved.length + 1,
+          org: state.org,
+          importId: state.data.id,
+          namespace: state.data.sourceNamespace,
+          checked,
+        });
+        savedCount++;
       }
     }
     state.data = {
       ...state.data,
       status: 'CONFIRMED',
       confirmedAt: new Date().toISOString(),
-      savedCount: saved,
+      savedCount,
       skippedCount: skipped,
     };
     return { status: 200, data: state.data };
@@ -465,5 +481,64 @@ export const movementImportsRoutes: MockRoutes = {
     const { state, error: failure } = load(params.id, false);
     if (failure) return failure;
     return { status: 200, data: page(balances(state), query) };
+  },
+
+  /** The imported history, newest first (no cutover here: `afterCutover` is always false). */
+  'GET /historical-movements': ({ query }) => {
+    const auth = authorize('movement.read');
+    if (auth.error) return auth.error;
+    const org = auth.user.organization_id;
+    const products = new Map(productsOf(org).map((p) => [p.id, p]));
+    const warehouses = new Map(activeWarehousesOf(org).map((w) => [w.id, w]));
+    const number = (value: string | null) => (value === null ? null : Number(value));
+    const items = saved
+      .filter(({ org: lineOrg, importId, checked }) => {
+        const code = text(checked.row.values.movement_type)?.toUpperCase();
+        return (
+          lineOrg === org &&
+          (!query.productId || checked.productId === Number(query.productId)) &&
+          (!query.warehouseId || checked.warehouseId === Number(query.warehouseId)) &&
+          (!query.importId || importId === Number(query.importId)) &&
+          (!query.movementType || code === query.movementType) &&
+          (!query.from || (checked.date ?? '') >= query.from) &&
+          (!query.to || (checked.date ?? '') <= query.to)
+        );
+      })
+      .sort((a, b) => (b.checked.date ?? '').localeCompare(a.checked.date ?? '') || b.id - a.id)
+      .flatMap(({ id, importId, namespace, checked }) => {
+        const product = products.get(checked.productId ?? -1);
+        const warehouse = warehouses.get(checked.warehouseId ?? -1);
+        if (!product || !warehouse) return [];
+        const v = checked.row.values;
+        return [
+          {
+            id,
+            date: checked.date,
+            movementType: text(v.movement_type)?.toUpperCase(),
+            product: {
+              id: product.id,
+              sku: product.sku,
+              name: product.name,
+              unit: findUnitRow(product.stockUnitId)?.code ?? 'EA',
+            },
+            warehouse: { id: warehouse.id, code: warehouse.code, name: warehouse.name },
+            quantityIn: checked.side === 'IN' ? checked.quantity : null,
+            quantityOut: checked.side === 'OUT' ? checked.quantity : null,
+            balance: checked.balance,
+            documentRef: text(v.document_ref),
+            locationCode: text(v.location_code) ?? 'DEFAULT',
+            lotCode: text(v.lot_code),
+            unitCost: number(text(v.unit_cost)),
+            afterCutover: false,
+            source: {
+              importId,
+              sourceNamespace: namespace,
+              externalMovementId: text(v.external_movement_id),
+              lineNumber: Number(text(v.line_number)),
+            },
+          },
+        ];
+      });
+    return { status: 200, data: page(items, query) };
   },
 };

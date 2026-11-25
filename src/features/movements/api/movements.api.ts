@@ -1,6 +1,8 @@
 import { http } from '@/core/api/http';
 import type {
   HistoryProduct,
+  ImportedMovementFilters,
+  ImportedMovementPage,
   Movement,
   MovementFilters,
   MovementPage,
@@ -8,6 +10,7 @@ import type {
   Option,
 } from '../types/movements.types';
 import type {
+  HistoricalMovementPageDto,
   MovementDto,
   MovementPageDto,
   MovementTypeDto,
@@ -15,7 +18,13 @@ import type {
   ReceiveTransferDto,
   WarehouseDto,
 } from './movements.dto';
-import { toListQuery, toMovement, toMovementType } from './movements.mappers';
+import {
+  toImportedMovement,
+  toImportedQuery,
+  toListQuery,
+  toMovement,
+  toMovementType,
+} from './movements.mappers';
 
 /**
  * `GET /movements`, most recent first (US-014): the movements of the warehouses where the user
@@ -90,4 +99,17 @@ export async function getHistoryProducts(): Promise<HistoryProduct[]> {
   return [first, ...rest]
     .flatMap((p) => p.items)
     .map((dto) => ({ id: String(dto.id), sku: dto.sku, name: dto.name }));
+}
+
+/**
+ * `GET /historical-movements`, newest first: the history imported from the company's previous
+ * system, apart from Pango's movements, in the warehouses where the user holds `movement.read`.
+ */
+export async function getImportedMovements(
+  filters: ImportedMovementFilters,
+): Promise<ImportedMovementPage> {
+  const { data } = await http.get<HistoricalMovementPageDto>('/historical-movements', {
+    params: toImportedQuery(filters),
+  });
+  return { items: data.items.map(toImportedMovement), total: data.total };
 }

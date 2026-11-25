@@ -1,11 +1,14 @@
 import { dayBound } from '@/shared/lib/localDay';
 import type {
+  ImportedMovement,
+  ImportedMovementCode,
+  ImportedMovementFilters,
   Movement,
   MovementFilters,
   MovementNature,
   MovementTypeRef,
 } from '../types/movements.types';
-import type { MovementDto, MovementTypeDto } from './movements.dto';
+import type { HistoricalMovementDto, MovementDto, MovementTypeDto } from './movements.dto';
 
 const NATURE: Record<MovementTypeDto['nature'], MovementNature> = {
   INBOUND: 'inbound',
@@ -82,6 +85,42 @@ export function toListQuery(filters: MovementFilters) {
     ...(filters.typeId && { movementTypeId: Number(filters.typeId) }),
     ...(filters.from && { from: dayBound(filters.from, false) }),
     ...(filters.to && { to: dayBound(filters.to, true) }),
+    page: filters.page,
+    pageSize: filters.pageSize,
+  };
+}
+
+export function toImportedMovement(dto: HistoricalMovementDto): ImportedMovement {
+  return {
+    id: String(dto.id),
+    date: dto.date,
+    code: dto.movementType as ImportedMovementCode,
+    product: { ...dto.product, id: String(dto.product.id) },
+    warehouse: { id: String(dto.warehouse.id), code: dto.warehouse.code, name: dto.warehouse.name },
+    quantityIn: dto.quantityIn,
+    quantityOut: dto.quantityOut,
+    balance: dto.balance,
+    documentRef: dto.documentRef,
+    lotCode: dto.lotCode,
+    unitCost: dto.unitCost,
+    afterCutover: dto.afterCutover,
+    source: {
+      importId: String(dto.source.importId),
+      system: dto.source.sourceNamespace,
+      movementId: dto.source.externalMovementId,
+      line: dto.source.lineNumber,
+    },
+  };
+}
+
+/** Query of `GET /historical-movements`: business days as they are, no time zone. */
+export function toImportedQuery(filters: ImportedMovementFilters) {
+  return {
+    ...(filters.productId && { productId: Number(filters.productId) }),
+    ...(filters.warehouseId && { warehouseId: Number(filters.warehouseId) }),
+    ...(filters.code && { movementType: filters.code }),
+    ...(filters.from && { from: filters.from }),
+    ...(filters.to && { to: filters.to }),
     page: filters.page,
     pageSize: filters.pageSize,
   };
