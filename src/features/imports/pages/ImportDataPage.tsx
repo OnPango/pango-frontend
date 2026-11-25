@@ -8,6 +8,8 @@ import { ImportHistory } from '../components/ImportHistory';
 import { ImportWizard } from '../components/ImportWizard';
 import { KindCard } from '../components/KindCard';
 import { MovementImportWizard } from '../components/movements/MovementImportWizard';
+import { hasImportInProgress, useMovementImportStore } from '../hooks/movementImport.store';
+import { useImportOwner } from '../hooks/useMovementImportWizard';
 import { QualityView } from '../components/QualityView';
 import { IMPORT_KINDS, type ImportKind } from '../types/imports.types';
 
@@ -34,11 +36,16 @@ export default function ImportDataPage() {
   const kind = requested === 'inventory' && !MOCK_ONLY_AVAILABLE ? null : requested;
   const quality = MOCK_ONLY_AVAILABLE && searchParams.get('view') === 'quality';
   const { data: records = [], isLoading, error } = useImports(MOCK_ONLY_AVAILABLE);
+  // A movement import left halfway is where Importar datos opens: it kept running meanwhile.
+  const owner = useImportOwner();
+  const resumes = useMovementImportStore(
+    (state) => state.owner === owner && hasImportInProgress(state),
+  );
 
   const go = (params: Record<string, string>) => setSearchParams(new URLSearchParams(params));
   const home = () => setSearchParams(new URLSearchParams());
 
-  if (kind === 'movements') {
+  if (kind === 'movements' || (resumes && !kind && !quality)) {
     return <MovementImportWizard key={kind} onExit={home} />;
   }
 
@@ -101,7 +108,13 @@ export default function ImportDataPage() {
         <KindCard
           kind="movements"
           badge={empty ? 'Paso 2' : undefined}
-          onStart={() => go({ import: 'movements' })}
+          onStart={() => {
+            // A finished import seen before is not shown again: this is a new one.
+            if (useMovementImportStore.getState().step === 'result') {
+              useMovementImportStore.getState().restart();
+            }
+            go({ import: 'movements' });
+          }}
         />
       </div>
 
