@@ -1,6 +1,7 @@
 import { useAuthStore } from '@/core/auth/auth.store';
 import { hasAnyPermission } from '@/core/auth/permissions';
 import { Alert } from '@/shared/ui/components/Alert';
+import { cn } from '@/shared/lib/cn';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { useDashboardSummary } from '../api/dashboard.queries';
 import { InventoryLevelCard } from '../components/InventoryLevelCard';
@@ -8,6 +9,12 @@ import { KpiStrip } from '../components/KpiStrip';
 import { LowStockCard } from '../components/LowStockCard';
 import { RecentActivity } from '../components/RecentActivity';
 import { buildGreeting, DashboardContent } from '../content/content';
+
+/**
+ * Both cards below the key figures keep this height, whatever the recent activity or the number
+ * of products in low stock: the low stock list scrolls inside its card.
+ */
+const CARD_HEIGHT = 'h-[26rem]';
 
 /**
  * US-047: the organization at a glance. The key figures with "Nivel de inventario" and
@@ -45,18 +52,18 @@ export default function DashboardPage() {
         >
           <KpiStrip kpis={data?.kpis} currency={data?.currency ?? 'COP'} isLoading={isLoading} />
           {(readsStock || showsLowStock) && (
-            <div className="grid flex-1 grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {readsStock && (
                 <InventoryLevelCard
                   warehouseId={null}
-                  className={showsLowStock ? undefined : 'lg:col-span-2'}
+                  className={cn(CARD_HEIGHT, !showsLowStock && 'lg:col-span-2')}
                 />
               )}
               {showsLowStock && (
                 <LowStockCard
                   block={data?.lowStockItems ?? undefined}
                   isLoading={isLoading}
-                  className={readsStock ? undefined : 'lg:col-span-2'}
+                  className={cn(CARD_HEIGHT, !readsStock && 'lg:col-span-2')}
                 />
               )}
             </div>

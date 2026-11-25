@@ -41,7 +41,7 @@ export function LowStockCard({
       ) : block.items.length === 0 ? (
         <EmptyNote>Ningún producto está en su punto de reorden.</EmptyNote>
       ) : (
-        <ul className="space-y-3.5">
+        <ul className="-mr-2 min-h-0 flex-1 space-y-3.5 overflow-y-auto pr-2">
           {block.items.map((item) => {
             const share =
               item.reorderPoint > 0
