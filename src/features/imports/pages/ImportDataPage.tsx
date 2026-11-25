@@ -4,10 +4,16 @@ import { importsErrorMessage } from '../content/imports.errors';
 import { useImports } from '../api/imports.queries';
 import { Alert } from '@/shared/ui/components/Alert';
 import { PageHeader } from '@/shared/ui/PageHeader';
+import { useAuthStore } from '@/core/auth/auth.store';
+import { hasAnyPermission } from '@/core/auth/permissions';
 import { ImportHistory } from '../components/ImportHistory';
-import { ImportWizard } from '../components/ImportWizard';
+import { InventoryImportWizard } from '../components/inventory/InventoryImportWizard';
 import { KindCard } from '../components/KindCard';
 import { MovementImportWizard } from '../components/movements/MovementImportWizard';
+import {
+  hasInventoryImportInProgress,
+  useInventoryImportStore,
+} from '../hooks/inventoryImport.store';
 import { hasImportInProgress, useMovementImportStore } from '../hooks/movementImport.store';
 import { useImportOwner } from '../hooks/useMovementImportWizard';
 import { QualityView } from '../components/QualityView';
@@ -17,9 +23,9 @@ const isKind = (value: string | null): value is ImportKind =>
   IMPORT_KINDS.includes(value as ImportKind);
 
 /**
- * pango-core only has the movement history import (`/movement-imports`). The inventory import, the
- * list of past loads and the history quality still answer only from the mock backend
- * (`src/mocks/handlers/imports.handlers.ts`), so against the real API they are hidden.
+ * The list of past loads and the history quality still answer only from the mock backend
+ * (`src/mocks/handlers/imports.handlers.ts`), so against the real API they are hidden. Both imports
+ * run against pango-core (`/inventory-imports`, `/movement-imports`).
  */
 const MOCK_ONLY_AVAILABLE = env.useMock;
 
@@ -33,33 +39,33 @@ export default function ImportDataPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const kindParam = searchParams.get('import');
   const requested = isKind(kindParam) ? kindParam : null;
-  const kind = requested === 'inventory' && !MOCK_ONLY_AVAILABLE ? null : requested;
+  const user = useAuthStore((state) => state.user);
+  const canImport = {
+    inventory: hasAnyPermission(user, ['inventory.import']),
+    movements: hasAnyPermission(user, ['movement.import']),
+  };
+  const kind = requested && canImport[requested] ? requested : null;
   const quality = MOCK_ONLY_AVAILABLE && searchParams.get('view') === 'quality';
   const { data: records = [], isLoading, error } = useImports(MOCK_ONLY_AVAILABLE);
-  // A movement import left halfway is where Importar datos opens: it kept running meanwhile.
+  // An import left halfway is where Importar datos opens: it kept running meanwhile.
   const owner = useImportOwner();
-  const resumes = useMovementImportStore(
+  const resumesMovements = useMovementImportStore(
     (state) => state.owner === owner && hasImportInProgress(state),
+  );
+  const resumesInventory = useInventoryImportStore(
+    (state) => state.owner === owner && hasInventoryImportInProgress(state),
   );
 
   const go = (params: Record<string, string>) => setSearchParams(new URLSearchParams(params));
   const home = () => setSearchParams(new URLSearchParams());
+  const landing = !kind && !quality;
 
-  if (kind === 'movements' || (resumes && !kind && !quality)) {
-    return <MovementImportWizard key={kind} onExit={home} />;
+  if (kind === 'inventory' || (landing && resumesInventory && canImport.inventory)) {
+    return <InventoryImportWizard key="inventory" onExit={home} />;
   }
 
-  if (kind) {
-    return (
-      <ImportWizard
-        // A new load starts from scratch, also when going from one kind to the other.
-        key={kind}
-        kind={kind}
-        onExit={home}
-        onOtherKind={() => go({ import: kind === 'inventory' ? 'movements' : 'inventory' })}
-        onQuality={() => go({ view: 'quality' })}
-      />
-    );
+  if (kind === 'movements' || (landing && resumesMovements && canImport.movements)) {
+    return <MovementImportWizard key="movements" onExit={home} />;
   }
 
   if (quality) {
@@ -101,13 +107,20 @@ export default function ImportDataPage() {
       <div className="grid gap-5 lg:grid-cols-2">
         <KindCard
           kind="inventory"
-          badge={empty ? 'Paso 1 recomendado' : MOCK_ONLY_AVAILABLE ? undefined : 'Próximamente'}
-          disabled={!MOCK_ONLY_AVAILABLE}
-          onStart={() => go({ import: 'inventory' })}
+          badge={canImport.inventory ? (empty ? 'Paso 1 recomendado' : undefined) : 'Sin permiso'}
+          disabled={!canImport.inventory}
+          onStart={() => {
+            // A finished import seen before is not shown again: this is a new one.
+            if (useInventoryImportStore.getState().step === 'result') {
+              useInventoryImportStore.getState().restart();
+            }
+            go({ import: 'inventory' });
+          }}
         />
         <KindCard
           kind="movements"
-          badge={empty ? 'Paso 2' : undefined}
+          badge={canImport.movements ? (empty ? 'Paso 2' : undefined) : 'Sin permiso'}
+          disabled={!canImport.movements}
           onStart={() => {
             // A finished import seen before is not shown again: this is a new one.
             if (useMovementImportStore.getState().step === 'result') {

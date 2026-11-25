@@ -6,7 +6,16 @@ import {
   type MovementCode,
   type TemplateColumn,
 } from '../types/movementImports.types';
-import { isEmptyRow, type Cell, type SheetData } from './spreadsheet';
+import {
+  excelSerialToDate,
+  isEmptyRow,
+  isoDate,
+  normalizeDateText,
+  normalizeHeader,
+  numberText,
+  type Cell,
+  type SheetData,
+} from './spreadsheet';
 
 /** Which column of the file (its index) carries each template column; null = none. */
 export type ColumnMapping = Record<TemplateColumn, number | null>;
@@ -134,16 +143,6 @@ export const TEMPLATE_FIELDS: TemplateField[] = [
   },
 ];
 
-/** `Código de Bodega ` → `codigo_de_bodega`: lower case, no accents, words joined by `_`. */
-export function normalizeHeader(header: string): string {
-  return header
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
-
 /**
  * Joins the file's headers to the template by name: first the exact template names, then the
  * usual aliases. Each header is used once.
@@ -217,32 +216,6 @@ export function toMovementCode(text: string): string {
   return MOVEMENT_ALIASES[key] ?? text.trim();
 }
 
-const pad = (n: number) => String(n).padStart(2, '0');
-
-/** A date as `YYYY-MM-DD`, from its UTC parts (Excel dates carry no time zone). */
-export function isoDate(date: Date): string {
-  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
-}
-
-/** Excel serial day (days since 1899-12-30) to a date. */
-function fromExcelSerial(serial: number): Date {
-  return new Date(Math.round((serial - 25569) * 86_400_000));
-}
-
-/** A date written as text, in the template format when it is recognized. */
-function normalizeDateText(text: string): string {
-  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T].*)?$/.exec(text);
-  if (iso) return `${iso[1]}-${pad(Number(iso[2]))}-${pad(Number(iso[3]))}`;
-  const dmy = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})(?:\s.*)?$/.exec(text);
-  if (dmy) return `${dmy[3]}-${pad(Number(dmy[2]))}-${pad(Number(dmy[1]))}`;
-  return text;
-}
-
-/** A number without the float noise Excel can leave (`0.30000000000000004` → `0.3`). */
-function numberText(value: number): string {
-  return String(Number(value.toPrecision(15)));
-}
-
 /**
  * One cell in the template format: text trimmed (empty = null), dates as `YYYY-MM-DD`, numbers
  * with a `.` and no thousands separators, movement types as their code. What cannot be read is
@@ -256,7 +229,7 @@ export function toTemplateValue(column: TemplateColumn, cell: Cell | undefined):
   } else if (typeof cell === 'number') {
     value =
       column === 'business_date' && cell > 0 && cell < 2_958_466
-        ? isoDate(fromExcelSerial(cell))
+        ? isoDate(excelSerialToDate(cell))
         : numberText(cell);
   } else if (typeof cell === 'boolean') {
     value = String(cell);

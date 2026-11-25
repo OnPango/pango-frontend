@@ -103,8 +103,8 @@ export const APP_ROUTES: AppRoute[] = [
     label: 'Importar datos',
     icon: FiUpload,
     section: 'data',
-    // Owner and Admin hold it (a warehouse permission): the API narrows it per warehouse.
-    anyOf: ['movement.import'],
+    // Owner and Admin hold both (warehouse permissions): the API narrows them per warehouse.
+    anyOf: ['movement.import', 'inventory.import'],
     Page: lazy(() => import('@/features/imports/pages/ImportDataPage')),
   },
   {

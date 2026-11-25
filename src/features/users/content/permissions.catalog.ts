@@ -145,6 +145,12 @@ export const PERMISSION_CATALOG: Record<Permission, PermissionMeta> = {
     description: 'Cargar movimientos pasados desde un archivo para los pronósticos',
     category: 'movements',
   },
+  'inventory.import': {
+    label: 'Importar inventario inicial',
+    description:
+      'Cargar desde un archivo las existencias de apertura, creando los productos, categorías y bodegas que falten',
+    category: 'movements',
+  },
   'stock_request.read': {
     label: 'Ver solicitudes',
     description: 'Consultar las solicitudes de productos',

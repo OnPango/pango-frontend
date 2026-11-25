@@ -6,7 +6,6 @@ import {
   chunk,
   isTemplateFile,
   missingFields,
-  normalizeHeader,
   quantityMissing,
   SOURCE_NAMESPACE_PATTERN,
   templateCsv,
@@ -15,6 +14,7 @@ import {
   toTemplateValue,
   type ColumnMapping,
 } from './movementTemplate';
+import { normalizeHeader } from './spreadsheet';
 
 const emptyMapping = () =>
   Object.fromEntries(TEMPLATE_COLUMNS.map((c) => [c, null])) as ColumnMapping;

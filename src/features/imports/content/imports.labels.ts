@@ -23,14 +23,22 @@ export interface KindCopy {
 export const KIND_COPY: Record<ImportKind, KindCopy> = {
   inventory: {
     title: 'Inventario',
-    tagline: 'Pone al día tus existencias',
+    tagline: 'Tu punto de partida en Pango',
     description:
-      'Lo que tienes hoy en cada bodega. Pango deja las existencias como en tu archivo y crea los productos, bodegas y lotes que falten.',
-    needs: ['Código producto', 'Producto', 'Categoría', 'Unidad', 'Bodega', 'Seguimiento', 'Saldo'],
+      'Lo que tienes hoy en cada bodega, como saldo inicial. Pango crea los productos, categorías, bodegas y lotes que falten.',
+    needs: [
+      'Código producto',
+      'Producto',
+      'Categoría',
+      'Unidad',
+      'Bodega',
+      'Seguimiento',
+      'Saldo inicial',
+    ],
     usage:
-      'Úsalo al empezar y cada vez que quieras poner al día tus existencias. Usa la plantilla de inventario de Pango.',
+      'Úsalo una vez, al empezar con Pango. Lo que ya tiene existencias o movimientos no se vuelve a cargar. Usa la plantilla de inventario de Pango.',
     template: 'plantilla de inventario de Pango',
-    templateFile: 'Plantilla_Inventario_PANGO.xlsx',
+    templateFile: 'Plantilla_Inventario_PANGO_v1.xlsx',
     cta: 'Importar inventario',
     fileTitle: 'Elige tu archivo de inventario',
   },

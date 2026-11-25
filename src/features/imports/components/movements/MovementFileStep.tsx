@@ -1,9 +1,7 @@
-import { useRef, useState, type DragEvent } from 'react';
-import { FiDownload, FiFileText, FiUploadCloud } from 'react-icons/fi';
-import { cn } from '@/shared/lib/cn';
+import { useState } from 'react';
+import { FiDownload, FiFileText } from 'react-icons/fi';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Button } from '@/shared/ui/components/Button';
-import { Spinner } from '@/shared/ui/components/Spinner';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { Select } from '@/shared/ui/components/form/select/Select';
 import type { MovementImportWizardState } from '../../hooks/useMovementImportWizard';
@@ -11,6 +9,7 @@ import { formatCount } from '../../lib/format';
 import { toSourceNamespace } from '../../lib/movementTemplate';
 import { dataRowCount } from '../../lib/spreadsheet';
 import { downloadTemplate } from '../../lib/template';
+import { FileDropZone } from '../FileDropZone';
 import { StepFrame } from '../StepFrame';
 
 export interface MovementFileStepProps {
@@ -21,16 +20,7 @@ export interface MovementFileStepProps {
 /** Step 1: choose the .xlsx or .csv and say which system it comes from. Nothing is sent yet. */
 export function MovementFileStep({ wizard, onBack }: MovementFileStepProps) {
   const { spreadsheet, sheet, isReading, fileError } = wizard;
-  const input = useRef<HTMLInputElement>(null);
-  const [dragging, setDragging] = useState(false);
   const [namespaceTouched, setNamespaceTouched] = useState(false);
-
-  const handleDrop = (event: DragEvent) => {
-    event.preventDefault();
-    setDragging(false);
-    const file = event.dataTransfer.files[0];
-    if (file) void wizard.chooseFile(file);
-  };
 
   const namespaceError =
     namespaceTouched && !wizard.namespaceValid
@@ -44,19 +34,6 @@ export function MovementFileStep({ wizard, onBack }: MovementFileStepProps) {
       onNext={() => wizard.goTo('columns')}
       nextDisabled={!spreadsheet || !sheet || isReading || !wizard.namespaceValid}
     >
-      <input
-        ref={input}
-        type="file"
-        accept=".xlsx,.csv"
-        className="sr-only"
-        aria-label="Archivo de Excel o CSV"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) void wizard.chooseFile(file);
-          event.target.value = '';
-        }}
-      />
-
       {fileError && (
         <Alert tone="danger" title="No pudimos leer este archivo.">
           {fileError}
@@ -96,31 +73,11 @@ export function MovementFileStep({ wizard, onBack }: MovementFileStepProps) {
           </Alert>
         </div>
       ) : (
-        <div
-          onDragOver={(event) => {
-            event.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={handleDrop}
-          className={cn(
-            'flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed px-6 py-12 text-center transition',
-            dragging ? 'border-primary bg-primary/5' : 'border-line2',
-          )}
-        >
-          {isReading ? (
-            <Spinner className="size-8 text-primary" />
-          ) : (
-            <FiUploadCloud aria-hidden className="size-9 text-muted" />
-          )}
-          <p className="font-semibold text-fg">
-            {isReading ? 'Leyendo tu archivo…' : 'Arrastra tu archivo aquí'}
-          </p>
-          <p className="text-sm text-muted">Excel (.xlsx) o CSV · hasta 200.000 filas</p>
-          <Button variant="outline" onClick={() => input.current?.click()} disabled={isReading}>
-            Seleccionar archivo
-          </Button>
-        </div>
+        <FileDropZone
+          isReading={isReading}
+          onFile={(file) => void wizard.chooseFile(file)}
+          hint="Excel (.xlsx) o CSV · hasta 200.000 filas"
+        />
       )}
 
       <TextBox
