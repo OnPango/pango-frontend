@@ -64,3 +64,25 @@ export interface DashboardLevelDto {
   granularity: 'DAY' | 'WEEK';
   points: { start: string; end: string; inStock: number; lowStock: number | null }[];
 }
+
+/** `GET /dashboard/imported-inventory-level`: the same periods, from the imported history. */
+export interface ImportedLevelDto extends DashboardLevelDto {
+  lastImportedDay: string | null;
+}
+
+/** `GET /historical-movements`: only what the dashboard shows of each imported line. */
+export interface ImportedMovementPageDto {
+  items: {
+    id: number;
+    date: string;
+    movementType: string;
+    product: { id: number; sku: string; name: string; unit: string };
+    warehouse: { id: number; code: string; name: string };
+    quantityIn: number | null;
+    quantityOut: number | null;
+    documentRef: string | null;
+    afterCutover: boolean;
+    source: { importId: number; sourceNamespace: string; externalMovementId: string };
+  }[];
+  total: number;
+}

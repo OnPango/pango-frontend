@@ -3,7 +3,8 @@ import { hasAnyPermission } from '@/core/auth/permissions';
 import { Alert } from '@/shared/ui/components/Alert';
 import { cn } from '@/shared/lib/cn';
 import { PageHeader } from '@/shared/ui/PageHeader';
-import { useDashboardSummary } from '../api/dashboard.queries';
+import { useDashboardSummary, useImportedMovements } from '../api/dashboard.queries';
+import { ImportedHistoryCard } from '../components/ImportedHistoryCard';
 import { InventoryLevelCard } from '../components/InventoryLevelCard';
 import { KpiStrip } from '../components/KpiStrip';
 import { LowStockCard } from '../components/LowStockCard';
@@ -25,6 +26,10 @@ export default function DashboardPage() {
   const user = useAuthStore((state) => state.user);
   const readsStock = hasAnyPermission(user, ['stock.read']);
   const summary = useDashboardSummary(null);
+  const readsMovements = hasAnyPermission(user, ['movement.read']);
+  const imported = useImportedMovements(null, readsMovements);
+  // Only once something was imported: a company that never imported does not see the block.
+  const showsImported = readsMovements && (imported.data?.total ?? 0) > 0;
 
   const data = summary.data;
   const isLoading = summary.isPending;
@@ -73,6 +78,13 @@ export default function DashboardPage() {
           <RecentActivity items={data?.recentActivity ?? undefined} isLoading={isLoading} />
         )}
       </div>
+      {showsImported && (
+        <ImportedHistoryCard
+          list={imported.data}
+          isLoading={imported.isPending}
+          isError={imported.isError}
+        />
+      )}
     </div>
   );
 }

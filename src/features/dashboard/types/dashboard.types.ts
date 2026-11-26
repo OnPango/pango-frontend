@@ -91,3 +91,33 @@ export interface InventoryLevel {
   granularity: 'day' | 'week';
   points: LevelPoint[];
 }
+
+/**
+ * The level counted from the imported history (the company's previous system): same periods as
+ * Pango's, for the product-warehouses that had not started in Pango yet. Shown labelled as imported.
+ */
+export interface ImportedLevel extends InventoryLevel {
+  /** Latest day of the imported history, `YYYY-MM-DD`; null when nothing was imported. */
+  lastImportedDay: string | null;
+}
+
+/** A line of the imported history, as the dashboard lists it. */
+export interface ImportedMovementItem {
+  id: string;
+  /** Business day of the source, `YYYY-MM-DD`. */
+  date: string;
+  code: string;
+  product: { id: string; sku: string; name: string; unit: string };
+  warehouse: { id: string; name: string };
+  /** Positive when it came in, negative when it went out. */
+  quantity: number;
+  document: string;
+  system: string;
+  /** On or after the product's first Pango movement there: shown, not counted. */
+  afterCutover: boolean;
+}
+
+export interface ImportedMovementList {
+  items: ImportedMovementItem[];
+  total: number;
+}
