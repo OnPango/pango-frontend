@@ -103,12 +103,12 @@ export function MovementsTable({
             header: 'Producto',
             skeleton: 'title',
             cell: (movement) => (
-              <div className="min-w-0">
+              <div className="min-w-0" title={productsSummary(movement.lines)}>
                 <p className="truncate text-sm font-semibold text-fg">
                   {productsSummary(movement.lines)}
                 </p>
                 {movement.lines.length === 1 && (
-                  <p className="text-xs text-muted">{movement.lines[0].product.sku}</p>
+                  <p className="truncate text-xs text-muted">{movement.lines[0].product.sku}</p>
                 )}
               </div>
             ),

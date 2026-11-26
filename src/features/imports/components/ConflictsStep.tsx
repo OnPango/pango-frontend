@@ -5,6 +5,7 @@ import { Button } from '@/shared/ui/components/Button';
 import { SegmentedControl } from '@/shared/ui/components/form/SegmentedControl';
 import type { ImportPreview, Resolution } from '../types/imports.types';
 import { StepFrame } from './StepFrame';
+import { CellContent } from '@/shared/ui/components/DataTable';
 
 export interface ConflictsStepProps {
   preview: ImportPreview;
@@ -85,12 +86,18 @@ export function ConflictsStep({
             {preview.conflicts.map((item) => (
               <tr key={item.id} className="border-t border-line2 align-middle">
                 <th scope="row" className="px-4 py-3 font-semibold text-fg">
-                  {item.name}
-                  <span className="block text-xs font-normal text-muted">{item.code}</span>
+                  <CellContent>
+                    {item.name}
+                    <span className="block text-xs font-normal text-muted">{item.code}</span>
+                  </CellContent>
                 </th>
                 <td className="px-4 py-3">{item.field}</td>
-                <td className="px-4 py-3 text-muted">{item.inPango}</td>
-                <td className={cn('px-4 py-3', !item.locked && 'font-semibold')}>{item.inFile}</td>
+                <td className="px-4 py-3 text-muted">
+                  <CellContent>{item.inPango}</CellContent>
+                </td>
+                <td className={cn('px-4 py-3', !item.locked && 'font-semibold')}>
+                  <CellContent>{item.inFile}</CellContent>
+                </td>
                 <td className="px-4 py-3">
                   {item.locked ? (
                     <span className="text-xs text-muted">Se cambia desde el producto</span>

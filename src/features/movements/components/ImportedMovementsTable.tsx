@@ -74,9 +74,9 @@ export function ImportedMovementsTable({
             header: 'Producto',
             skeleton: 'title',
             cell: (m) => (
-              <div className="min-w-0">
+              <div className="min-w-0" title={m.product.name}>
                 <p className="truncate text-sm font-semibold text-fg">{m.product.name}</p>
-                <p className="text-xs text-muted">{m.product.sku}</p>
+                <p className="truncate text-xs text-muted">{m.product.sku}</p>
               </div>
             ),
           },

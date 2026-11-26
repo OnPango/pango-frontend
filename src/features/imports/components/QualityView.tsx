@@ -13,8 +13,7 @@ const COLUMNS: Column<QualityRow>[] = [
     key: 'product',
     header: 'Producto',
     cell: (r) => (
-      // Imported names can be long and have no spaces to break at: cap the column and cut them.
-      <div className="max-w-56 min-w-0 sm:max-w-xs xl:max-w-sm" title={r.name}>
+      <div className="min-w-0" title={r.name}>
         <span className="block truncate font-semibold text-fg">{r.name}</span>
         <span className="block truncate text-xs text-muted">{r.code}</span>
       </div>

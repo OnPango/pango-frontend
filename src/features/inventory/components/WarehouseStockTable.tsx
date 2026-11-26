@@ -47,9 +47,7 @@ export function WarehouseStockTable({
         skeleton: 'title',
         header: 'Producto',
         cell: ({ product }) => (
-          // An auto-layout table grows a column to fit its longest text: without a max width, a
-          // long name (up to 150 characters) pushes the other columns off screen.
-          <div className="max-w-56 min-w-0 sm:max-w-xs xl:max-w-sm">
+          <div className="min-w-0">
             <Button
               variant="ghost"
               size="sm"
