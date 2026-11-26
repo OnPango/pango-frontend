@@ -67,6 +67,54 @@ interface SavedLine {
 const saved: SavedLine[] = [];
 let lastId = 0;
 
+/**
+ * A few lines already imported in the seed organization, so the dashboard and Movimientos show
+ * an imported history before anything is imported in the session.
+ */
+function seedHistory(org: string): void {
+  if (org !== 'org-pango' || saved.some((line) => line.org === org)) return;
+  const day = (back: number) => new Date(Date.now() - back * 86_400_000).toISOString().slice(0, 10);
+  const lines: [string, number, number, string, 'IN' | 'OUT', number, number][] = [
+    ['SI-0001', 1, 1, 'OPENING_BALANCE', 'IN', 120, 40],
+    ['OC-0042', 3, 1, 'PURCHASE_RECEIPT', 'IN', 60, 35],
+    ['FV-1001', 1, 1, 'SALE', 'OUT', 12, 30],
+    ['FV-1002', 6, 2, 'SALE', 'OUT', 4, 22],
+    ['CI-0007', 7, 1, 'INTERNAL_CONSUMPTION', 'OUT', 2, 15],
+    ['FV-1003', 4, 2, 'SALE', 'OUT', 3, 9],
+    ['AJ-0003', 3, 1, 'ADJUSTMENT_OUT', 'OUT', 1, 8],
+  ];
+  for (const [id, productId, warehouseId, code, side, quantity, back] of lines) {
+    const values = Object.fromEntries(
+      TEMPLATE_COLUMNS.map((c) => [c, null]),
+    ) as ImportRow['values'];
+    Object.assign(values, {
+      external_movement_id: id,
+      line_number: '1',
+      business_date: day(back),
+      movement_type: code,
+      document_ref: id,
+      [side === 'IN' ? 'quantity_in' : 'quantity_out']: String(quantity),
+    });
+    saved.push({
+      id: saved.length + 1,
+      org,
+      // No real import has id 0: the seed never mixes with the session's imports.
+      importId: 0,
+      namespace: 'sistema-anterior',
+      checked: {
+        row: { rowNumber: saved.length + 2, values },
+        status: 'VALID',
+        productId,
+        warehouseId,
+        date: day(back),
+        quantity,
+        side,
+        balance: null,
+      },
+    });
+  }
+}
+
 const text = (value: string | null | undefined) => value?.trim() || null;
 const lineKey = (org: string, namespace: string, values: ImportRow['values']) =>
   [org, namespace, text(values.external_movement_id), text(values.line_number)].join('|');
@@ -488,6 +536,7 @@ export const movementImportsRoutes: MockRoutes = {
     const auth = authorize('movement.read');
     if (auth.error) return auth.error;
     const org = auth.user.organization_id;
+    seedHistory(org);
     const products = new Map(productsOf(org).map((p) => [p.id, p]));
     const warehouses = new Map(activeWarehousesOf(org).map((w) => [w.id, w]));
     const number = (value: string | null) => (value === null ? null : Number(value));
