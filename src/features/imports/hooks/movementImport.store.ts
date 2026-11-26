@@ -5,6 +5,7 @@ import { movementImportErrorMessage } from '../content/movementImports.labels';
 import {
   autoMap,
   buildRows,
+  pickMovementSheet,
   SOURCE_NAMESPACE_PATTERN,
   type ColumnMapping,
 } from '../lib/movementTemplate';
@@ -164,8 +165,8 @@ export const useMovementImportStore = create<MovementImportState>()((set, get) =
       });
       try {
         const read = await readSpreadsheet(file);
-        // The first sheet with data: workbooks often start with an instructions sheet.
-        const first = read.sheets.find((s) => s.rows.length > 1) ?? read.sheets[0];
+        // Pango's workbook starts with its instructions: its data is in `Movimientos`.
+        const first = pickMovementSheet(read.sheets) ?? read.sheets[0];
         update({ spreadsheet: read, sheetName: first.name, mapping: mappingFor(read, first.name) });
       } catch (error) {
         update({

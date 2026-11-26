@@ -51,7 +51,7 @@ export const KIND_COPY: Record<ImportKind, KindCopy> = {
     usage:
       'Úsalo para cargar meses de historial. No cambia tus existencias de hoy. Los productos y bodegas deben existir en Pango.',
     template: 'plantilla de movimientos',
-    templateFile: 'Plantilla_Movimientos_PANGO.csv',
+    templateFile: 'Plantilla_Movimientos_PANGO_v1.xlsx',
     cta: 'Importar movimientos',
     fileTitle: 'Elige tu archivo de movimientos',
   },
