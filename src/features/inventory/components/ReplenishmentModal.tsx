@@ -1,21 +1,32 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { formatQuantity, unitLabel, type UnitRef } from '@/shared/lib/units';
+import { useMemo } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import { useAuthStore } from '@/core/auth/auth.store';
+import { hasPermissionIn } from '@/core/auth/permissions';
+import { DEFAULT_LEAD_TIME_DAYS } from '@/shared/lib/reorderPoint';
+import { formatQuantity, type UnitRef } from '@/shared/lib/units';
 import { Alert } from '@/shared/ui/components/Alert';
-import { Badge } from '@/shared/ui/components/Badge';
 import { Button } from '@/shared/ui/components/Button';
 import { TextBox } from '@/shared/ui/components/form/TextBox';
 import { Modal } from '@/shared/ui/components/Modal';
 import { Spinner } from '@/shared/ui/components/Spinner';
-import { useReplenishment, useSetReplenishment } from '../api/inventory.queries';
+import {
+  useCurrentForecast,
+  useReplenishment,
+  useSetReplenishment,
+} from '../api/inventory.queries';
 import { inventoryErrorMessage } from '../content/inventory.errors';
-import { ALERT_LABELS, SOURCE_LABELS } from '../content/replenishment.labels';
+import { ALERT_LABELS } from '../content/replenishment.labels';
+import { resolveSystemValues } from '../content/replenishment.preview';
 import type { Replenishment } from '../types/inventory.types';
 import {
   replenishmentSchema,
+  toLeadTimeDays,
   toNumber,
   type ReplenishmentFormValues,
 } from '../types/replenishment.schema';
+import { ReplenishmentComparison } from './ReplenishmentComparison';
+import { ReplenishmentMethodSelector } from './ReplenishmentMethodSelector';
 
 export interface ReplenishmentTarget {
   productId: string;
@@ -50,26 +61,73 @@ function ReplenishmentContent({
   onClose,
   onSaved,
 }: Omit<ReplenishmentModalProps, 'target'> & { target: ReplenishmentTarget }) {
+  const currentUser = useAuthStore((state) => state.user);
+  const canReadForecast = hasPermissionIn(currentUser, 'forecast.read', target.warehouseId);
+
   const current = useReplenishment(target.productId, target.warehouseId);
+  const forecast = useCurrentForecast(target.productId, target.warehouseId, canReadForecast);
   const save = useSetReplenishment(target.productId, target.warehouseId);
+
   const data = current.data;
   const quantity = (value: number) => formatQuantity(value, target.unit);
+
+  const initialValues = useMemo<ReplenishmentFormValues | undefined>(
+    () =>
+      data
+        ? {
+            method: data.method,
+            leadTimeDays: String(data.leadTimeDays),
+            safetyStock: String(data.manualSafetyStock),
+            reorderPoint: String(data.manualReorderPoint),
+          }
+        : undefined,
+    [data],
+  );
+
   const {
     register,
+    control,
+    setValue,
     handleSubmit,
     formState: { errors, isDirty },
   } = useForm<ReplenishmentFormValues>({
     resolver: zodResolver(replenishmentSchema(data?.maxStock ?? null)),
     mode: 'onTouched',
-    defaultValues: { safetyStock: '', reorderPoint: '' },
-    // Filled once the current values arrive; "dirty" is measured against them.
-    values: data
-      ? { safetyStock: String(data.safetyStock), reorderPoint: String(data.reorderPoint) }
-      : undefined,
+    defaultValues: {
+      method: 'manual',
+      leadTimeDays: String(DEFAULT_LEAD_TIME_DAYS),
+      safetyStock: '',
+      reorderPoint: '',
+    },
+    values: initialValues,
+    resetOptions: { keepDirtyValues: true },
   });
+
+  const [selectedMethod, leadTimeText, manualSafetyStock, manualReorderPoint] = useWatch({
+    control,
+    name: ['method', 'leadTimeDays', 'safetyStock', 'reorderPoint'],
+  });
+
+  const parsedLeadTime = toLeadTimeDays(leadTimeText);
+  const systemPreview = data
+    ? resolveSystemValues({
+        replenishment: data,
+        forecast: forecast.data,
+        forecastStatus: forecast.status,
+        canReadForecast,
+        leadTimeDays: parsedLeadTime,
+      })
+    : null;
+
+  const copySystemToManual = (safetyStock: number, reorderPoint: number) => {
+    setValue('safetyStock', String(safetyStock), { shouldDirty: true, shouldValidate: true });
+    setValue('reorderPoint', String(reorderPoint), { shouldDirty: true, shouldValidate: true });
+  };
 
   const submit = handleSubmit((values) => {
     if (!data) return;
+    const days = toLeadTimeDays(values.leadTimeDays);
+    if (days === null) return;
     save.mutate(
       {
         safetyStock: toNumber(values.safetyStock),
@@ -77,22 +135,23 @@ function ReplenishmentContent({
         // Leaving them out would clear them: they keep what they had.
         minStock: data.minStock,
         maxStock: data.maxStock,
+        method: values.method,
+        leadTimeDays: days,
       },
       { onSuccess: (saved) => onSaved(target, saved) },
     );
   });
 
-  const unit = unitLabel(target.unit).toLowerCase();
-
   return (
     <Modal
+      size="lg"
       title="Reposición"
       description={`${target.productName} en ${target.warehouseName}`}
       onClose={onClose}
       dismissible={!save.isPending}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={save.isPending}>
+          <Button type="button" variant="outline" onClick={onClose} disabled={save.isPending}>
             Cancelar
           </Button>
           <Button
@@ -107,7 +166,7 @@ function ReplenishmentContent({
         </>
       }
     >
-      {!data ? (
+      {!data || !systemPreview ? (
         current.error ? (
           <Alert tone="danger">
             {inventoryErrorMessage(current.error, 'No se pudieron cargar los valores.')}
@@ -118,7 +177,7 @@ function ReplenishmentContent({
           </p>
         )
       ) : (
-        <form id={FORM_ID} onSubmit={submit} noValidate className="space-y-5">
+        <form id={FORM_ID} onSubmit={submit} noValidate className="space-y-6">
           {save.isError && (
             <Alert tone="danger">
               {inventoryErrorMessage(save.error, 'No se pudieron guardar los valores.')}
@@ -145,44 +204,42 @@ function ReplenishmentContent({
             )}
           </section>
 
-          <section aria-labelledby="replenishment-values" className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 id="replenishment-values" className="text-sm font-bold text-fg">
-                Valores vigentes
-              </h3>
-              <Badge
-                tone={data.source === 'calculated' ? 'primary' : 'neutral'}
-                appearance="outline"
-              >
-                {SOURCE_LABELS[data.source].long}
-              </Badge>
-            </div>
-            {data.source === 'calculated' && (
-              <Alert tone="info">
-                Estos valores los calculó el pronóstico. Si los cambias, quedan como manuales y
-                reemplazan el cálculo.
-              </Alert>
-            )}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <TextBox
-                label="Stock de seguridad"
-                required
-                inputMode="decimal"
-                trailing={<span className="text-xs text-muted">{unit}</span>}
-                hint="Colchón para cubrir la demanda mientras llega la reposición."
-                error={errors.safetyStock?.message}
-                {...register('safetyStock')}
-              />
-              <TextBox
-                label="Punto de reorden"
-                required
-                inputMode="decimal"
-                trailing={<span className="text-xs text-muted">{unit}</span>}
-                hint="Cuando lo disponible llega a este valor se abre una alerta. 0 = sin alertas."
-                error={errors.reorderPoint?.message}
-                {...register('reorderPoint')}
-              />
-            </div>
+          <section aria-labelledby="replenishment-config" className="space-y-4">
+            <h3 id="replenishment-config" className="text-sm font-bold text-fg">
+              Configuración de reposición
+            </h3>
+            <ReplenishmentMethodSelector
+              registerProps={register('method')}
+              disabled={save.isPending}
+            />
+            <TextBox
+              label="Tiempo de entrega"
+              required
+              inputMode="numeric"
+              autoComplete="off"
+              trailing={<span className="text-xs text-muted">días</span>}
+              hint="Días desde el pedido hasta tenerlo disponible (1 a 365; por defecto 7). Escala los valores del sistema."
+              error={errors.leadTimeDays?.message}
+              containerClassName="sm:max-w-xs"
+              {...register('leadTimeDays')}
+            />
+          </section>
+
+          <section aria-labelledby="replenishment-compare" className="space-y-3">
+            <h3 id="replenishment-compare" className="text-sm font-bold text-fg">
+              Valores del sistema vs. manuales
+            </h3>
+            <ReplenishmentComparison
+              unit={target.unit}
+              selectedMethod={selectedMethod}
+              savedMethod={data.method}
+              preview={systemPreview}
+              manualSafetyStock={manualSafetyStock}
+              manualReorderPoint={manualReorderPoint}
+              register={register}
+              errors={errors}
+              onCopyToManual={copySystemToManual}
+            />
           </section>
         </form>
       )}
@@ -190,7 +247,10 @@ function ReplenishmentContent({
   );
 }
 
-/** US-016: safety stock and reorder point of a product in a warehouse, set by hand. */
+/**
+ * US-016 / US-040: compare forecast-calculated and manual replenishment values side by side, pick
+ * which source applies, and adjust the lead time in days.
+ */
 export function ReplenishmentModal({ target, ...props }: ReplenishmentModalProps) {
   if (!target) return null;
   return (

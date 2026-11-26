@@ -15,6 +15,8 @@ export const inventoryKeys = {
   productLots: (productId: string) => [...inventoryKeys.all, 'lots', productId] as const,
   replenishment: (productId: string, warehouseId: string) =>
     [...inventoryKeys.all, 'replenishment', productId, warehouseId] as const,
+  forecastPreview: (productId: string, warehouseId: string) =>
+    [...inventoryKeys.all, 'forecast-preview', productId, warehouseId] as const,
   warehouses: () => [...inventoryKeys.all, 'warehouses'] as const,
   movementTypes: (warehouseId: string) =>
     [...inventoryKeys.all, 'movement-types', warehouseId] as const,
@@ -22,6 +24,8 @@ export const inventoryKeys = {
   alerts: () => ['alerts'] as const,
   /** The requests feature's lots of a product (`['stock-requests', 'lots', id]`): attending picks one. */
   requestLots: (productId: string) => ['stock-requests', 'lots', productId] as const,
+  /** The dashboard's root (`['dashboard']`): its figures summarize stock, alerts and movements. */
+  dashboard: () => ['dashboard'] as const,
   /** The movements feature's root (`['movements']`): a new movement joins its history. */
   movements: () => ['movements'] as const,
   /**

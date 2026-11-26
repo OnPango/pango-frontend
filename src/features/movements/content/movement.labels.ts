@@ -1,7 +1,12 @@
 import type { IconType } from 'react-icons';
 import { FiArrowDownLeft, FiArrowUpRight, FiClipboard, FiRepeat } from 'react-icons/fi';
 import { formatQuantity } from '@/shared/lib/units';
-import type { Movement, MovementLine, MovementNature } from '../types/movements.types';
+import type {
+  ImportedMovementCode,
+  Movement,
+  MovementLine,
+  MovementNature,
+} from '../types/movements.types';
 
 /** The direction of a type, with the icons of Inventario's "Registrar entrada / salida". */
 export const NATURE_LABELS: Record<
@@ -91,4 +96,24 @@ export function signedQuantity(lines: MovementLine[]): { text: string; sign: 1 |
 export function productsSummary(lines: MovementLine[]): string {
   const names = [...new Set(lines.map((line) => line.product.name))];
   return names.length <= 1 ? (names[0] ?? '') : `${names[0]} y ${names.length - 1} más`;
+}
+
+/** Spanish names of the imported history's movement codes. */
+export const IMPORTED_CODE_LABELS: Record<ImportedMovementCode, string> = {
+  OPENING_BALANCE: 'Saldo inicial',
+  PURCHASE_RECEIPT: 'Compra',
+  SALE: 'Venta',
+  INTERNAL_CONSUMPTION: 'Consumo interno',
+  ADJUSTMENT_IN: 'Ajuste de entrada',
+  ADJUSTMENT_OUT: 'Ajuste de salida',
+  TRANSFER_OUT: 'Traslado (salida)',
+  TRANSFER_IN: 'Traslado (entrada)',
+};
+
+/** A business day (`YYYY-MM-DD`) as a date, without moving it across time zones. */
+export function formatBusinessDay(day: string): string {
+  const [year, month, date] = day.split('-').map(Number);
+  return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(
+    new Date(year, month - 1, date),
+  );
 }

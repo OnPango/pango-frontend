@@ -16,6 +16,7 @@ import type {
 import {
   countIncomingTransfers,
   getActiveProducts,
+  getCurrentForecast,
   getMovementTypes,
   getProductLots,
   getProductStock,
@@ -140,6 +141,7 @@ function afterMovement(queryClient: QueryClient, movement: RegisteredMovement) {
     // The movement may have raised or resolved an alert (the alerts feature, and its bell).
     queryClient.invalidateQueries({ queryKey: inventoryKeys.alerts() }),
     queryClient.invalidateQueries({ queryKey: inventoryKeys.movements() }),
+    queryClient.invalidateQueries({ queryKey: inventoryKeys.dashboard() }),
   ]);
 }
 
@@ -210,6 +212,16 @@ export function useReplenishment(productId: string, warehouseId: string) {
   });
 }
 
+/** Optional live forecast preview for the replenishment modal; only queried with `forecast.read`. */
+export function useCurrentForecast(productId: string, warehouseId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: inventoryKeys.forecastPreview(productId, warehouseId),
+    queryFn: () => getCurrentForecast(productId, warehouseId),
+    enabled,
+    retry: false,
+  });
+}
+
 export function useSetReplenishment(productId: string, warehouseId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -234,8 +246,9 @@ export function useSetReplenishment(productId: string, warehouseId: string) {
       );
       // The product view shows the values and their origin. Not awaited, like movements.
       void queryClient.invalidateQueries({ queryKey: inventoryKeys.stock(productId) });
-      // New values re-evaluate the alert (US-016: the next alerts use them).
+      // New values re-evaluate the alert (US-016 / US-040: the next alerts use them).
       void queryClient.invalidateQueries({ queryKey: inventoryKeys.alerts() });
+      void queryClient.invalidateQueries({ queryKey: inventoryKeys.dashboard() });
     },
   });
 }

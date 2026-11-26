@@ -42,12 +42,13 @@ export function ProductStockCard({
     product.id,
     stock.warehouses.map((row) => row.warehouse.id),
   );
-  const alerts = useMemo(() => {
-    const byWarehouse = new Map<string, Replenishment['openAlert']>();
+  const byWarehouse = useMemo(() => {
+    const map = new Map<string, Replenishment>();
     stock.warehouses.forEach((row, index) => {
-      byWarehouse.set(row.warehouse.id, replenishments[index]?.data?.openAlert ?? null);
+      const repl = replenishments[index]?.data;
+      if (repl) map.set(row.warehouse.id, repl);
     });
-    return byWarehouse;
+    return map;
   }, [stock.warehouses, replenishments]);
 
   const columns = useMemo<Column<Row>[]>(() => {
@@ -72,7 +73,7 @@ export function ProductStockCard({
         header: 'Existencia',
         className: 'text-right',
         cell: (row) => {
-          const alert = alerts.get(row.warehouse.id);
+          const alert = byWarehouse.get(row.warehouse.id)?.openAlert ?? null;
           return (
             <div className="flex flex-col items-end gap-1">
               <span
@@ -130,16 +131,25 @@ export function ProductStockCard({
         key: 'reorderPoint',
         header: 'Punto de reorden',
         className: 'text-right',
-        cell: (row) => (
-          <div className="flex flex-col items-end">
-            <span className="text-sm text-fg/90 tabular-nums">
-              {row.reorderPoint === 0
-                ? 'Sin definir'
-                : formatQuantity(row.reorderPoint, product.unit)}
-            </span>
-            <span className="text-[11px] text-muted">{SOURCE_LABELS[row.source].label}</span>
-          </div>
-        ),
+        cell: (row) => {
+          const repl = byWarehouse.get(row.warehouse.id);
+          const isFallback =
+            repl?.method === 'forecast' &&
+            repl.source === 'manual' &&
+            repl.calculationIssue !== null;
+          return (
+            <div className="flex flex-col items-end">
+              <span className="text-sm text-fg/90 tabular-nums">
+                {row.reorderPoint === 0
+                  ? 'Sin definir'
+                  : formatQuantity(row.reorderPoint, product.unit)}
+              </span>
+              <span className="text-[11px] text-muted">
+                {isFallback ? 'Manual (respaldo)' : SOURCE_LABELS[row.source].label}
+              </span>
+            </div>
+          );
+        },
       },
     ];
     if (!onRegister && !onReplenish) return base;
@@ -161,7 +171,7 @@ export function ProductStockCard({
         ),
       },
     ];
-  }, [onOpenWarehouse, onRegister, onReplenish, onShowLots, product, alerts, canTransfer]);
+  }, [onOpenWarehouse, onRegister, onReplenish, onShowLots, product, byWarehouse, canTransfer]);
 
   return (
     <section aria-labelledby="stock-title" className="space-y-5 rounded-2xl">

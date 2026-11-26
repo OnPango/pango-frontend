@@ -1,23 +1,31 @@
 import type {
+  CalculationIssue,
+  CurrentForecastSummary,
   MovementType,
   ProductStock,
   RegisterAdjustmentInput,
   RegisteredMovement,
   RegisterMovementInput,
   RegisterTransferInput,
+  ReorderMethod,
   Replenishment,
+  SetReplenishmentInput,
   StockProduct,
   WarehouseOption,
   WarehouseProductStock,
 } from '../types/inventory.types';
 import type {
+  CalculationIssueDto,
   CreateMovementDto,
+  ForecastPreviewPageDto,
   MovementDto,
   MovementNatureDto,
   MovementTypeDto,
   ProductDetailDto,
   ProductDto,
   ReplenishmentDto,
+  ReplenishmentMethodDto,
+  SetReplenishmentDto,
   ValueSourceDto,
   WarehouseDto,
   WarehouseProductStockDto,
@@ -37,6 +45,7 @@ export const toStockProduct = (dto: ProductDto): StockProduct => ({
   unit: { code: dto.stockUnit.code, name: dto.stockUnit.name },
   family: dto.category.name,
   tracksLots: dto.tracksLots,
+  averageCost: dto.averageCost ?? 0,
   isActive: dto.isActive,
 });
 
@@ -54,15 +63,31 @@ export const toProductStock = (dto: ProductDetailDto): ProductStock => ({
 
 const toSource = (dto: ValueSourceDto) => (dto === 'CALCULATED' ? 'calculated' : 'manual');
 
+const toMethod = (dto: ReplenishmentMethodDto): ReorderMethod =>
+  dto === 'FORECAST_ROP' ? 'forecast' : 'manual';
+
+const CALCULATION_ISSUES: Record<CalculationIssueDto, CalculationIssue> = {
+  NO_FORECAST: 'no_forecast',
+  NO_INTERVAL: 'no_interval',
+  NO_LEAD_TIME: 'no_lead_time',
+};
+
 export const toReplenishment = (dto: ReplenishmentDto): Replenishment => ({
   onHand: dto.onHand,
   reserved: dto.reserved,
   available: dto.available,
+  method: toMethod(dto.replenishmentMethod),
+  leadTimeDays: dto.leadTimeDays,
   safetyStock: dto.safetyStock,
   reorderPoint: dto.reorderPoint,
+  manualSafetyStock: dto.manualSafetyStock,
+  manualReorderPoint: dto.manualReorderPoint,
   minStock: dto.minStock,
   maxStock: dto.maxStock,
   source: toSource(dto.valueSource),
+  baseForecastId: dto.baseForecastId === null ? null : String(dto.baseForecastId),
+  calculatedAt: dto.calculatedAt,
+  calculationIssue: dto.calculationIssue ? CALCULATION_ISSUES[dto.calculationIssue] : null,
   openAlert: dto.openAlert
     ? {
         severity: Math.min(3, Math.max(1, dto.openAlert.severity)) as 1 | 2 | 3,
@@ -70,6 +95,29 @@ export const toReplenishment = (dto: ReplenishmentDto): Replenishment => ({
       }
     : null,
 });
+
+export const toSetReplenishmentDto = (input: SetReplenishmentInput): SetReplenishmentDto => ({
+  safetyStock: input.safetyStock,
+  reorderPoint: input.reorderPoint,
+  minStock: input.minStock,
+  maxStock: input.maxStock,
+  replenishmentMethod: input.method === 'forecast' ? 'FORECAST_ROP' : 'FIXED_ROP',
+  leadTimeDays: input.leadTimeDays,
+});
+
+export const toCurrentForecast = (dto: ForecastPreviewPageDto): CurrentForecastSummary | null => {
+  const current = dto.items.find((item) => item.isCurrent && item.status === 'OK');
+  if (!current) return null;
+  return {
+    id: String(current.id),
+    estimate: current.total?.estimate ?? null,
+    upper: current.total?.upper ?? null,
+    horizonWeeks: current.periods.length,
+    horizonDays: current.periods.length * 7,
+    historyEnd: current.historyEnd,
+    createdAt: current.createdAt,
+  };
+};
 
 export const toWarehouseOption = (dto: WarehouseDto): WarehouseOption => ({
   id: String(dto.id),
@@ -93,6 +141,7 @@ export const toCreateMovementDto = (input: RegisterMovementInput): CreateMovemen
       productId: Number(input.productId),
       quantity: input.quantity,
       ...(input.lotCode?.trim() ? { lotCode: input.lotCode.trim() } : {}),
+      ...(input.unitCost !== null ? { unitCost: input.unitCost } : {}),
     },
   ],
 });

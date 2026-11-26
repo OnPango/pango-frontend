@@ -1,8 +1,9 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { MovementFilters } from '../types/movements.types';
+import type { ImportedMovementFilters, MovementFilters } from '../types/movements.types';
 import {
   getHistoryProducts,
   getHistoryWarehouses,
+  getImportedMovements,
   getMovement,
   getMovements,
   getMovementTypes,
@@ -21,6 +22,8 @@ export const movementsKeys = {
   types: () => [...movementsKeys.all, 'types'] as const,
   warehouses: () => [...movementsKeys.all, 'warehouses'] as const,
   products: () => [...movementsKeys.all, 'products'] as const,
+  imported: (filters: ImportedMovementFilters) =>
+    [...movementsKeys.all, 'imported', filters] as const,
 };
 
 export function useMovements(filters: MovementFilters) {
@@ -37,7 +40,8 @@ export function useMovement(id: string) {
 
 /**
  * Receiving adds stock to the destination: its stock (Inventario), its alerts and this history
- * change. Other features' roots are named, not imported (`['inventory']`, `['alerts']`).
+ * change, and the dashboard with them. Other features' roots are named, not imported
+ * (`['inventory']`, `['alerts']`, `['dashboard']`).
  */
 export function useReceiveTransfer() {
   const queryClient = useQueryClient();
@@ -55,6 +59,7 @@ export function useReceiveTransfer() {
         queryClient.invalidateQueries({ queryKey: movementsKeys.all }),
         queryClient.invalidateQueries({ queryKey: ['inventory'] }),
         queryClient.invalidateQueries({ queryKey: ['alerts'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
       ]);
     },
   });
@@ -83,5 +88,15 @@ export function useHistoryProducts(enabled: boolean) {
     queryFn: getHistoryProducts,
     enabled,
     staleTime: 300_000,
+  });
+}
+
+/** The imported history (`GET /historical-movements`), with the previous page while the next loads. */
+export function useImportedMovements(filters: ImportedMovementFilters, enabled = true) {
+  return useQuery({
+    queryKey: movementsKeys.imported(filters),
+    queryFn: () => getImportedMovements(filters),
+    placeholderData: keepPreviousData,
+    enabled,
   });
 }

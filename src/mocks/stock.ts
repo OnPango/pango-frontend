@@ -1,3 +1,5 @@
+import { computeReorderPoint, DEFAULT_LEAD_TIME_DAYS } from '@/shared/lib/reorderPoint';
+
 /**
  * Stock on hand shared by the catalog, warehouse and movement mocks, per organization, product,
  * warehouse and lot (pango-core's `stock_balances`, without locations: everything sits in each
@@ -119,21 +121,89 @@ export const hasTransfersInTransit = (org: string, warehouseId: number) =>
 
 // ---- Replenishment parameters and alerts (docs/replenishment.md) ----
 
+export type MockReplenishmentMethod = 'MIN_MAX' | 'FIXED_ROP' | 'FORECAST_ROP';
+export type MockCalculationIssue = 'NO_FORECAST' | 'NO_INTERVAL' | 'NO_LEAD_TIME';
+
 export interface ReplenishmentParams {
+  replenishmentMethod: MockReplenishmentMethod;
+  leadTimeDays: number;
   safetyStock: number;
   reorderPoint: number;
+  manualSafetyStock: number;
+  manualReorderPoint: number;
   minStock: number | null;
   maxStock: number | null;
   valueSource: 'MANUAL' | 'CALCULATED';
+  baseForecastId: number | null;
+  calculatedAt: string | null;
+  calculationIssue: MockCalculationIssue | null;
 }
 
 const DEFAULT_PARAMS: ReplenishmentParams = {
+  replenishmentMethod: 'FIXED_ROP',
+  leadTimeDays: DEFAULT_LEAD_TIME_DAYS,
   safetyStock: 0,
   reorderPoint: 0,
+  manualSafetyStock: 0,
+  manualReorderPoint: 0,
   minStock: null,
   maxStock: null,
   valueSource: 'MANUAL',
+  baseForecastId: null,
+  calculatedAt: null,
+  calculationIssue: null,
 };
+
+export interface MockForecastSnapshot {
+  id: number;
+  estimate: number | null;
+  upper: number | null;
+  horizonDays: number;
+}
+
+/** Mirrors `reorderValues` in `pango-core/src/replenishment/reorder-point.ts`. */
+export function resolveReplenishmentParams(
+  base: Pick<
+    ReplenishmentParams,
+    | 'replenishmentMethod'
+    | 'leadTimeDays'
+    | 'manualSafetyStock'
+    | 'manualReorderPoint'
+    | 'minStock'
+    | 'maxStock'
+  >,
+  forecast: MockForecastSnapshot | null,
+  now = new Date().toISOString(),
+): ReplenishmentParams {
+  const manual = (calculationIssue: MockCalculationIssue | null): ReplenishmentParams => ({
+    ...base,
+    safetyStock: base.manualSafetyStock,
+    reorderPoint: base.manualReorderPoint,
+    valueSource: 'MANUAL',
+    baseForecastId: null,
+    calculatedAt: null,
+    calculationIssue,
+  });
+  if (base.replenishmentMethod !== 'FORECAST_ROP') return manual(null);
+  if (!forecast) return manual('NO_FORECAST');
+  if (forecast.estimate === null || forecast.upper === null || forecast.horizonDays <= 0) {
+    return manual('NO_INTERVAL');
+  }
+  if (base.leadTimeDays <= 0) return manual('NO_LEAD_TIME');
+  const calculated = computeReorderPoint(
+    { estimate: forecast.estimate, upper: forecast.upper, horizonDays: forecast.horizonDays },
+    base.leadTimeDays,
+  );
+  return {
+    ...base,
+    safetyStock: calculated.safetyStock,
+    reorderPoint: calculated.reorderPoint,
+    valueSource: 'CALCULATED',
+    baseForecastId: forecast.id,
+    calculatedAt: now,
+    calculationIssue: null,
+  };
+}
 
 const pwKey = (org: string, productId: number, warehouseId: number) =>
   `${org}|${productId}|${warehouseId}`;
@@ -151,7 +221,7 @@ export interface AlertRow {
   productId: number;
   warehouseId: number;
   severity: 1 | 2 | 3;
-  status: 'OPEN' | 'RESOLVED' | 'DISMISSED';
+  status: 'OPEN' | 'ATTENDED' | 'RESOLVED' | 'DISMISSED';
   availableQuantity: number;
   reorderPoint: number;
   reorderPointSource: 'MANUAL' | 'CALCULATED';
@@ -161,6 +231,9 @@ export interface AlertRow {
   updatedAt: string;
   resolvedAt: string | null;
   resolution: 'STOCK_RECOVERED' | 'REORDER_POINT_CHANGED' | 'NO_REORDER_POINT' | 'INACTIVE' | null;
+  /** US-045: who marked it attended (a mock user id) and when; null while pending. */
+  attendedAt: string | null;
+  attendedBy: string | null;
 }
 export const alerts: AlertRow[] = [];
 let lastAlertId = 0;
@@ -255,13 +328,18 @@ export function evaluateAlert(org: string, productId: number, warehouseId: numbe
       updatedAt: now,
       resolvedAt: null,
       resolution: null,
+      attendedAt: null,
+      attendedBy: null,
     });
   } else if (below && open) {
     // pango-core refreshes the open alert instead of opening another; `createdAt` stays.
     const changed = (Object.keys(values) as (keyof typeof values)[]).some(
       (k) => open[k] !== values[k],
     );
+    // An attended alert that gets worse needs someone to look again.
+    const worse = open.status === 'ATTENDED' && values.severity > open.severity;
     if (changed) Object.assign(open, values, { updatedAt: now });
+    if (worse) Object.assign(open, { status: 'OPEN', attendedAt: null, attendedBy: null });
   } else if (!below && open) {
     open.status = 'RESOLVED';
     open.resolvedAt = now;
@@ -281,13 +359,19 @@ const openAlertRow = (org: string, productId: number, warehouseId: number) =>
       a.org === org &&
       a.productId === productId &&
       a.warehouseId === warehouseId &&
-      a.status === 'OPEN',
+      (a.status === 'OPEN' || a.status === 'ATTENDED'),
   );
 
 export function openAlertOf(org: string, productId: number, warehouseId: number) {
   const open = openAlertRow(org, productId, warehouseId);
   return open
-    ? { id: open.id, severity: open.severity, createdAt: open.createdAt, updatedAt: open.updatedAt }
+    ? {
+        id: open.id,
+        status: open.status,
+        severity: open.severity,
+        createdAt: open.createdAt,
+        updatedAt: open.updatedAt,
+      }
     : null;
 }
 
@@ -301,39 +385,71 @@ export function setReplenishment(
   evaluateAlert(org, productId, warehouseId);
 }
 
+/** Recomputes effective replenishment values after a forecast run for `FORECAST_ROP` rows. */
+export function refreshForecastReplenishment(
+  org: string,
+  productId: number,
+  warehouseId: number,
+  forecast: MockForecastSnapshot | null,
+  now = new Date().toISOString(),
+) {
+  const current = replenishmentOf(org, productId, warehouseId);
+  if (current.replenishmentMethod !== 'FORECAST_ROP') return;
+  setReplenishment(org, productId, warehouseId, resolveReplenishmentParams(current, forecast, now));
+}
+
 // Seed: Tornillo M8 (per lot) and Caja corrugada already moved in Bodega Central.
 applyStock('org-pango', 1, 1, 'L-2026-10', 1200);
 applyStock('org-pango', 3, 1, null, 85);
+
+const daysAgo = (days: number, hour: number) =>
+  new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 11) +
+  `${String(hour).padStart(2, '0')}:15:00.000Z`;
 
 // Tornillo M8 has values computed by the forecast. A higher reorder point first raised an alert,
 // resolved when the forecast lowered it: one resolved alert in the history.
 setReplenishment('org-pango', 1, 1, {
   ...DEFAULT_PARAMS,
+  replenishmentMethod: 'FORECAST_ROP',
   safetyStock: 300,
   reorderPoint: 1300,
+  manualSafetyStock: 150,
+  manualReorderPoint: 400,
   maxStock: 2000,
   valueSource: 'CALCULATED',
+  baseForecastId: 1,
+  calculatedAt: daysAgo(9, 14),
 });
 setReplenishment('org-pango', 1, 1, {
   ...DEFAULT_PARAMS,
+  replenishmentMethod: 'FORECAST_ROP',
   safetyStock: 200,
   reorderPoint: 500,
+  manualSafetyStock: 150,
+  manualReorderPoint: 400,
   valueSource: 'CALCULATED',
+  baseForecastId: 2,
+  calculatedAt: daysAgo(1, 8),
 });
 // Caja corrugada sits below its reorder point (medium); Cable USB has none left in Tienda Norte
 // (critical).
-setReplenishment('org-pango', 3, 1, { ...DEFAULT_PARAMS, safetyStock: 10, reorderPoint: 120 });
+setReplenishment('org-pango', 3, 1, {
+  ...DEFAULT_PARAMS,
+  safetyStock: 10,
+  reorderPoint: 120,
+  manualSafetyStock: 10,
+  manualReorderPoint: 120,
+});
 setReplenishment('org-pango', 4, 2, {
   ...DEFAULT_PARAMS,
   safetyStock: 5,
   reorderPoint: 20,
+  manualSafetyStock: 5,
+  manualReorderPoint: 20,
   maxStock: 60,
 });
 
 // Spread the seeded alerts over the last days, so the list reads like a real one.
-const daysAgo = (days: number, hour: number) =>
-  new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 11) +
-  `${String(hour).padStart(2, '0')}:15:00.000Z`;
 alerts[0].createdAt = daysAgo(9, 14);
 alerts[0].resolvedAt = daysAgo(6, 10);
 alerts[1].createdAt = daysAgo(3, 16);

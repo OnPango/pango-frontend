@@ -1,6 +1,7 @@
 import { authorize, error } from '../guard';
 import { numericId } from '../ids';
 import type { MockRoutes } from '../server';
+import { refreshForecastReplenishment, type MockForecastSnapshot } from '../stock';
 import { findProductRow, findUnitRow, productsOf } from './catalog.handlers';
 import { activeWarehousesOf, findWarehouseRow } from './warehouses.handlers';
 
@@ -187,6 +188,7 @@ function forecastSeries(run: RunRow, productId: number, warehouseId: number, at:
 }
 
 function finish(run: RunRow, at: number) {
+  const atIso = new Date(at).toISOString();
   for (const { productId, warehouseId } of run.series) {
     const row: ForecastRow = forecastSeries(run, productId, warehouseId, at);
     if (row.status !== 'ERROR') {
@@ -204,6 +206,18 @@ function finish(run: RunRow, at: number) {
     if (row.status === 'OK') run.seriesOk++;
     else if (row.status === 'ERROR') run.seriesError++;
     else run.seriesNoForecast++;
+    if (row.status !== 'ERROR') {
+      const snapshot: MockForecastSnapshot | null =
+        row.isCurrent && row.status === 'OK'
+          ? {
+              id: row.id,
+              estimate: row.total?.estimate ?? null,
+              upper: row.total?.upper ?? null,
+              horizonDays: row.periods.length * 7,
+            }
+          : null;
+      refreshForecastReplenishment(run.org, productId, warehouseId, snapshot, atIso);
+    }
   }
   run.status = run.seriesError > 0 ? 'PARTIAL' : 'COMPLETED';
   run.finishedAt = at;
@@ -312,6 +326,30 @@ function paginate<T>(items: T[], query: Record<string, string | undefined>) {
     total: items.length,
     page,
     pageSize,
+  };
+}
+
+/** Current OK forecast snapshot of a product-warehouse pair for mock replenishment calculation. */
+export function currentOkForecastOf(
+  org: string,
+  productId: number,
+  warehouseId: number,
+): MockForecastSnapshot | null {
+  settle(org);
+  const current = forecasts.find(
+    (row) =>
+      row.org === org &&
+      row.productId === productId &&
+      row.warehouseId === warehouseId &&
+      row.isCurrent &&
+      row.status === 'OK',
+  );
+  if (!current) return null;
+  return {
+    id: current.id,
+    estimate: current.total?.estimate ?? null,
+    upper: current.total?.upper ?? null,
+    horizonDays: current.periods.length * 7,
   };
 }
 

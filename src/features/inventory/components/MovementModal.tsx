@@ -1,5 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useWatch } from 'react-hook-form';
+import { FiDollarSign } from 'react-icons/fi';
+import { formatUnitCost } from '@/shared/lib/money';
 import { formatQuantity, unitLabel } from '@/shared/lib/units';
 import { Alert } from '@/shared/ui/components/Alert';
 import { Button } from '@/shared/ui/components/Button';
@@ -28,6 +30,18 @@ const FORM_ID = 'movement-form';
 const formatDay = (iso: string) =>
   new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(`${iso}T12:00:00`));
 
+/**
+ * What the unit cost does: the average it leaves, or that leaving it empty keeps the current one.
+ */
+function costHint(cost: { current: number | null; next: number | null } | null) {
+  if (!cost) return 'Lo que costó cada unidad. Actualiza el costo promedio del producto.';
+  if (cost.next !== null) return `El costo promedio quedará en ${formatUnitCost(cost.next)}.`;
+  if (cost.current !== null && cost.current > 0) {
+    return `Costo promedio actual: ${formatUnitCost(cost.current)}. Si lo dejas vacío, se mantiene.`;
+  }
+  return 'Lo que costó cada unidad. Con él se valora el inventario.';
+}
+
 function MovementForm({
   kind,
   products,
@@ -36,13 +50,14 @@ function MovementForm({
   onClose,
   onSaved,
 }: Omit<MovementModalProps, 'kind'> & { kind: MovementKind }) {
-  const { form, submit, product, available, lots, isSubmitting, serverError } = useMovementForm({
-    kind,
-    products,
-    initialProductId,
-    initialWarehouseId,
-    onSaved,
-  });
+  const { form, submit, product, available, lots, cost, isSubmitting, serverError } =
+    useMovementForm({
+      kind,
+      products,
+      initialProductId,
+      initialWarehouseId,
+      onSaved,
+    });
   const {
     register,
     control,
@@ -235,15 +250,36 @@ function MovementForm({
           )}
         </div>
 
-        <TextBox
-          label="Documento de referencia"
-          optional
-          maxLength={40}
-          placeholder={kind === 'inbound' ? 'Ej. FAC-1043' : 'Ej. REM-208'}
-          hint="Factura, remisión u otro documento que respalde el movimiento."
-          error={errors.documentRef?.message}
-          {...register('documentRef')}
-        />
+        <div className={kind === 'inbound' ? 'grid grid-cols-1 gap-4 sm:grid-cols-2' : undefined}>
+          {kind === 'inbound' && (
+            <TextBox
+              label="Costo unitario"
+              optional
+              inputMode="decimal"
+              placeholder="Ej. 15.000"
+              leadingIcon={FiDollarSign}
+              trailing={
+                product ? (
+                  <span className="text-xs whitespace-nowrap text-muted">
+                    por {unitLabel(product.unit).toLowerCase()}
+                  </span>
+                ) : undefined
+              }
+              hint={costHint(cost)}
+              error={errors.unitCost?.message}
+              {...register('unitCost')}
+            />
+          )}
+          <TextBox
+            label="Documento de referencia"
+            optional
+            maxLength={40}
+            placeholder={kind === 'inbound' ? 'Ej. FAC-1043' : 'Ej. REM-208'}
+            hint="Factura, remisión u otro documento que respalde el movimiento."
+            error={errors.documentRef?.message}
+            {...register('documentRef')}
+          />
+        </div>
 
         <p className="rounded-xl bg-primary/5 px-4 py-3 text-xs text-muted">
           Un movimiento registrado no se edita ni se borra. Si te equivocas, se corrige con otro

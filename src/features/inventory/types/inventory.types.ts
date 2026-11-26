@@ -10,11 +10,19 @@ export interface StockProduct {
   family: string;
   /** Each inbound and outbound movement asks for the lot. */
   tracksLots: boolean;
+  /** Weighted average cost of one stock unit, across every warehouse; 0 before the first cost. */
+  averageCost: number;
   isActive: boolean;
 }
 
 /** Set by hand (US-016) or computed by the forecast (US-040). */
 export type ValueSource = 'manual' | 'calculated';
+
+/** Selector choosing whether replenishment uses manual thresholds or the forecast calculation. */
+export type ReorderMethod = 'manual' | 'forecast';
+
+/** Why a `forecast` replenishment configuration fell back to its manual values. */
+export type CalculationIssue = 'no_forecast' | 'no_interval' | 'no_lead_time';
 
 /** US-015: a product's stock, in total and per warehouse where it is enabled. */
 export interface ProductStock {
@@ -31,18 +39,28 @@ export interface ProductStock {
   }[];
 }
 
-/** US-016: a product's replenishment values in one warehouse, with the stock they compare to. */
+/** US-016 / US-040: a product's replenishment parameters in one warehouse, with current stock. */
 export interface Replenishment {
   onHand: number;
   /** Held by stock requests in progress. */
   reserved: number;
   /** On hand minus reserved: what the reorder point is compared against. */
   available: number;
+  method: ReorderMethod;
+  leadTimeDays: number;
+  /** In force (manual or computed). */
   safetyStock: number;
+  /** In force (manual or computed); 0 = no alerts. */
   reorderPoint: number;
+  /** Set by hand; kept as fallback while using `forecast`. */
+  manualSafetyStock: number;
+  manualReorderPoint: number;
   minStock: number | null;
   maxStock: number | null;
   source: ValueSource;
+  baseForecastId: string | null;
+  calculatedAt: string | null;
+  calculationIssue: CalculationIssue | null;
   /** 1 at or below the reorder point, 2 at or below the safety stock, 3 nothing available. */
   openAlert: { severity: 1 | 2 | 3; createdAt: string } | null;
 }
@@ -52,6 +70,19 @@ export interface SetReplenishmentInput {
   reorderPoint: number;
   minStock: number | null;
   maxStock: number | null;
+  method: ReorderMethod;
+  leadTimeDays: number;
+}
+
+/** Minimal slice of the current OK forecast for a product-warehouse, used to preview system values. */
+export interface CurrentForecastSummary {
+  id: string;
+  estimate: number | null;
+  upper: number | null;
+  horizonWeeks: number;
+  horizonDays: number;
+  historyEnd: string;
+  createdAt: string;
 }
 
 /** One product in a warehouse's stock list (`GET /stock`). */
@@ -114,6 +145,8 @@ export interface RegisterMovementInput {
   quantity: number;
   lotCode: string | null;
   documentRef: string | null;
+  /** Inbound only: what one unit cost. Null keeps the current average cost. */
+  unitCost: number | null;
 }
 
 /**

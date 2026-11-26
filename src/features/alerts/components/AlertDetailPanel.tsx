@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { FiArrowRight } from 'react-icons/fi';
 import { formatQuantity } from '@/shared/lib/units';
 import { Alert } from '@/shared/ui/components/Alert';
@@ -6,7 +6,7 @@ import { Badge } from '@/shared/ui/components/Badge';
 import { Button } from '@/shared/ui/components/Button';
 import { Drawer } from '@/shared/ui/components/Drawer';
 import { Spinner } from '@/shared/ui/components/Spinner';
-import { useAlert, useCurrentStock } from '../api/alerts.queries';
+import { useAlert, useCurrentStock, useSetAlertStatus } from '../api/alerts.queries';
 import {
   formatDate,
   RESOLUTION_LABELS,
@@ -15,7 +15,13 @@ import {
   STATUS_LABELS,
 } from '../content/alert.labels';
 import { alertsErrorMessage } from '../content/alerts.errors';
-import type { AlertSeverity, CurrentStock, StockAlert } from '../types/alerts.types';
+import type {
+  AlertManualStatus,
+  AlertSeverity,
+  CurrentStock,
+  StockAlert,
+} from '../types/alerts.types';
+import { AttendAlertDialog } from './AttendAlertDialog';
 import { SeverityBadge } from './SeverityBadge';
 
 function Item({ label, children }: { label: string; children: ReactNode }) {
@@ -26,6 +32,9 @@ function Item({ label, children }: { label: string; children: ReactNode }) {
     </div>
   );
 }
+
+/** Pending or attended: refreshed by every evaluation until it resolves. */
+const inForce = (alert: StockAlert) => alert.status === 'open' || alert.status === 'attended';
 
 /** The severity the stock would have now (RF-ALT-001), or null above the reorder point. */
 function severityNow(stock: CurrentStock): AlertSeverity | null {
@@ -60,7 +69,7 @@ function CurrentSituation({ alert, enabled }: { alert: StockAlert; enabled: bool
   } else {
     const stock = current.data;
     const now = severityNow(stock);
-    const worse = alert.status === 'open' && now !== null && now > alert.severity;
+    const worse = inForce(alert) && now !== null && now > alert.severity;
     const pointChanged = stock.reorderPoint !== alert.reorderPoint || stock.source !== alert.source;
     body = (
       <>
@@ -91,7 +100,7 @@ function CurrentSituation({ alert, enabled }: { alert: StockAlert; enabled: bool
             <strong>{SEVERITY_LABELS[now].label.toLowerCase()}</strong> (
             {SEVERITY_LABELS[now].long.toLowerCase()}).
           </Alert>
-        ) : alert.status === 'open' && now !== null ? (
+        ) : inForce(alert) && now !== null ? (
           <p className="text-sm text-fg/80">Sigue en o bajo el punto de reorden.</p>
         ) : now === null && stock.reorderPoint > 0 ? (
           <p className="text-sm text-fg/80">Está por encima del punto de reorden.</p>
@@ -122,31 +131,66 @@ function CurrentSituation({ alert, enabled }: { alert: StockAlert; enabled: bool
 export function AlertDetailPanel({
   alertId,
   readsStock,
+  resolvesIn,
   onClose,
   onShowInventory,
 }: {
   alertId: string;
   /** Whether the user may read the stock of a warehouse: the "Ahora" section and the link. */
   readsStock: (warehouseId: string) => boolean;
+  /** Whether the user may mark the alerts of a warehouse attended or pending (US-045). */
+  resolvesIn: (warehouseId: string) => boolean;
   onClose: () => void;
   onShowInventory: (alert: StockAlert) => void;
 }) {
   const { data: alert, error } = useAlert(alertId);
+  const setStatus = useSetAlertStatus();
+  const [isAttending, setIsAttending] = useState(false);
   const showsStock = alert ? readsStock(alert.warehouse.id) : false;
+  const canSetStatus = alert ? inForce(alert) && resolvesIn(alert.warehouse.id) : false;
   const amount = (value: number) => (alert ? formatQuantity(value, alert.product.unit) : '');
+  const changeTo = (status: AlertManualStatus) =>
+    alert && setStatus.mutate({ id: alert.id, status });
+
+  const footer =
+    alert && (showsStock || canSetStatus) ? (
+      <div className="flex flex-wrap justify-end gap-2">
+        {canSetStatus && alert.status === 'open' && (
+          <Button
+            onClick={() => {
+              setStatus.reset();
+              setIsAttending(true);
+            }}
+          >
+            Marcar atendida
+          </Button>
+        )}
+        {canSetStatus && alert.status === 'attended' && (
+          <Button
+            variant="outline"
+            isLoading={setStatus.isPending}
+            onClick={() => changeTo('open')}
+          >
+            Volver a pendiente
+          </Button>
+        )}
+        {showsStock && (
+          <Button
+            variant={canSetStatus && alert.status === 'open' ? 'outline' : 'primary'}
+            onClick={() => onShowInventory(alert)}
+          >
+            Ver en Inventario <FiArrowRight aria-hidden className="ml-1.5 size-4" />
+          </Button>
+        )}
+      </div>
+    ) : undefined;
 
   return (
     <Drawer
       title={alert ? alert.product.name : 'Alerta'}
       description={alert ? `${alert.product.sku} · ${alert.warehouse.name}` : undefined}
       onClose={onClose}
-      footer={
-        alert && showsStock ? (
-          <Button variant="primary" onClick={() => onShowInventory(alert)}>
-            Ver en Inventario <FiArrowRight aria-hidden className="ml-1.5 size-4" />
-          </Button>
-        ) : undefined
-      }
+      footer={footer}
     >
       {!alert ? (
         error ? (
@@ -170,13 +214,25 @@ export function AlertDetailPanel({
               Se generó el {formatDate(alert.createdAt, true)}, cuando el disponible llegó al punto
               de reorden.
             </p>
-            {alert.status === 'open' && alert.updatedAt !== alert.createdAt && (
+            {inForce(alert) && alert.updatedAt !== alert.createdAt && (
               <p className="text-xs text-muted">
-                Se actualizó el {formatDate(alert.updatedAt, true)}: sigue la existencia mientras
-                esté pendiente.
+                Se actualizó el {formatDate(alert.updatedAt, true)}: sigue la existencia hasta
+                resolverse.
               </p>
             )}
           </div>
+          {alert.status === 'attended' && alert.attendedAt && (
+            <Alert tone="success">
+              {alert.attendedBy?.name ? `La atendió ${alert.attendedBy.name}` : 'Se atendió'} (
+              {formatDate(alert.attendedAt, true)}). Se resuelve sola cuando el disponible supere el
+              punto de reorden, y vuelve a pendiente si empeora.
+            </Alert>
+          )}
+          {setStatus.isError && (
+            <Alert tone="danger">
+              {alertsErrorMessage(setStatus.error, 'No se pudo cambiar el estado de la alerta.')}
+            </Alert>
+          )}
           {alert.status === 'resolved' && alert.resolvedAt && (
             <Alert tone="success">
               {/* The time already ends in "p. m.": only a reason adds its own period. */}
@@ -187,7 +243,7 @@ export function AlertDetailPanel({
 
           <section aria-labelledby="alert-data">
             <h3 id="alert-data" className="text-sm font-bold text-fg">
-              {alert.status === 'open' ? 'Lo que marca la alerta' : 'Antes de resolverse'}
+              {inForce(alert) ? 'Lo que marca la alerta' : 'Antes de resolverse'}
             </h3>
             <dl className="divide-y divide-line2">
               <Item label="Disponible">
@@ -217,6 +273,9 @@ export function AlertDetailPanel({
 
           <CurrentSituation alert={alert} enabled={showsStock} />
         </div>
+      )}
+      {alert && isAttending && (
+        <AttendAlertDialog alert={alert} onClose={() => setIsAttending(false)} />
       )}
     </Drawer>
   );

@@ -12,11 +12,13 @@ import type { AlertDto, ReplenishmentDto } from './alerts.dto';
 
 const STATUS: Record<AlertDto['status'], AlertStatus> = {
   OPEN: 'open',
+  ATTENDED: 'attended',
   RESOLVED: 'resolved',
   DISMISSED: 'dismissed',
 };
-const STATUS_DTO: Record<AlertStatus, AlertDto['status']> = {
+export const STATUS_DTO: Record<AlertStatus, AlertDto['status']> = {
   open: 'OPEN',
+  attended: 'ATTENDED',
   resolved: 'RESOLVED',
   dismissed: 'DISMISSED',
 };
@@ -60,6 +62,10 @@ export function toStockAlert(dto: AlertDto): StockAlert {
     updatedAt: dto.updatedAt ?? dto.createdAt,
     resolvedAt: dto.resolvedAt,
     resolution: dto.resolution ? RESOLUTION[dto.resolution] : null,
+    attendedAt: dto.attendedAt ?? null,
+    attendedBy: dto.attendedBy
+      ? { id: String(dto.attendedBy.id), name: dto.attendedBy.name }
+      : null,
   };
 }
 

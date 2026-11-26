@@ -61,7 +61,7 @@ export const MOCK_PASSWORD = 'Pango123*';
 // Bump the version when the shape or the permission codes of the seed data change: data saved by
 // an older version would otherwise be loaded as is (e.g. roles holding permissions that no longer exist).
 const USERS_STORAGE_KEY = 'pango_mock_db_users_v3';
-const ROLES_STORAGE_KEY = 'pango_mock_db_roles_v2';
+const ROLES_STORAGE_KEY = 'pango_mock_db_roles_v3';
 const AREAS_STORAGE_KEY = 'pango_mock_db_areas_v2';
 const ORGANIZATIONS_STORAGE_KEY = 'pango_mock_db_organizations_v3';
 

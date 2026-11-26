@@ -1,5 +1,6 @@
 import { http } from '@/core/api/http';
 import type {
+  CurrentForecastSummary,
   MovementType,
   ProductLot,
   ProductStock,
@@ -16,6 +17,7 @@ import type {
   WarehouseStockRow,
 } from '../types/inventory.types';
 import type {
+  ForecastPreviewPageDto,
   LotDto,
   MovementCountDto,
   MovementDto,
@@ -31,10 +33,12 @@ import {
   toCreateAdjustmentDto,
   toCreateMovementDto,
   toCreateTransferDto,
+  toCurrentForecast,
   toMovementType,
   toProductStock,
   toRegisteredMovement,
   toReplenishment,
+  toSetReplenishmentDto,
   toStockProduct,
   toWarehouseOption,
   toWarehouseProductStock,
@@ -150,8 +154,9 @@ export async function getReplenishment(
 }
 
 /**
- * Saves the values as manual and re-evaluates the alert. Min and max stock are part of the body:
- * leaving them out clears them, so callers send the current ones back.
+ * Saves manual fallback values, the replenishment method (`FIXED_ROP` vs `FORECAST_ROP`) and
+ * lead time, recalculating system values when appropriate and re-evaluating the alert. Min and max
+ * stock stay part of the body so omitting them never clears them.
  */
 export async function setReplenishment(
   productId: string,
@@ -160,9 +165,22 @@ export async function setReplenishment(
 ): Promise<Replenishment> {
   const { data } = await http.put<ReplenishmentDto>(
     replenishmentPath(productId, warehouseId),
-    input,
+    toSetReplenishmentDto(input),
   );
   return toReplenishment(data);
+}
+
+/**
+ * Current OK forecast for live preview in replenishment editing; null if none exists yet.
+ */
+export async function getCurrentForecast(
+  productId: string,
+  warehouseId: string,
+): Promise<CurrentForecastSummary | null> {
+  const { data } = await http.get<ForecastPreviewPageDto>(`/products/${productId}/forecasts`, {
+    params: { warehouseId: Number(warehouseId), page: 1, pageSize: 25 },
+  });
+  return toCurrentForecast(data);
 }
 
 /**

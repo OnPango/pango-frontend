@@ -32,6 +32,11 @@ export interface Product {
   volumeL: number | null;
   /** Stock is kept per lot; otherwise only the quantity matters. */
   tracksLots: boolean;
+  /**
+   * Weighted average cost of one stock unit, across every warehouse. Read-only: entries with a
+   * unit cost set it. 0 until the first one.
+   */
+  averageCost: number;
   /** False: archived (products are never deleted). */
   isActive: boolean;
   createdAt: string;

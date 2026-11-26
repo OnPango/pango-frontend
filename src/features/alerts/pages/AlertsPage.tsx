@@ -7,20 +7,34 @@ import { CardGrid } from '@/shared/ui/components/CardGrid';
 import { Select } from '@/shared/ui/components/form/select/Select';
 import type { SelectOption } from '@/shared/ui/components/form/select/select.types';
 import { ViewModeToggle } from '@/shared/ui/components/ViewModeToggle';
+import { Alert } from '@/shared/ui/components/Alert';
 import { PageHeader } from '@/shared/ui/PageHeader';
-import { useAlertProducts, useAlerts, useAlertWarehouses } from '../api/alerts.queries';
+import {
+  useAlertProducts,
+  useAlerts,
+  useAlertWarehouses,
+  useSetAlertStatus,
+} from '../api/alerts.queries';
 import { AlertCard } from '../components/AlertCard';
 import { AlertDetailPanel } from '../components/AlertDetailPanel';
+import { AttendAlertDialog } from '../components/AttendAlertDialog';
 import { AlertsTable } from '../components/AlertsTable';
-import { alertWarehouses, readsStockIn } from '../content/alert.permissions';
+import { alertWarehouses, readsStockIn, resolvesAlertsIn } from '../content/alert.permissions';
 import { alertsErrorMessage } from '../content/alerts.errors';
-import type { AlertSort, AlertStatus, Option, StockAlert } from '../types/alerts.types';
+import type {
+  AlertManualStatus,
+  AlertSort,
+  AlertStatus,
+  Option,
+  StockAlert,
+} from '../types/alerts.types';
 
 const ALL = 'all';
 
-/** Pending first (what needs action); dismissing by hand comes in S6. */
+/** Pending first (what needs action), then attended (someone took charge, still in force). */
 const STATUS_OPTIONS: SelectOption[] = [
   { value: 'open', label: 'Pendientes' },
+  { value: 'attended', label: 'Atendidas' },
   { value: 'resolved', label: 'Resueltas' },
   { value: ALL, label: 'Todas' },
 ];
@@ -107,6 +121,24 @@ export default function AlertsPage() {
     (warehouseId: string) => readsStockIn(currentUser, warehouseId),
     [currentUser],
   );
+  const resolvesIn = useCallback(
+    (warehouseId: string) => resolvesAlertsIn(currentUser, warehouseId),
+    [currentUser],
+  );
+
+  // US-045, from a card (the detail panel has its own): attending asks first, going back to
+  // pending does not.
+  const statusChange = useSetAlertStatus();
+  const [attending, setAttending] = useState<StockAlert | null>(null);
+  const changeStatus = (alert: StockAlert, next: AlertManualStatus) => {
+    if (next === 'attended') {
+      statusChange.reset();
+      setAttending(alert);
+    } else {
+      statusChange.mutate({ id: alert.id, status: next });
+    }
+  };
+  const savingId = statusChange.isPending ? statusChange.variables.id : null;
 
   const showInventory = (alert: StockAlert) =>
     navigate(`/inventory?view=product&product=${alert.product.id}`);
@@ -181,6 +213,12 @@ export default function AlertsPage() {
         <ViewModeToggle legend="Ver las alertas como" value={view} onChange={setView} />
       </section>
 
+      {statusChange.isError && (
+        <Alert tone="danger">
+          {alertsErrorMessage(statusChange.error, 'No se pudo cambiar el estado de la alerta.')}
+        </Alert>
+      )}
+
       {view === 'table' ? (
         <AlertsTable
           alerts={alerts.data?.items ?? []}
@@ -225,15 +263,20 @@ export default function AlertsPage() {
               alert={alert}
               onOpen={open}
               onShowInventory={readsStock(alert.warehouse.id) ? showInventory : undefined}
+              onSetStatus={resolvesIn(alert.warehouse.id) ? changeStatus : undefined}
+              isSaving={savingId === alert.id}
             />
           )}
         />
       )}
 
+      {attending && <AttendAlertDialog alert={attending} onClose={() => setAttending(null)} />}
+
       {openId && (
         <AlertDetailPanel
           alertId={openId}
           readsStock={readsStock}
+          resolvesIn={resolvesIn}
           onClose={close}
           onShowInventory={showInventory}
         />
