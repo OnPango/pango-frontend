@@ -395,4 +395,33 @@ export const dashboardRoutes: MockRoutes = {
       },
     };
   },
+
+  /**
+   * The level from the imported history: the older half of the periods, as if the company had
+   * imported its history up to then and started in Pango after.
+   */
+  'GET /dashboard/imported-inventory-level': (request) => {
+    const pango = dashboardRoutes['GET /dashboard/inventory-level'](request);
+    if (pango.status !== 200) return pango;
+    const { points, ...level } = pango.data as {
+      points: { start: string; end: string; inStock: number; lowStock: number | null }[];
+    };
+    const cut = Math.floor(points.length / 2);
+    return {
+      status: 200,
+      data: {
+        ...level,
+        lastImportedDay: points[cut - 1]?.end ?? null,
+        points: points.map((point, i) =>
+          i < cut
+            ? {
+                ...point,
+                inStock: point.inStock + 2,
+                lowStock: point.lowStock === null ? null : Math.max(1, point.lowStock - 1),
+              }
+            : { ...point, inStock: 0, lowStock: point.lowStock === null ? null : 0 },
+        ),
+      },
+    };
+  },
 };

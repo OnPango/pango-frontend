@@ -43,7 +43,7 @@ export function ImportedHistoryCard({
               const Icon = inbound ? FiArrowDownLeft : FiArrowUpRight;
               const unit = { code: item.product.unit, name: item.product.unit };
               return (
-                <li key={item.id} className="flex items-start gap-3 rounded-xl py-2">
+                <li key={item.id} className="flex min-w-0 items-start gap-3 rounded-xl py-2">
                   <span
                     aria-hidden
                     className={cn(
@@ -54,29 +54,33 @@ export function ImportedHistoryCard({
                     <Icon className="size-4" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2">
+                    {/* The quantity shares the first line, so the lines below take the full width. */}
+                    <span className="flex items-baseline justify-between gap-2">
                       <span className="truncate text-sm font-medium text-fg">
                         {IMPORTED_CODE_LABELS[item.code] ?? item.code}
                       </span>
-                      <Badge tone="neutral" size="sm" className="shrink-0">
-                        Importado
-                      </Badge>
+                      <span
+                        className={cn(
+                          'shrink-0 text-sm font-semibold whitespace-nowrap tabular-nums',
+                          inbound ? 'text-success' : 'text-danger',
+                        )}
+                      >
+                        {inbound ? '+' : '−'}
+                        {formatQuantity(Math.abs(item.quantity), unit)}
+                      </span>
                     </span>
                     <span className="block truncate text-xs text-muted">
                       {item.product.name} ({item.product.sku})
                     </span>
-                    <span className="block truncate text-[11px] text-muted">
-                      {formatDay(item.date)} · {item.warehouse.name} · {item.document}
+                    {/* The label shares the line of the date, so the type never gets cut. */}
+                    <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-muted">
+                      <Badge tone="neutral" size="sm" className="shrink-0">
+                        Importado
+                      </Badge>
+                      <span className="truncate">
+                        {formatDay(item.date)} · {item.warehouse.name} · {item.document}
+                      </span>
                     </span>
-                  </span>
-                  <span
-                    className={cn(
-                      'shrink-0 text-sm font-semibold tabular-nums',
-                      inbound ? 'text-success' : 'text-danger',
-                    )}
-                  >
-                    {inbound ? '+' : '−'}
-                    {formatQuantity(Math.abs(item.quantity), unit)}
                   </span>
                 </li>
               );
