@@ -74,9 +74,10 @@ export function ImportedMovementsTable({
             header: 'Producto',
             skeleton: 'title',
             cell: (m) => (
-              <div className="min-w-0">
+              // Imported names can be long and have no spaces to break at: cap the column and cut them.
+              <div className="max-w-56 min-w-0 sm:max-w-xs xl:max-w-sm" title={m.product.name}>
                 <p className="truncate text-sm font-semibold text-fg">{m.product.name}</p>
-                <p className="text-xs text-muted">{m.product.sku}</p>
+                <p className="truncate text-xs text-muted">{m.product.sku}</p>
               </div>
             ),
           },
