@@ -28,6 +28,21 @@ interface DataTableProps<T> {
   pagination?: Omit<PaginationProps, 'className'>;
 }
 
+/**
+ * What goes inside a table cell. An auto-layout table widens a column to fit its longest text, and
+ * imported names can be long and have no spaces to break at: without a cap, one of them pushes the
+ * other columns off screen. The cap keeps every column within a readable width; a word that still
+ * does not fit breaks, and content already set to `truncate` is cut with an ellipsis instead.
+ * `break-words` (not `anywhere`) so it does not shrink the columns' minimum width on small screens.
+ */
+export function CellContent({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn('max-w-56 min-w-0 break-words sm:max-w-xs xl:max-w-sm', className)}>
+      {children}
+    </div>
+  );
+}
+
 /** Presentational table with loading, error and empty states, and optional pagination. */
 export function DataTable<T>({
   columns,
@@ -74,7 +89,7 @@ export function DataTable<T>({
       <tr key={getRowKey(row)} className="border-t border-line2">
         {columns.map((column) => (
           <td key={column.key} className={cn('px-4 py-3', column.className)}>
-            {column.cell(row)}
+            <CellContent>{column.cell(row)}</CellContent>
           </td>
         ))}
       </tr>

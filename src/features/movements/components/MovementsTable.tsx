@@ -103,11 +103,7 @@ export function MovementsTable({
             header: 'Producto',
             skeleton: 'title',
             cell: (movement) => (
-              // Imported names can be long and have no spaces to break at: cap the column and cut them.
-              <div
-                className="max-w-56 min-w-0 sm:max-w-xs xl:max-w-sm"
-                title={productsSummary(movement.lines)}
-              >
+              <div className="min-w-0" title={productsSummary(movement.lines)}>
                 <p className="truncate text-sm font-semibold text-fg">
                   {productsSummary(movement.lines)}
                 </p>

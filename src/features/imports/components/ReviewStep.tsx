@@ -6,6 +6,7 @@ import { RESULT_LABEL } from '../content/imports.labels';
 import type { ImportKind, ImportPreview, PreviewRow, RowResult } from '../types/imports.types';
 import { formatCount } from '../lib/format';
 import { StepFrame } from './StepFrame';
+import { CellContent } from '@/shared/ui/components/DataTable';
 
 export interface ReviewStepProps {
   kind: ImportKind;
@@ -156,7 +157,7 @@ export function ReviewStep({ kind, preview, onBack, onNext }: ReviewStepProps) {
                       preview.columns[cellIndex]?.numeric && 'text-right tabular-nums',
                     )}
                   >
-                    {cell}
+                    <CellContent>{cell}</CellContent>
                   </td>
                 ))}
                 <td className="px-4 py-2.5">
