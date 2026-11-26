@@ -64,3 +64,15 @@ export function formatShortDay(day: string): string {
     .format(new Date(year, month - 1, date))
     .replace('.', '');
 }
+
+/** Spanish names of the imported history's movement codes (the kardex template). */
+export const IMPORTED_CODE_LABELS: Record<string, string> = {
+  OPENING_BALANCE: 'Saldo inicial',
+  PURCHASE_RECEIPT: 'Compra',
+  SALE: 'Venta',
+  INTERNAL_CONSUMPTION: 'Consumo interno',
+  ADJUSTMENT_IN: 'Ajuste de entrada',
+  ADJUSTMENT_OUT: 'Ajuste de salida',
+  TRANSFER_OUT: 'Traslado (salida)',
+  TRANSFER_IN: 'Traslado (entrada)',
+};
