@@ -47,15 +47,19 @@ export function WarehouseStockTable({
         skeleton: 'title',
         header: 'Producto',
         cell: ({ product }) => (
-          <div className="min-w-0">
+          // An auto-layout table grows a column to fit its longest text: without a max width, a
+          // long name (up to 150 characters) pushes the other columns off screen.
+          <div className="max-w-56 min-w-0 sm:max-w-xs xl:max-w-sm">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => onOpenProduct(product.id)}
-              className="max-w-full justify-start truncate rounded-md p-0 text-left text-sm hover:bg-transparent hover:text-primary hover:underline"
+              className="max-w-full justify-start rounded-md p-0 text-left text-sm hover:bg-transparent hover:text-primary hover:underline"
+              title={product.name}
               aria-label={`Ver existencia de ${product.name} en todos los almacenes`}
             >
-              {product.name}
+              {/* The ellipsis needs a block box: the button itself is a flex container. */}
+              <span className="min-w-0 truncate">{product.name}</span>
             </Button>
             <p className="truncate text-xs text-muted">
               {product.sku}

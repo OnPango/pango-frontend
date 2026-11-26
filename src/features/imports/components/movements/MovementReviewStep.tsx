@@ -101,10 +101,11 @@ const BALANCE_COLUMNS: Column<ImportBalance>[] = [
     key: 'product',
     header: 'Producto',
     cell: (r) => (
-      <>
-        <span className="font-semibold text-fg">{r.product.name}</span>
-        <span className="block text-xs text-muted">{r.product.sku}</span>
-      </>
+      // Imported names can be long and have no spaces to break at: cap the column and cut them.
+      <div className="max-w-56 min-w-0 sm:max-w-xs xl:max-w-sm" title={r.product.name}>
+        <span className="block truncate font-semibold text-fg">{r.product.name}</span>
+        <span className="block truncate text-xs text-muted">{r.product.sku}</span>
+      </div>
     ),
     skeleton: 'title',
   },
