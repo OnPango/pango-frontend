@@ -1,6 +1,6 @@
 import type { ImportKind } from '../types/imports.types';
-import { TEMPLATE_COLUMNS } from '../types/movementImports.types';
 import { INVENTORY_TEMPLATE_FILE_NAME, INVENTORY_TEMPLATE_URL } from './inventoryTemplate';
+import { MOVEMENT_TEMPLATE_FILE_NAME, MOVEMENT_TEMPLATE_URL } from './movementTemplate';
 
 function download(href: string, fileName: string): void {
   const link = document.createElement('a');
@@ -10,20 +10,10 @@ function download(href: string, fileName: string): void {
 }
 
 /**
- * Downloads the template of a load. Inventory: the published workbook (`public/templates/`), with
- * its instructions sheet. Movements: the v1 headers of pango-core
- * (`docs/templates/pango-standard-kardex-movement-history-import-v1.csv`) as a CSV.
+ * Downloads the template of a load: the published workbook (`public/templates/`), whose first
+ * sheet holds the instructions and an example, and the second the columns to fill.
  */
 export function downloadTemplate(kind: ImportKind): void {
-  if (kind === 'inventory') {
-    download(INVENTORY_TEMPLATE_URL, INVENTORY_TEMPLATE_FILE_NAME);
-    return;
-  }
-  // The BOM makes Excel read the accents as UTF-8.
-  const blob = new Blob([`\uFEFF${TEMPLATE_COLUMNS.join(',')}\n`], {
-    type: 'text/csv;charset=utf-8',
-  });
-  const url = URL.createObjectURL(blob);
-  download(url, 'Plantilla_Movimientos_PANGO.csv');
-  URL.revokeObjectURL(url);
+  if (kind === 'inventory') download(INVENTORY_TEMPLATE_URL, INVENTORY_TEMPLATE_FILE_NAME);
+  else download(MOVEMENT_TEMPLATE_URL, MOVEMENT_TEMPLATE_FILE_NAME);
 }

@@ -8,7 +8,6 @@ import {
   missingFields,
   quantityMissing,
   SOURCE_NAMESPACE_PATTERN,
-  templateCsv,
   toMovementCode,
   toSourceNamespace,
   toTemplateValue,
@@ -163,11 +162,5 @@ describe('helpers', () => {
     expect(SOURCE_NAMESPACE_PATTERN.test('siigo-main')).toBe(true);
     expect(SOURCE_NAMESPACE_PATTERN.test('siigo main')).toBe(false);
     expect(SOURCE_NAMESPACE_PATTERN.test('-siigo')).toBe(false);
-  });
-
-  it('downloads the template header of pango-core', () => {
-    expect(templateCsv()).toBe(
-      'external_movement_id,line_number,business_date,warehouse_code,sku,stock_unit,movement_type,quantity_in,quantity_out,balance_after,document_ref,location_code,lot_code,unit_cost\n',
-    );
   });
 });
