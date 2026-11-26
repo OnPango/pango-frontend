@@ -17,6 +17,43 @@ import {
   type SheetData,
 } from './spreadsheet';
 
+/** The published workbook, served from `public/`. Bump the version when its columns change. */
+export const MOVEMENT_TEMPLATE_URL = '/templates/Plantilla_Movimientos_PANGO_v1.xlsx';
+export const MOVEMENT_TEMPLATE_FILE_NAME = 'Plantilla_Movimientos_PANGO_v1.xlsx';
+
+/** The data sheet of the workbook; its first sheet is `Instrucciones`. */
+export const MOVEMENT_SHEET_NAME = 'Movimientos';
+
+/**
+ * The headers of the workbook's data sheet, in Spanish: `*` required, `**` required in some
+ * cases (one quantity per line; the lot for products with lots).
+ */
+export const MOVEMENT_TEMPLATE_HEADERS: Record<TemplateColumn, string> = {
+  external_movement_id: 'Número de movimiento *',
+  line_number: 'Línea *',
+  business_date: 'Fecha *',
+  warehouse_code: 'Código de bodega *',
+  sku: 'Código producto *',
+  movement_type: 'Tipo de movimiento *',
+  quantity_in: 'Cantidad que entra **',
+  quantity_out: 'Cantidad que sale **',
+  balance_after: 'Saldo después',
+  lot_code: 'Código de lote **',
+  stock_unit: 'Unidad de medida',
+  document_ref: 'Documento',
+  location_code: 'Ubicación',
+  unit_cost: 'Costo unitario',
+};
+
+/** The workbook's `Movimientos` sheet when present, otherwise the first sheet holding rows. */
+export function pickMovementSheet(sheets: readonly SheetData[]): SheetData | undefined {
+  const wanted = normalizeHeader(MOVEMENT_SHEET_NAME);
+  return (
+    sheets.find((sheet) => normalizeHeader(sheet.name) === wanted) ??
+    sheets.find((sheet) => sheet.rows.slice(1).some((row) => !isEmptyRow(row)))
+  );
+}
+
 /** Which column of the file (its index) carries each template column; null = none. */
 export type ColumnMapping = Record<TemplateColumn, number | null>;
 
@@ -144,8 +181,9 @@ export const TEMPLATE_FIELDS: TemplateField[] = [
 ];
 
 /**
- * Joins the file's headers to the template by name: first the exact template names, then the
- * usual aliases. Each header is used once.
+ * Joins the file's headers to the template by name, ignoring case, accents and the `*` markers:
+ * first the v1 column names, then the workbook's Spanish headers, then the usual aliases. Each
+ * header is used once.
  */
 export function autoMap(headers: readonly string[]): ColumnMapping {
   const normalized = headers.map(normalizeHeader);
@@ -164,14 +202,25 @@ export function autoMap(headers: readonly string[]): ColumnMapping {
     }
   };
   for (const field of TEMPLATE_FIELDS) take(field, [field.column]);
+  for (const field of TEMPLATE_FIELDS) {
+    take(field, [normalizeHeader(MOVEMENT_TEMPLATE_HEADERS[field.column])]);
+  }
   for (const field of TEMPLATE_FIELDS) take(field, field.aliases);
   return mapping;
 }
 
-/** Every template column is joined by its exact name: the file is Pango's template. */
+/**
+ * The file is Pango's template: it has every column under its v1 name (the CSV of pango-core)
+ * or under the workbook's Spanish header.
+ */
 export function isTemplateFile(headers: readonly string[]): boolean {
   const normalized = new Set(headers.map(normalizeHeader));
-  return TEMPLATE_COLUMNS.every((column) => normalized.has(column));
+  return (
+    TEMPLATE_COLUMNS.every((column) => normalized.has(column)) ||
+    TEMPLATE_COLUMNS.every((column) =>
+      normalized.has(normalizeHeader(MOVEMENT_TEMPLATE_HEADERS[column])),
+    )
+  );
 }
 
 /** Required columns that are not joined to any column of the file. */
@@ -280,9 +329,4 @@ export function toSourceNamespace(text: string): string {
     .replace(/[^a-z0-9._-]+/g, '-')
     .replace(/^[^a-z0-9]+/, '')
     .slice(0, 60);
-}
-
-/** The template's header row, for the download. */
-export function templateCsv(): string {
-  return `${TEMPLATE_COLUMNS.join(',')}\n`;
 }

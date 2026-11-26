@@ -1,6 +1,8 @@
 import type {
   ActivityItem,
   DashboardSummary,
+  ImportedLevel,
+  ImportedMovementList,
   InventoryLevel,
   LevelDays,
   MovementNature,
@@ -8,7 +10,12 @@ import type {
   Ref,
   Severity,
 } from '../types/dashboard.types';
-import type { DashboardLevelDto, DashboardSummaryDto } from './dashboard.dto';
+import type {
+  DashboardLevelDto,
+  DashboardSummaryDto,
+  ImportedLevelDto,
+  ImportedMovementPageDto,
+} from './dashboard.dto';
 
 const ref = (dto: { id: number; name: string }): Ref => ({ id: String(dto.id), name: dto.name });
 
@@ -64,6 +71,27 @@ export function toSummary(dto: DashboardSummaryDto): DashboardSummary {
         lineCount: item.lineCount,
         registeredBy: item.registeredBy,
       })),
+  };
+}
+
+export function toImportedLevel(dto: ImportedLevelDto): ImportedLevel {
+  return { ...toLevel(dto), lastImportedDay: dto.lastImportedDay };
+}
+
+export function toImportedMovements(dto: ImportedMovementPageDto): ImportedMovementList {
+  return {
+    total: dto.total,
+    items: dto.items.map((item) => ({
+      id: String(item.id),
+      date: item.date,
+      code: item.movementType,
+      product: { ...item.product, id: String(item.product.id) },
+      warehouse: { id: String(item.warehouse.id), name: item.warehouse.name },
+      quantity: item.quantityIn ?? -(item.quantityOut ?? 0),
+      document: item.documentRef ?? item.source.externalMovementId,
+      system: item.source.sourceNamespace,
+      afterCutover: item.afterCutover,
+    })),
   };
 }
 
