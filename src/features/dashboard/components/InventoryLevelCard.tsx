@@ -181,11 +181,6 @@ export function InventoryLevelCard({
     <DashboardCard
       title="Nivel de inventario"
       className={className}
-      description={
-        includesImported && importedLevel?.lastImportedDay
-          ? `Incluye datos importados del sistema anterior, hasta el ${formatDay(importedLevel.lastImportedDay)}.`
-          : undefined
-      }
       aside={
         <Select
           aria-label="Periodo del nivel de inventario"
@@ -205,9 +200,13 @@ export function InventoryLevelCard({
       ) : level.data ? (
         <div aria-busy={level.isFetching || undefined} className="flex flex-1 flex-col">
           {includesImported && (
-            <Badge tone="secondary" size="sm" className="mb-2 self-start">
-              Incluye datos importados
-            </Badge>
+            <p className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+              <Badge tone="secondary" size="sm">
+                Incluye datos importados
+              </Badge>
+              {importedLevel?.lastImportedDay &&
+                `del sistema anterior, hasta el ${formatDay(importedLevel.lastImportedDay)}`}
+            </p>
           )}
           <LevelChart rows={rows} />
         </div>

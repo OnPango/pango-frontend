@@ -12,10 +12,16 @@ import { RecentActivity } from '../components/RecentActivity';
 import { buildGreeting, DashboardContent } from '../content/content';
 
 /**
- * Both cards below the key figures keep this height, whatever the recent activity or the number
- * of products in low stock: the low stock list scrolls inside its card.
+ * The row of the two cards below the key figures is as tall as the inventory level needs, never
+ * below 26rem, so it fits however narrow the cards get (small screens, zoom).
  */
-const CARD_HEIGHT = 'h-[26rem]';
+const LEVEL_HEIGHT = 'min-h-[26rem]';
+/**
+ * Side by side, the low stock card takes the row's height without adding its own (`h-0` +
+ * `min-h-full`): its list scrolls inside instead of stretching the row. Stacked, it is as tall as
+ * its list, which scrolls past 26rem.
+ */
+const LOW_STOCK_HEIGHT = 'max-h-[26rem] lg:h-0 lg:max-h-none lg:min-h-full';
 
 /**
  * US-047: the organization at a glance. The key figures with "Nivel de inventario" and
@@ -61,14 +67,17 @@ export default function DashboardPage() {
               {readsStock && (
                 <InventoryLevelCard
                   warehouseId={null}
-                  className={cn(CARD_HEIGHT, !showsLowStock && 'lg:col-span-2')}
+                  className={cn(LEVEL_HEIGHT, !showsLowStock && 'lg:col-span-2')}
                 />
               )}
               {showsLowStock && (
                 <LowStockCard
                   block={data?.lowStockItems ?? undefined}
                   isLoading={isLoading}
-                  className={cn(CARD_HEIGHT, !readsStock && 'lg:col-span-2')}
+                  className={cn(
+                    readsStock ? LOW_STOCK_HEIGHT : LEVEL_HEIGHT,
+                    !readsStock && 'lg:col-span-2',
+                  )}
                 />
               )}
             </div>
